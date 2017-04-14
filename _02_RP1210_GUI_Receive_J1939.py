@@ -6,6 +6,7 @@ from   ctypes.wintypes import HWND
 import threading
 import queue
 import time
+import collections 
 
 
 class RP1210ReadMessageThread(threading.Thread):
@@ -32,7 +33,7 @@ class RP1210ReadMessageThread(threading.Thread):
             
 
 class RP1210(tk.Frame):
-    """The SSS2 gui and functions."""
+    """The RP1210 gui and functions."""
     def __init__(self, parent):
         self.main_frame = tk.Frame.__init__(self, parent)
         self.root = parent
@@ -41,7 +42,11 @@ class RP1210(tk.Frame):
         self.grid( column=0, row=0, sticky='NSEW') #needed to display
 
         #See the entries in C:\Windows\RP121032.ini for options to use in the dllName (we'll parse this ini file later)  
-        self.setupRP1210("DPA4PMA.DLL" )
+        #self.setupRP1210("DPA4PMA.DLL" )
+        self.setupRP1210("NULN2R32.DLL" )
+
+        #Add Dialog or menu to select RP1210 device
+        
         self.init_gui()
 
     def setupRP1210(self,dllName,protocol = "J1939:Channel=1",deviceID = 1):
@@ -106,6 +111,10 @@ class RP1210(tk.Frame):
    
     def init_gui(self):
         """Builds GUI."""
+
+        #Add Menus
+
+        
         #Set up a button. Some documentation is http://effbot.org/tkinterbook/button.htm
         version_button = tk.Button(self, text="Display Version", command=self.display_version)
         version_button.grid(row=0,column=0,padx=10,pady=2, sticky=tk.W+tk.E) #The sticky parameters fill the column.
@@ -137,12 +146,20 @@ class RP1210(tk.Frame):
         self.scroll_j1939_message_button.grid(row=3,column=1,sticky='NW')
         self.scroll_j1939_message_button.state(['!alternate']) #Clears Check Box
         self.scroll_j1939_message_button.state(['selected']) #selects Check Box
-        
-        self.rx_index = 0
-        self.message_tree_ids=[]
+
+        # Set up a deque to hold messages
+        #https://docs.python.org/3/library/collections.html#collections.deque
+        self.max_rx_messages = 10000
+        self.rx_message_buffer = collections.deque(maxlen=self.max_rx_messages)
+        self.max_message_tree = 10000
+        self.message_tree_ids=collections.deque(maxlen=self.max_message_tree)
         self.fill_tree()
-        
+
+        #Assignment: Create widgets that can set the maxlen of the deque buffers
+    
+
     def fill_tree(self):
+
         while self.rx_queue.qsize():
             
             
@@ -151,22 +168,21 @@ class RP1210(tk.Frame):
 
             for b in rxmessage:
                 message_text+="{:02X} ".format(b)
-            self.message_tree_ids.insert(self.rx_index, self.recieved_j1939_message_tree.insert('','end',text=message_text))
+            self.message_tree_ids.append(self.recieved_j1939_message_tree.insert('','end',text=message_text))
+            if len(self.message_tree_ids) >= self.max_message_tree: #Change this to a tkInt that updates based
+                self.recieved_j1939_message_tree.delete(self.message_tree_ids.popleft())
 
-            
-                
-            if self.rx_index > 10:
-                self.recieved_j1939_message_tree.delete(self.message_tree_ids[self.rx_index-10])
-                self.rx_index = 0
-            
-            if self.scroll_j1939_message_button.instate(['selected']):
-               self.recieved_j1939_message_tree.see(self.message_tree_ids[self.rx_index])
+            self.rx_message_buffer.append(message_text)
 
-            self.rx_index+=1
+        if self.scroll_j1939_message_button.instate(['selected']):
+               if len(self.message_tree_ids) > 1:
+                   self.recieved_j1939_message_tree.see(self.message_tree_ids[-1])
            
+        self.after(20, self.fill_tree)
 
-           
-        self.after(10, self.fill_tree)
+        #Assignment: Add a widget that will clear the tree view
+        
+    
 
     def display_version(self):
         """Brings up a dialog box that shows the version of the RP1210 device and driver. This is not a recommended function to use in RP1210D"""
@@ -218,17 +234,16 @@ class RP1210(tk.Frame):
         else :   
            print("ReadDetailedVersion fails with a return value of  %i" %nRetVal )
            messagebox.showerror("RP1210 Detailed Version Information","ERROR {}".format(nRetVal))
-                               
-           
-
+    def on_closing(self):
+        print("Exiting program. Disconnect RP1210 Device with return value of ", end='')
+        print(self.ClientDisconnect(self.nClientID))
+        root.destroy()
 
 if __name__ == '__main__':
 
     root = tk.Tk()
-    RP1210(root)
+    rp1210 = RP1210(root)
+    root.protocol("WM_DELETE_WINDOW", rp1210.on_closing)
     root.mainloop()
-    try:
-        root.destroy() # if mainloop quits, destroy window
-    except:
-        print("Bye.")
+    print("Bye.")
         

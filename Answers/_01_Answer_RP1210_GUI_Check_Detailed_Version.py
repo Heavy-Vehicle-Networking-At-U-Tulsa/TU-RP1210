@@ -13,7 +13,8 @@ class RP1210(tk.Frame):
         self.grid( column=0, row=0, sticky='NSEW') #needed to display
 
         #See the entries in C:\Windows\RP121032.ini for options to use in the dllName (we'll parse this ini file later)  
-        self.setupRP1210("DPA4PMA.DLL" )
+        #self.setupRP1210("DPA4PMA.DLL" )
+        self.setupRP1210("NULN2R32.DLL")
         self.init_gui()
 
     def setupRP1210(self,dllName,protocol = "J1939:Channel=1",deviceID = 1):
