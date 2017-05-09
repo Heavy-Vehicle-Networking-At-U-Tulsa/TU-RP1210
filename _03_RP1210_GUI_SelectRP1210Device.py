@@ -82,16 +82,17 @@ class setup_RP1210_connections(tk.Toplevel):
         self.port_combo_box_values=[]
         for API in self.RP1210_APIs:
             # create a pulldown menu, and add it to the menu bar
-            print(API)
-            api_config = configparser.ConfigParser()
-            api_config.read("C:\\Windows\\"+API+".ini")
-            for iniEntry in api_config:
-                print(iniEntry)
-            self.port_combo_box_values.append(API)
+            if API is not '':
+                print(API)
+                api_config = configparser.ConfigParser()
+                api_config.read("C:\\Windows\\"+API+".ini")
+                for iniEntry in api_config:
+                    print(iniEntry)
+                self.port_combo_box_values.append(API)
         
         self.port_combo_box['values']=self.port_combo_box_values
-    # standard button semantics
-
+        self.port_combo_box.current(0)
+        
     def ok(self, event=None):
 
         if not self.validate():
@@ -138,7 +139,7 @@ class RP1210(tk.Frame):
         self.root.geometry('+100+100')
         self.root.title('RP1210 Interface')
         self.grid( column=0, row=0, sticky='NSEW') #needed to display
-        self.dllName = None
+        self.dllName = None#"DPA4PMA.DLL"
         self.protocol = "J1939:Channel=1"
         self.deviceID = 1
         self.init_gui()
@@ -243,13 +244,8 @@ class RP1210(tk.Frame):
         detailed_version_button = tk.Button(self, text="Get Detailed Version", command=self.display_detailed_version)
         detailed_version_button.grid(row=1,column=0,padx=10,pady=2, sticky=tk.W+tk.E)
 
-    def run_program(self):
-        #Add a thread to listen to messages
-        self.rx_queue = queue.Queue()
-        self.read_message_thread = RP1210ReadMessageThread(self,self.rx_queue,self.ReadMessage,self.nClientID)
-        self.read_message_thread.daemon = True
-        self.read_message_thread.start()
-        print("Started RP1210ReadMessage Thread.")
+        rp1210_button = tk.Button(self, text="Select RP1210 Adapter", command=self.select_RP1210_dialog)
+        rp1210_button.grid(row=2,column=0,padx=10,pady=2, sticky=tk.W+tk.E)
 
         #Add a Text Box to display the data. See http://www.tkdocs.com/tutorial/tree.html
         #also https://docs.python.org/3/library/tkinter.ttk.html
@@ -268,6 +264,14 @@ class RP1210(tk.Frame):
         self.scroll_j1939_message_button.grid(row=3,column=1,sticky='NW')
         self.scroll_j1939_message_button.state(['!alternate']) #Clears Check Box
         self.scroll_j1939_message_button.state(['selected']) #selects Check Box
+
+    def run_program(self):
+        #Add a thread to listen to messages
+        self.rx_queue = queue.Queue()
+        self.read_message_thread = RP1210ReadMessageThread(self,self.rx_queue,self.ReadMessage,self.nClientID)
+        self.read_message_thread.daemon = True
+        self.read_message_thread.start()
+        print("Started RP1210ReadMessage Thread.")
 
         # Set up a deque to hold messages
         #https://docs.python.org/3/library/collections.html#collections.deque
