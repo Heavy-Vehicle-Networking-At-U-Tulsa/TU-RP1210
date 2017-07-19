@@ -19,6 +19,7 @@ import queue
 import time
 import collections 
 import sys
+import struct
 
 class RP1210ReadMessageThread(threading.Thread):
     '''This thread is designed to recieve messages from the vehicle diagnostic adapter (VDA) and put the
@@ -41,15 +42,14 @@ class RP1210ReadMessageThread(threading.Thread):
         BLOCKING_IO = 1
         
         #display a valid connection upon start.
-        print(self.ReadMessage)
-        print(self.nClientID)
+        print("Read Message Client ID: {}".format(self.nClientID))
         
         while self.runSignal:
             nRetVal = self.ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ),
                                         c_short( 2000 ), c_short( BLOCKING_IO ) )
             if nRetVal > 0:
                 self.rx_queue.put(ucTxRxBuffer[:nRetVal])
-                print(ucTxRxBuffer[:nRetVal])
+                #print(ucTxRxBuffer[:nRetVal])
             time.sleep(.001)
     
 class RP1210(QWidget):
@@ -60,7 +60,7 @@ class RP1210(QWidget):
         # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
         # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
         # box control
-        self.setupRP1210("DGDPA4MA.DLL",protocol = "CAN")
+        self.setupRP1210("DPA4PMA.DLL",protocol = "CAN")
 
         
 
@@ -147,6 +147,7 @@ class RP1210(QWidget):
         #setup a Receive queue
         self.rx_queue = queue.Queue()
         self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.ReadMessage,self.nClientID)
+        self.read_message_thread.setDaemon(True)
         self.read_message_thread.start()
         print("Started RP1210ReadMessage Thread.")
         
@@ -157,17 +158,23 @@ class RP1210(QWidget):
         self.received_CAN_message_table = QTableWidget()
         
         #Set the headers
-        CAN_table_columns = ["Count","Abs. Time","Rel. Time","ID","DLC","B0","B1","B2","B3","B4","B5","B6","B7","B8"]
+        CAN_table_columns = ["Count","PC Time","VDA Time","ID","DLC","B0","B1","B2","B3","B4","B5","B6","B7"]
         self.received_CAN_message_table.setColumnCount(len(CAN_table_columns))
         self.received_CAN_message_table.setHorizontalHeaderLabels(CAN_table_columns)
         
         #Initialize a counter
         self.received_CAN_message_count = 0
+        #use this variable to run a reziser once message traffic appears
+        self.received_CAN_message_table_needs_resized = True
         
         self.max_rx_messages = 10000
         self.rx_message_buffer = collections.deque(maxlen=self.max_rx_messages)
         self.max_message_table = 10000
         self.message_table_ids=collections.deque(maxlen=self.max_message_table)
+        
+        table_timer = QTimer(self)
+        table_timer.timeout.connect(self.fill_table)
+        table_timer.start(20) 
         self.fill_table()
 
         #Define where the widgets go in the window        
@@ -185,31 +192,68 @@ class RP1210(QWidget):
 
     def fill_table(self):
 
-        QTimer.singleShot(20, lambda: self.fill_table)
-                    
         while self.rx_queue.qsize():
             
-            #Print received message to the console
-            message_text = ""
+            #Get a message from the queue. These are raw bytes
             rxmessage = self.rx_queue.get()
-            for b in rxmessage:
-                message_text+="{:02X} ".format(b)
-            print(message_text)
+            
+            #Print received message to the console for debugging
+            #message_text = ""
+            
+            #for b in rxmessage:
+            #    message_text+="{:02X} ".format(b)
+            #print(message_text)
+            
+            if self.scroll_CAN_message_button.isChecked():
+                self.received_CAN_message_table.scrollToBottom()
             
             #Parse CAN into tables
+            #Get the message counter for the session 
+            #Assignment: add a button that resets the counter.
             self.received_CAN_message_count += 1
-            timestamp = time.time()
-            
+            timestamp = time.time() #PC Time
+            vda_timestamp = struct.unpack(">L",rxmessage[0:4])[0] # Vehicle Diagnostic Adapter Timestamp 
+            extended = rxmessage[0:4]
+            if extended:
+                can_id = struct.unpack(">L",rxmessage[5:9])[0]
+                databytes = rxmessage[9:]
+            else:
+                can_id = struct.unpack(">L",rxmessage[5:7])[0]
+                databytes = rxmessage[7:]
+            dlc = len(databytes)
             #Insert a new row:
-            rowCount = self.received_CAN_message_table.rowCount()
-            self.received_CAN_message_table.insertRow(rowCount)
-            lastRow = rowcount - 1
-            self.received_CAN_message_table.setItem(lastRow,0,self.received_CAN_message_count)
-            self.received_CAN_message_table.setItem(lastRow,1,timestamp)
+            row_count = self.received_CAN_message_table.rowCount()
+            self.received_CAN_message_table.insertRow(row_count)
+            last_row = row_count
             
+            #Populate the row with data
+            self.received_CAN_message_table.setItem(last_row,0,
+                 QTableWidgetItem("{}".format(self.received_CAN_message_count)))
             
+            self.received_CAN_message_table.setItem(last_row,1,
+                 QTableWidgetItem("{:0.6f}".format(timestamp)))
             
-        
+            self.received_CAN_message_table.setItem(last_row,2,
+                 QTableWidgetItem("{:0.3f}".format(vda_timestamp* 0.001))) #Figure out what the multiplier is for the time stamp
+            
+            self.received_CAN_message_table.setItem(last_row,3,
+                 QTableWidgetItem("{:08X}".format(can_id)))
+            #Assignment: Make the ID format conditional on 29 or 11 bit IDs
+            
+            self.received_CAN_message_table.setItem(last_row,4,
+                 QTableWidgetItem("{}".format(dlc)))
+            
+            col=5
+            for b in databytes:
+                self.received_CAN_message_table.setItem(last_row,col,
+                    QTableWidgetItem("{:02X}".format(b)))
+                col+=1
+
+            
+            if self.received_CAN_message_count < 100:
+                self.received_CAN_message_table.resizeColumnsToContents()    
+                #Assignment: Change this automatic resizer to a button.
+            
     def display_version(self):
         
         chDLLMajorVersion    = (c_char)()
