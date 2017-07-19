@@ -1,53 +1,71 @@
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
-from   ctypes import *
-from   ctypes.wintypes import HWND
+#!/bin/env/python
+# An introduction sample source code that provides RP1210 capabilities
+
+#Import 
+from PyQt5.QtWidgets import (QWidget, QTreeView, QMessageBox, QHBoxLayout, 
+                             QFileDialog, QLabel, QSlider, QCheckBox, 
+                             QLineEdit, QVBoxLayout, QApplication, QPushButton,
+                             QTableWidget, QTableWidgetItem)
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QIcon 
+
+#Use ctypes to import the RP1210 DLL
+from ctypes import *
+from ctypes.wintypes import HWND
+
+#Use threads to set up asynchronous communications
 import threading
 import queue
 import time
 import collections 
-
+import sys
 
 class RP1210ReadMessageThread(threading.Thread):
-    def __init__(self, parent, rx_queue, RP1210_ReadMessage,nClientID ):
+    '''This thread is designed to recieve messages from the vehicle diagnostic adapter (VDA) and put the
+    data into a queue. The class arguments are as follows:
+    rx_queue - A datastructure that takes the recieved message.
+    RP1210_ReadMessage - a function handle to the VDA DLL.
+    nClientID - this lets us know which network is being used to recieve the messages. This will likely be '''
+    def __init__(self, parent, rx_queue, RP1210_ReadMessage, nClientID):
+        super().__init__()
         self.root = parent
         threading.Thread.__init__(self)
         self.rx_queue = rx_queue
         self.ReadMessage = RP1210_ReadMessage
-        
         self.nClientID = nClientID
-        
+        self.runSignal = True
+
     def run(self):
         ucTxRxBuffer = (c_char*2000)()
         NON_BLOCKING_IO = 0
+        BLOCKING_IO = 1
+        
+        #display a valid connection upon start.
         print(self.ReadMessage)
         print(self.nClientID)
         
-        while True:
-            nRetVal = self.ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ), c_short( 2000 ), c_short( NON_BLOCKING_IO ) )
+        while self.runSignal:
+            nRetVal = self.ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ),
+                                        c_short( 2000 ), c_short( BLOCKING_IO ) )
             if nRetVal > 0:
-                #print(ucTxRxBuffer[:nRetVal])
                 self.rx_queue.put(ucTxRxBuffer[:nRetVal])
+                print(ucTxRxBuffer[:nRetVal])
             time.sleep(.001)
-            
+    
+class RP1210(QWidget):
 
-class RP1210(tk.Frame):
-    """The RP1210 gui and functions."""
-    def __init__(self, parent):
-        self.main_frame = tk.Frame.__init__(self, parent)
-        self.root = parent
-        self.root.geometry('+100+100')
-        self.root.title('RP1210 Interface')
-        self.grid( column=0, row=0, sticky='NSEW') #needed to display
+    def __init__(self):
+        super().__init__()
 
-        #See the entries in C:\Windows\RP121032.ini for options to use in the dllName (we'll parse this ini file later)  
-        #self.setupRP1210("DPA4PMA.DLL" )
-        self.setupRP1210("NULN2R32.DLL" )
+        # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
+        # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
+        # box control
+        self.setupRP1210("DGDPA4MA.DLL",protocol = "CAN")
 
-        #Add Dialog or menu to select RP1210 device
         
-        self.init_gui()
+
+        self.init_ui()
+                
 
     def setupRP1210(self,dllName,protocol = "J1939:Channel=1",deviceID = 1):
 
@@ -70,7 +88,7 @@ class RP1210(tk.Frame):
         # typedef short (WINAPI *fxRP1210_ReadMessage)         ( short, char*, short, short             );
         prototype                   = WINFUNCTYPE( c_short, c_short, POINTER( c_char*2000 ), c_short, c_short             )
         self.ReadMessage          = prototype( ("RP1210_ReadMessage", RP1210DLL ) )
-        
+
         # typedef short (WINAPI *fxRP1210_SendCommand)         ( short, short, char*, short             );
         prototype                   = WINFUNCTYPE( c_short, c_short, c_short, POINTER( c_char*2000 ), c_short             )
         self.SendCommand          = prototype( ("RP1210_SendCommand", RP1210DLL ) )
@@ -100,6 +118,8 @@ class RP1210(tk.Frame):
         self.szProtocolName = bytes(protocol,'ascii')
         self.nClientID = self.ClientConnect( HWND(None), c_short( deviceID ), self.szProtocolName, 0, 0, 0  )
 
+        print('The Client ID is: %i' %self.nClientID)
+
         # Set all filters to pass.  This allows messages to be read.
         RP1210_Set_All_Filters_States_to_Pass = 3 
         nRetVal = self.SendCommand( c_short( RP1210_Set_All_Filters_States_to_Pass ), c_short( self.nClientID ), None, 0 )
@@ -108,84 +128,89 @@ class RP1210(tk.Frame):
            print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
         else :
            print('RP1210_Set_All_Filters_States_to_Pass returns %i' %nRetVal )
-   
-    def init_gui(self):
-        """Builds GUI."""
 
-        #Add Menus
+    def init_ui(self):
+        #Builds GUI
 
+        self.setGeometry(200,200,500,500)
+
+        b1 = QWidget()
+        self.version_button = QPushButton(b1)
+        self.version_button.setText('Display Version')
+        self.version_button.clicked.connect(self.display_version)
         
-        #Set up a button. Some documentation is http://effbot.org/tkinterbook/button.htm
-        version_button = tk.Button(self, text="Display Version", command=self.display_version)
-        version_button.grid(row=0,column=0,padx=10,pady=2, sticky=tk.W+tk.E) #The sticky parameters fill the column.
-
-        detailed_version_button = tk.Button(self, text="Get Detailed Version", command=self.display_detailed_version)
-        detailed_version_button.grid(row=1,column=0,padx=10,pady=2, sticky=tk.W+tk.E)
-
-
-        #Add a thread to listen to messages
+        b2 = QWidget()
+        self.detailed_version_button = QPushButton(b2)
+        self.detailed_version_button.setText('Get Detailed Version')        
+        self.detailed_version_button.clicked.connect(self.display_detailed_version)
+      
+        #setup a Receive queue
         self.rx_queue = queue.Queue()
-        self.read_message_thread = RP1210ReadMessageThread(self,self.rx_queue,self.ReadMessage,self.nClientID)
+        self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.ReadMessage,self.nClientID)
         self.read_message_thread.start()
         print("Started RP1210ReadMessage Thread.")
+        
+        self.scroll_CAN_message_button =  QCheckBox("Auto Scroll Message Window")   
 
-        #Add a Text Box to display the data. See http://www.tkdocs.com/tutorial/tree.html
-        #also https://docs.python.org/3/library/tkinter.ttk.html
-        self.recieved_j1939_message_tree = ttk.Treeview(self.main_frame, height=20)
-        self.recieved_j1939_message_tree.grid(row=0,column=1,rowspan=2,sticky=tk.W+tk.E+tk.N+tk.S)
-        self.recieved_j1939_message_tree.column("#0",stretch=True, minwidth=500,width=500, anchor='w') 
-        self.recieved_j1939_message_tree.heading("#0",text="Hex Values",anchor='w') 
-
-        #Assignment: Add the followng columns to the tree view: 'Timestamp','PGN','HOW/Priority', 'SA','DA','data'
-        #self.recieved_j1939_message_tree.column('Timestamp', width=130, anchor='w')
-        #self.recieved_j1939_message_tree.heading('Timestamp', text='Timestamp')
-
-        #Add a checkbutton to start and stop scrolling
-        #See http://effbot.org/tkinterbook/checkbutton.htm
-        self.scroll_j1939_message_button =  ttk.Checkbutton(self.main_frame, text="Auto Scroll Message Window")
-        self.scroll_j1939_message_button.grid(row=3,column=1,sticky='NW')
-        self.scroll_j1939_message_button.state(['!alternate']) #Clears Check Box
-        self.scroll_j1939_message_button.state(['selected']) #selects Check Box
-
-        # Set up a deque to hold messages
-        #https://docs.python.org/3/library/collections.html#collections.deque
+        
+        #Set up a Table to display recieved messages
+        self.received_CAN_message_table = QTableWidget()
+        
+        #Set the headers
+        CAN_table_columns = ["Count","Abs. Time","Rel. Time","ID","DLC","B0","B1","B2","B3","B4","B5","B6","B7","B8"]
+        self.received_CAN_message_table.setColumnCount(len(CAN_table_columns))
+        self.received_CAN_message_table.setHorizontalHeaderLabels(CAN_table_columns)
+        
+        #Initialize a counter
+        self.received_CAN_message_count = 0
+        
         self.max_rx_messages = 10000
         self.rx_message_buffer = collections.deque(maxlen=self.max_rx_messages)
-        self.max_message_tree = 10000
-        self.message_tree_ids=collections.deque(maxlen=self.max_message_tree)
-        self.fill_tree()
+        self.max_message_table = 10000
+        self.message_table_ids=collections.deque(maxlen=self.max_message_table)
+        self.fill_table()
 
-        #Assignment: Create widgets that can set the maxlen of the deque buffers
-    
+        #Define where the widgets go in the window        
+        v_layout = QVBoxLayout()
+        
+        v_layout.addWidget(self.version_button)
+        v_layout.addWidget(self.detailed_version_button)
+        v_layout.addWidget(self.scroll_CAN_message_button)
+        v_layout.addWidget(self.received_CAN_message_table)
 
-    def fill_tree(self):
+        self.setLayout(v_layout)
+        self.setWindowTitle('RP1210 Interface')
 
+        self.show()
+
+    def fill_table(self):
+
+        QTimer.singleShot(20, lambda: self.fill_table)
+                    
         while self.rx_queue.qsize():
             
-            
+            #Print received message to the console
             message_text = ""
             rxmessage = self.rx_queue.get()
-
             for b in rxmessage:
                 message_text+="{:02X} ".format(b)
-            self.message_tree_ids.append(self.recieved_j1939_message_tree.insert('','end',text=message_text))
-            if len(self.message_tree_ids) >= self.max_message_tree: #Change this to a tkInt that updates based
-                self.recieved_j1939_message_tree.delete(self.message_tree_ids.popleft())
-
-            self.rx_message_buffer.append(message_text)
-
-        if self.scroll_j1939_message_button.instate(['selected']):
-               if len(self.message_tree_ids) > 1:
-                   self.recieved_j1939_message_tree.see(self.message_tree_ids[-1])
-           
-        self.after(20, self.fill_tree)
-
-        #Assignment: Add a widget that will clear the tree view
+            print(message_text)
+            
+            #Parse CAN into tables
+            self.received_CAN_message_count += 1
+            timestamp = time.time()
+            
+            #Insert a new row:
+            rowCount = self.received_CAN_message_table.rowCount()
+            self.received_CAN_message_table.insertRow(rowCount)
+            lastRow = rowcount - 1
+            self.received_CAN_message_table.setItem(lastRow,0,self.received_CAN_message_count)
+            self.received_CAN_message_table.setItem(lastRow,1,timestamp)
+            
+            
+            
         
-    
-
     def display_version(self):
-        """Brings up a dialog box that shows the version of the RP1210 device and driver. This is not a recommended function to use in RP1210D"""
         
         chDLLMajorVersion    = (c_char)()
         chDLLMinorVersion    = (c_char)()
@@ -195,55 +220,51 @@ class RP1210(tk.Frame):
         self.ReadVersion( byref( chDLLMajorVersion ), byref( chDLLMinorVersion ), byref( chAPIMajorVersion ), byref( chAPIMinorVersion  ) )
 
         print('Successfully Read DLL and API Versions.')
-        DLLMajor = chDLLMajorVersion.value
-        DLLMinor = chDLLMinorVersion.value
-        APIMajor = chAPIMajorVersion.value
-        APIMinor = chAPIMinorVersion.value
+        DLLMajor = chDLLMajorVersion.value.decode('ascii')
+        DLLMinor = chDLLMinorVersion.value.decode('ascii')
+        APIMajor = chAPIMajorVersion.value.decode('ascii')
+        APIMinor = chAPIMinorVersion.value.decode('ascii')
         print("DLL Major Version: {}".format(DLLMajor))
         print("DLL Minor Version: {}".format(DLLMinor))
         print("API Major Version: {}".format(APIMajor))
-        print("API Minor Version: {}".format(DLLMinor))
-        
-        message_box_text = "".join(["Driver software versions are as follows:\n",
-             "DLL Major Version: {}\n".format(DLLMajor.decode('ascii')),
-             "DLL Minor Version: {}\n".format(DLLMinor.decode('ascii')),
-             "API Major Version: {}\n".format(APIMajor.decode('ascii')),
-             "API Minor Version: {}\n".format(DLLMinor.decode('ascii'))])
-        messagebox.showinfo("RP1210 Version Information",message_box_text)
-        
+        print("API Minor Version: {}".format(APIMinor))
 
-    def display_detailed_version(self):
-        """Brings up a dialog box that shows the version of the RP1210 driver"""
-        
+        self.result1 = QMessageBox()
+        self.result1.setText('Driver software versions are as follows:\nDLL Major Version: %r' %DLLMajor + '\nDLL Minor Version: %r' %DLLMinor + '\nAPI Major Version: %r' %APIMajor + '\nAPI Minor Version: %r' %APIMinor)
+        self.result1.setIcon(QMessageBox.Information)
+        self.result1.setWindowTitle('RP1210 Version Information')
+        self.result1.setStandardButtons(QMessageBox.Ok)
+
+        self.result1.show()
+
+    def display_detailed_version(self, result2):
+              
         chAPIVersionInfo    = (c_char*17)()
         chDLLVersionInfo    = (c_char*17)()
         chFWVersionInfo     = (c_char*17)()
         nRetVal = self.ReadDetailedVersion( c_short( self.nClientID ), byref( chAPIVersionInfo ), byref( chDLLVersionInfo ), byref( chFWVersionInfo ) )
 
+        self.result2 = QMessageBox()
+        self.result2.setIcon(QMessageBox.Information)
+        self.result2.setWindowTitle('RP1210 Detailed Version Information')
+        self.result2.setStandardButtons(QMessageBox.Ok)
+        
         if nRetVal == 0 :
            print('Congratulations! You have connected to a VDA! No need to check your USB connection.')
            DLL = chDLLVersionInfo.value
            API = chAPIVersionInfo.value
            FW = chAPIVersionInfo.value
-           message_box_text = "".join(["Congratulations!\n",
-                 "You have connected to a vehicle diagnostic adapter (VDA)!\n",
-                 "No need to check your USB connection.\n", 
-                 "DLL = {}\nAPI = {}\nFW  = {}".format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii'))])
-           messagebox.showinfo("RP1210 Detailed Version Information",message_box_text)
-        
+           self.result2.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
+                       
         else :   
            print("ReadDetailedVersion fails with a return value of  %i" %nRetVal )
-           messagebox.showerror("RP1210 Detailed Version Information","ERROR {}".format(nRetVal))
-    def on_closing(self):
-        print("Exiting program. Disconnect RP1210 Device with return value of ", end='')
-        print(self.ClientDisconnect(self.nClientID))
-        root.destroy()
-
+           self.result2.setText('RP1210 Detailed Version Information:\nERROR %i' %nRetVal)
+           
+        self.result2.show()
+            
 if __name__ == '__main__':
 
-    root = tk.Tk()
-    rp1210 = RP1210(root)
-    root.protocol("WM_DELETE_WINDOW", rp1210.on_closing)
-    root.mainloop()
-    print("Bye.")
-        
+    app = QApplication(sys.argv)
+    execute = RP1210()
+    sys.exit(app.exec_())
+
