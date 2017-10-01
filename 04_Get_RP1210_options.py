@@ -27,6 +27,8 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QComboBox,
                              QAction,
                              QDockWidget,
+                             QDialog,
+                             QDialogButtonBox,
                              QProgressDialog)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon 
@@ -170,39 +172,190 @@ class RP1210():
         return nClientID
 
 
-class SelectRP1210(QWidget):
+class SelectRP1210(QDialog):
     def __init__(self):
         super(SelectRP1210,self).__init__()
-
+        RP1210_config = configparser.ConfigParser()
+        RP1210_config.read("c:/Windows/RP121032.ini")
+        #self.setGeometry(800,800,100,100)
+        self.apis = sorted(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
+        self.current_api_index = 0
+        print("Current RP1210 APIs installed are: " + ", ".join(self.apis))
+        self.dll_name = None
         self.setup_dialog()
+        self.setWindowTitle("Select RP1210")
+        self.setWindowModality(Qt.ApplicationModal)
+        self.exec_()
 
     def setup_dialog(self):
-        self.RP1210DLL_combo_box = QComboBox()
-        RP1210_config = configparser.ConfigParser()
-        RP1210_config.read("c:\\Windows\\RP121032.ini")
-        self.RP1210DLL_combo_box.addItems(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
-        self.RP1210DLL_combo_box.activated.connect(self.continue_parsing_inis)
-
-        idx = self.RP1210DLL_combo_box.currentIndex()
-        if idx >= 0: 
-            self.dll_name = self.RP1210DLL_combo_box.itemText(idx) + ".DLL"
-        print(self.dll_name)
         
-        v_layout = QVBoxLayout()
-        v_layout.addWidget(self.RP1210DLL_combo_box)
+        vendor_label = QLabel("System RP1210 Vendors:")
+        self.vendor_combo_box = QComboBox()
+        self.vendor_combo_box.setInsertPolicy(QComboBox.NoInsert)
+        self.vendor_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.vendor_combo_box.activated.connect(self.fill_device)
 
-    def  fill_vendor(self):
-        pass
-    def fill_device(self,vendor):
-        pass
-    def fill_protocol(self,vendor,protocol):
-        pass    
-    def continue_parsing_inis(self):
-        print(self.dll_name[:-4])
-        dll_config = configparser.ConfigParser()
-        dll_config.read("C:/WINDOWS" + self.dll_name[:-4] + ".INI")
-        print(dll_config["VendorInformation"]["Name"])  
+        device_label = QLabel("Available RP1210 Vendor Devices:")
+        self.device_combo_box = QComboBox()
+        self.device_combo_box.setInsertPolicy(QComboBox.NoInsert)
+        self.device_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.device_combo_box.activated.connect(self.fill_protocol)
+        
+        protocol_label = QLabel("Available Device Protocols:")
+        self.protocol_combo_box = QComboBox()
+        self.protocol_combo_box.setInsertPolicy(QComboBox.NoInsert)
+        self.protocol_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        #self.protocol_combo_box.activated.connect(self.accept)
+        
 
+        self.buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        self.accepted.connect(self.connect_RP1210)
+        self.rejected.connect(self.reject_RP1210)
+        
+        try:
+            with open("RP1210_selection.txt","r") as selection_file:
+                previous_selections = selection_file.read()
+        except FileNotFoundError:
+            print("RP1210_selection.txt not Found!")
+            previous_selections = "0,0,0"
+        self.selection_index = previous_selections.split(',')
+
+        self.fill_vendor()
+
+        self.v_layout = QVBoxLayout()
+        self.v_layout.addWidget(vendor_label)
+        self.v_layout.addWidget(self.vendor_combo_box)
+        self.v_layout.addWidget(device_label)
+        self.v_layout.addWidget(self.device_combo_box)
+        self.v_layout.addWidget(protocol_label)
+        self.v_layout.addWidget(self.protocol_combo_box)
+        self.v_layout.addWidget(self.buttons)
+
+        self.setLayout(self.v_layout)
+
+    def fill_vendor(self):
+        self.vendor_combo_box.clear()
+        vendor_combo_box_entries = []
+        self.vendor_configs = {} 
+        for api_string in self.apis:
+            self.vendor_configs[api_string] = configparser.ConfigParser()
+            try:
+                self.vendor_configs[api_string].read("c:/Windows/" + api_string + ".ini")
+                #print("api_string = {}".format(api_string))
+                #print("The api ini file has the following sections:")
+                #print(vendor_config.sections())
+                vendor_name = self.vendor_configs[api_string]['VendorInformation']['name']
+                #print(vendor_name)
+                if vendor_name is not None:
+                    vendor_combo_box_entries.append("{:8} - {}".format(api_string,vendor_name))
+                else:
+                    self.apis.remove(api_string) #remove faulty/corrupt api_string   
+            except Exception as e:
+                print(e)
+                self.apis.remove(api_string) #remove faulty/corrupt api_string 
+
+        self.vendor_combo_box.addItems(vendor_combo_box_entries)
+        try:
+            self.vendor_combo_box.setCurrentIndex(int(self.selection_index[0]))
+        except:
+            pass
+
+        self.fill_device()
+    
+    def fill_device(self):
+        idx = self.vendor_combo_box.currentIndex()
+        self.api_string = self.vendor_combo_box.itemText(idx).split("-")[0].strip()
+        self.device_combo_box.clear()
+        for key in self.vendor_configs[self.api_string]:
+            if "DeviceInformation" in key:
+                try:
+                    device_id = self.vendor_configs[self.api_string][key]["DeviceID"]
+                except KeyError:
+                    device_id = None
+                    print("No Device ID for {} in {}.ini".format(key,self.api_string))
+                try:
+                    device_description = self.vendor_configs[self.api_string][key]["DeviceDescription"]
+                except KeyError:
+                    device_description = "No device description available"
+                try:
+                    device_MultiCANChannels = self.vendor_configs[self.api_string][key]["MultiCANChannels"]
+                except KeyError:
+                    device_MultiCANChannels = None
+                try:
+                    device_MultiJ1939Channels = self.vendor_configs[self.api_string][key]["MultiJ1939Channels"]
+                except KeyError:
+                    device_MultiJ1939Channels = None
+                try:
+                    device_MultiISO15765Channels = self.vendor_configs[self.api_string][key]["MultiISO15765Channels"]
+                except KeyError:
+                    device_MultiISO15765Channels = None
+                try:
+                    device_name = self.vendor_configs[self.api_string][key]["DeviceName"]
+                except KeyError:
+                    device_name = "Device name not provided"
+                device_combo_box_entry = "{}: {}, {}".format(device_id,device_name,device_description)
+                self.device_combo_box.addItem(device_combo_box_entry)
+        try:
+            self.device_combo_box.setCurrentIndex(int(self.selection_index[1]))
+        except:
+            pass
+
+        self.fill_protocol()
+
+    def fill_protocol(self):
+        idx = self.device_combo_box.currentIndex()
+        self.device_id = self.device_combo_box.itemText(idx).split(":")[0].strip()
+        self.protocol_combo_box.clear()
+        for key in self.vendor_configs[self.api_string]:
+            if "ProtocolInformation" in key:
+                try:
+                    protocol_string = self.vendor_configs[self.api_string][key]["ProtocolString"]
+                except KeyError:
+                    protocol_string = None
+                    print("No Protocol Name for {} in {}.ini".format(key,self.api_string))
+                try:
+                    protocol_description = self.vendor_configs[self.api_string][key]["ProtocolDescription"]
+                except KeyError:
+                    protocol_description = "No protocol description available"
+                try:
+                    protocol_speed = self.vendor_configs[self.api_string][key]["ProtocolSpeed"]
+                except KeyError:
+                    protocol_speed = "No Speed Specified"
+                try:
+                    protocol_params = self.vendor_configs[self.api_string][key]["ProtocolParams"]
+                except KeyError:
+                    protocol_params = ""
+                
+                devices = self.vendor_configs[self.api_string][key]["Devices"].split(',')
+                if self.device_id in devices and protocol_string is not None:
+                    device_combo_box_entry = "{}: {}".format(protocol_string,protocol_description)
+                    self.protocol_combo_box.addItem(device_combo_box_entry)
+        try:
+            self.protocol_combo_box.setCurrentIndex(int(self.selection_index[2]))
+        except:
+            pass
+   
+    def connect_RP1210(self):
+        print("Accepted Dialog OK")
+        vendor_index = self.vendor_combo_box.currentIndex()
+        device_index = self.device_combo_box.currentIndex()
+        protocol_index = self.protocol_combo_box.currentIndex()
+        with open("RP1210_selection.txt","w") as selection_file:
+            selection_file.write("{},{},{}".format(vendor_index,device_index,protocol_index))
+        self.dll_name = self.vendor_combo_box.itemText(vendor_index).split("-")[0].strip()
+        self.deviceID = int(self.device_combo_box.itemText(device_index).split(":")[0].strip())
+        self.protocol = self.protocol_combo_box.itemText(protocol_index).split(":")[0].strip()
+        
+    
+    def reject_RP1210(self):
+        self.dll_name = None
+        self.protocol = None
+        self.deviceID = None
 
 class TUDiagnostics(QMainWindow):
     def __init__(self):
@@ -210,32 +363,32 @@ class TUDiagnostics(QMainWindow):
         # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
         # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
         # box control
-        dll_name = "DGDPA5MA"
-        protocol = "J1708"
-        deviceID = 1
-        self.RP1210 = RP1210()
-        J1708_client_ID = self.RP1210.setup_RP1210(dll_name,protocol,deviceID)
-        print(J1708_client_ID)
+        # dll_name = "DGDPA5MA"
+        # protocol = "J1708"
+        # deviceID = 1
+        
 
-        try:
-            # The json file holding the last connection of the RP1210 device is
-            # a dictionary of dictionarys where the main keys are the client ids
-            # and the entries are a dictionary needed for the connections. 
-            # This enables us to connect 2 or more clients at once and remember.
-            with open("Last_RP1210_Connection.json","r") as rp1210_file:
-                file_contents = json.load(rp1210_file)
+        # try:
+        #     # The json file holding the last connection of the RP1210 device is
+        #     # a dictionary of dictionarys where the main keys are the client ids
+        #     # and the entries are a dictionary needed for the connections. 
+        #     # This enables us to connect 2 or more clients at once and remember.
+        #     with open("Last_RP1210_Connection.json","r") as rp1210_file:
+        #         file_contents = json.load(rp1210_file)
 
-            for clientID,rp1210_settings in file_contents.items():
-                dll_name = rp1210_settings["dll_name"]
-                protocol = rp1210_settings["protocol"]  
-                deviceID = rp1210_settings["deviceID"]
-                self.setupRP1210(dll_name,protocol,deviceID)
-        except Exception as e:
-            print(e)
-            SelectRP1210()
+        #     for clientID,rp1210_settings in file_contents.items():
+        #         dll_name = rp1210_settings["dll_name"]
+        #         protocol = rp1210_settings["protocol"]  
+        #         deviceID = rp1210_settings["deviceID"]
+        #         self.setupRP1210(dll_name,protocol,deviceID)
+        # except Exception as e:
+        #     print(e)
+        #     SelectRP1210()
 
         self.init_ui()
+        self.selectRP1210()
         
+
     def init_ui(self):
         #Builds GUI
 
@@ -257,17 +410,11 @@ class TUDiagnostics(QMainWindow):
 
         #RP1210 Menu Items
         rp1210_menu = menubar.addMenu('&RP1210')
-        connect_rp1210 = QAction(QIcon(r'png/bug-8x.png'), '&Connect', self)
+        connect_rp1210 = QAction(QIcon(r'icons/bug-8x.png'), '&Connect', self)
         connect_rp1210.setShortcut('Ctrl+R')
         connect_rp1210.setStatusTip('Connect Vehicle Diagnostic Adapter')
         connect_rp1210.triggered.connect(self.selectRP1210)
         rp1210_menu.addAction(connect_rp1210)
-
-        select_rp1210 = QAction(QIcon(r'png/globe-8x.png'), 'Confi&gure...', self)
-        select_rp1210.setShortcut('Ctrl+G')
-        select_rp1210.setStatusTip('Select RP1210 (VDA) Device')
-        select_rp1210.triggered.connect(self.selectRP1210)
-        rp1210_menu.addAction(select_rp1210)
 
         b1 = QWidget()
         self.version_button = QPushButton(b1)
@@ -335,7 +482,13 @@ class TUDiagnostics(QMainWindow):
         self.show()
     
     def selectRP1210(self):
-        print("Calling Select")
+        select_dialog = SelectRP1210()
+        self.RP1210 = RP1210()
+        print(select_dialog.dll_name)
+        print(select_dialog.protocol)
+        print(select_dialog.deviceID)
+        self.nClientID = self.RP1210.setup_RP1210(select_dialog.dll_name,select_dialog.protocol,select_dialog.deviceID)
+
         
 
     def get_j1939_vin(self):
@@ -438,13 +591,21 @@ class TUDiagnostics(QMainWindow):
                 #Assignment: Change this automatic resizer to a button.
             
     def display_version(self):
-        
+        if self.RP1210.ReadVersion is None:
+            print("RP1210_ReadVersion() is not supported.")
+            self.result1 = QMessageBox()
+            self.result1.setText("RP1210_ReadVersion() function is not supported.")
+            self.result1.setIcon(QMessageBox.Information)
+            self.result1.setWindowTitle('RP1210 Version Information')
+            self.result1.setStandardButtons(QMessageBox.Ok)
+            return
+
         chDLLMajorVersion    = (c_char)()
         chDLLMinorVersion    = (c_char)()
         chAPIMajorVersion    = (c_char)()
         chAPIMinorVersion    = (c_char)()
 
-        self.ReadVersion( byref( chDLLMajorVersion ), byref( chDLLMinorVersion ), byref( chAPIMajorVersion ), byref( chAPIMinorVersion  ) )
+        self.RP1210.ReadVersion( byref( chDLLMajorVersion ), byref( chDLLMinorVersion ), byref( chAPIMajorVersion ), byref( chAPIMinorVersion  ) )
 
         print('Successfully Read DLL and API Versions.')
         DLLMajor = chDLLMajorVersion.value.decode('ascii')
@@ -465,11 +626,19 @@ class TUDiagnostics(QMainWindow):
         self.result1.show()
 
     def display_detailed_version(self, result2):
-              
+        if self.RP1210.ReadDetailedVersion is None:
+            print("RP1210_ReadVersion() is not supported.")
+            self.result1 = QMessageBox()
+            self.result1.setText("RP1210_ReadDetailedVersion() function is not supported.")
+            self.result1.setIcon(QMessageBox.Information)
+            self.result1.setWindowTitle('RP1210 Detailed Version')
+            self.result1.setStandardButtons(QMessageBox.Ok)
+            self.result1.show()
+            return     
         chAPIVersionInfo    = (c_char*17)()
         chDLLVersionInfo    = (c_char*17)()
         chFWVersionInfo     = (c_char*17)()
-        nRetVal = self.ReadDetailedVersion( c_short( self.nClientID ), byref( chAPIVersionInfo ), byref( chDLLVersionInfo ), byref( chFWVersionInfo ) )
+        nRetVal = self.RP1210.ReadDetailedVersion( c_short( self.nClientID ), byref( chAPIVersionInfo ), byref( chDLLVersionInfo ), byref( chFWVersionInfo ) )
 
         self.result2 = QMessageBox()
         self.result2.setIcon(QMessageBox.Information)
