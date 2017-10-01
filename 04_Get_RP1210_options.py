@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QSizePolicy,
                              QGridLayout,
                              QGroupBox,
+                             QComboBox,
                              QAction,
                              QDockWidget,
                              QProgressDialog)
@@ -41,6 +42,7 @@ import time
 import collections 
 import sys
 import struct
+import json
 
 import configparser
 
@@ -76,93 +78,171 @@ class RP1210ReadMessageThread(threading.Thread):
             time.sleep(.0005)
         print("RP1210 Recieve Thread is finished.")
 
-
-class RP1210(QMainWindow):
-
+class RP1210():
+    """A class to access RP1210 libraries for different devices."""
     def __init__(self):
-        super().__init__()
+       pass
 
-        # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
-        # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
-        # box control
-        self.RP1210_config = configparser.ConfigParser()
-        self.dll_name="DGDPA5MA.DLL"
-        self.setupRP1210(protocol = "CAN")
-
-        
-
-        self.init_ui()
-                
-
-    def setupRP1210(self,protocol = "J1939:Channel=1",deviceID = 1):
-
+    def setup_RP1210(self,dll_name,protocol,deviceID):        
         #Load the Windows Device Library
-        RP1210DLL = windll.LoadLibrary( self.dll_name )
-                
+        print("Loading the {} file using the {} protocol for device {:d}".format(dll_name + ".dll", protocol, deviceID))
+        try:
+            RP1210DLL = windll.LoadLibrary(dll_name + ".dll")
+        except Exception as e:
+            print(e)
+            print("\nIf RP1210 DLL fails to load, please check to be sure you are using"
+                + "a 32-bit version of Python and you have the correct drivers for the VDA installed.")
+            return None
+
         # Define windows prototype functions:
-        # typedef short (WINAPI *fxRP1210_ClientConnect)       ( HWND, short, char *, long, long, short );
-        prototype                   = WINFUNCTYPE( c_short, HWND, c_short, c_char_p, c_long, c_long, c_short)
-        self.ClientConnect        = prototype( ( "RP1210_ClientConnect", RP1210DLL ) )
+        try:
+            prototype = WINFUNCTYPE(c_short, HWND, c_short, c_char_p, c_long, c_long, c_short)
+            self.ClientConnect = prototype(("RP1210_ClientConnect", RP1210DLL))
 
-        # typedef short (WINAPI *fxRP1210_ClientDisconnect)    ( short                                  );
-        prototype                   = WINFUNCTYPE( c_short, c_short )
-        self.ClientDisconnect     = prototype( ( "RP1210_ClientDisconnect", RP1210DLL ) )
+            prototype = WINFUNCTYPE(c_short, c_short)
+            self.ClientDisconnect = prototype(("RP1210_ClientDisconnect", RP1210DLL))
 
-        # typedef short (WINAPI *fxRP1210_SendMessage)         ( short, char*, short, short, short      );
-        prototype                   = WINFUNCTYPE( c_short, c_short,  POINTER( c_char*2000 ), c_short, c_short, c_short      )
-        self.SendMessage          = prototype( ("RP1210_SendMessage", RP1210DLL ) )
+            prototype = WINFUNCTYPE(c_short, c_short,  POINTER(c_char*2000), c_short, c_short, c_short)
+            self.SendMessage = prototype(("RP1210_SendMessage", RP1210DLL))
 
-        # typedef short (WINAPI *fxRP1210_ReadMessage)         ( short, char*, short, short             );
-        prototype                   = WINFUNCTYPE( c_short, c_short, POINTER( c_char*2000 ), c_short, c_short             )
-        self.ReadMessage          = prototype( ("RP1210_ReadMessage", RP1210DLL ) )
+            prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*2000), c_short, c_short)
+            self.ReadMessage = prototype(("RP1210_ReadMessage", RP1210DLL))
 
-        # typedef short (WINAPI *fxRP1210_SendCommand)         ( short, short, char*, short             );
-        prototype                   = WINFUNCTYPE( c_short, c_short, c_short, POINTER( c_char*2000 ), c_short             )
-        self.SendCommand          = prototype( ("RP1210_SendCommand", RP1210DLL ) )
+            prototype = WINFUNCTYPE(c_short, c_short, c_short, POINTER(c_char*2000), c_short)
+            self.SendCommand = prototype(("RP1210_SendCommand", RP1210DLL))
+        except Exception as e:
+            print(e)
+            print("\n Critical RP1210 functions were not able to be loaded. There is something wrong with the DLL file.")
+            return None
+        
+        try:
+            prototype = WINFUNCTYPE(c_short, c_char_p, c_char_p, c_char_p, c_char_p)
+            self.ReadVersion = prototype(("RP1210_ReadVersion", RP1210DLL))
+        except Exception as e:
+            print(e)
+        
+        try:
+            prototype = WINFUNCTYPE( c_short, c_short, POINTER(c_char*17), POINTER(c_char*17), POINTER(c_char*17) )
+            self.ReadDetailedVersion  = prototype( ("RP1210_ReadDetailedVersion", RP1210DLL ) )
+        except Exception as e:
+            print(e)
+            self.ReadDetailedVersion = None
 
-        # typedef short (WINAPI *fxRP1210_ReadVersion)         ( char*, char*, char*, char*             );
-        prototype                   = WINFUNCTYPE( c_short, c_char_p, c_char_p, c_char_p, c_char_p             )
-        self.ReadVersion          = prototype( ("RP1210_ReadVersion", RP1210DLL ) )
+        try:
+            prototype = WINFUNCTYPE( c_short, c_short, c_char_p, c_short, c_short             )
+            self.GetHardwareStatus = prototype( ("RP1210_GetHardwareStatus", RP1210DLL ) )
+        except Exception as e:
+            print(e)
+            self.GetHardwareStatus = None
 
-        # typedef short (WINAPI *fxRP1210_ReadDetailedVersion) ( short, char*, char*, char*             );
-        prototype                   = WINFUNCTYPE( c_short, c_short, POINTER(c_char*17), POINTER(c_char*17), POINTER(c_char*17) )
-        self.ReadDetailedVersion  = prototype( ("RP1210_ReadDetailedVersion", RP1210DLL ) )
+        try:
+            prototype = WINFUNCTYPE( c_short, c_short, c_char_p                           )
+            self.GetErrorMsg = prototype( ("RP1210_GetErrorMsg", RP1210DLL ) )
+        except Exception as e:
+            print(e)
+            self.GetErrorMsg = None
+        
+        try:
+            prototype = WINFUNCTYPE( c_short, c_void_p, c_char_p, c_short             )
+            self.GetLastErrorMsg = prototype( ("RP1210_GetLastErrorMsg", RP1210DLL ) )
+        except Exception as e:
+            print(e)
+            self.GetLastErrorMsg = None
+        
+        protocol_name = bytes(protocol,'ascii')
+        nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_name, 0, 0, 0  )
 
-        # typedef short (WINAPI *fxRP1210_GetHardwareStatus)   ( short, char*, short, short             );
-        prototype                   = WINFUNCTYPE( c_short, c_short, c_char_p, c_short, c_short             )
-        self.GetHardwareStatus    = prototype( ("RP1210_GetHardwareStatus", RP1210DLL ) )
-
-        # typedef short (WINAPI *fxRP1210_GetErrorMsg)         ( short, char*                           );
-        prototype                   = WINFUNCTYPE( c_short, c_short, c_char_p                           )
-        self.GetErrorMsg          = prototype( ("RP1210_GetErrorMsg", RP1210DLL ) )
-
-        # typedef short (WINAPI *fxRP1210_GetLastErrorMsg)     ( short, int *, char*, short             );
-        prototype                   = WINFUNCTYPE( c_short, c_void_p, c_char_p, c_short             )
-        self.GetLastErrorMsg      = prototype( ("RP1210_GetLastErrorMsg", RP1210DLL ) )
-
-        print( "Attempting connect to DLL [%s], DeviceID [%d]" %( self.dll_name, deviceID ) )
-
-        self.szProtocolName = bytes(protocol,'ascii')
-        self.nClientID = self.ClientConnect( HWND(None), c_short( deviceID ), self.szProtocolName, 0, 0, 0  )
-
-        print('The Client ID is: %i' %self.nClientID)
-
+        print("The Client ID is: {}".format(nClientID))
+        
+        if nClientID < 128:
+            file_contents = {nClientID:{"dll_name":dll_name, "protocol":protocol ,"deviceID":deviceID}}
+            with open("Last_RP1210_Connection.json","w") as rp1210_file:
+                json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
+        
         # Set all filters to pass.  This allows messages to be read.
         RP1210_Set_All_Filters_States_to_Pass = 3 
-        nRetVal = self.SendCommand( c_short( RP1210_Set_All_Filters_States_to_Pass ), c_short( self.nClientID ), None, 0 )
-
+        nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(nClientID), None, 0)
         if nRetVal == 0 :
            print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
         else :
-           print('RP1210_Set_All_Filters_States_to_Pass returns %i' %nRetVal )
+           print('RP1210_Set_All_Filters_States_to_Pass returns {:d}'.format(nRetVal))
+        
+        return nClientID
 
+
+class SelectRP1210(QWidget):
+    def __init__(self):
+        super(SelectRP1210,self).__init__()
+
+        self.setup_dialog()
+
+    def setup_dialog(self):
+        self.RP1210DLL_combo_box = QComboBox()
+        RP1210_config = configparser.ConfigParser()
+        RP1210_config.read("c:\\Windows\\RP121032.ini")
+        self.RP1210DLL_combo_box.addItems(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
+        self.RP1210DLL_combo_box.activated.connect(self.continue_parsing_inis)
+
+        idx = self.RP1210DLL_combo_box.currentIndex()
+        if idx >= 0: 
+            self.dll_name = self.RP1210DLL_combo_box.itemText(idx) + ".DLL"
+        print(self.dll_name)
+        
+        v_layout = QVBoxLayout()
+        v_layout.addWidget(self.RP1210DLL_combo_box)
+
+    def  fill_vendor(self):
+        pass
+    def fill_device(self,vendor):
+        pass
+    def fill_protocol(self,vendor,protocol):
+        pass    
+    def continue_parsing_inis(self):
+        print(self.dll_name[:-4])
+        dll_config = configparser.ConfigParser()
+        dll_config.read("C:/WINDOWS" + self.dll_name[:-4] + ".INI")
+        print(dll_config["VendorInformation"]["Name"])  
+
+
+class TUDiagnostics(QMainWindow):
+    def __init__(self):
+        super(TUDiagnostics,self).__init__()
+        # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
+        # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
+        # box control
+        dll_name = "DGDPA5MA"
+        protocol = "J1708"
+        deviceID = 1
+        self.RP1210 = RP1210()
+        J1708_client_ID = self.RP1210.setup_RP1210(dll_name,protocol,deviceID)
+        print(J1708_client_ID)
+
+        try:
+            # The json file holding the last connection of the RP1210 device is
+            # a dictionary of dictionarys where the main keys are the client ids
+            # and the entries are a dictionary needed for the connections. 
+            # This enables us to connect 2 or more clients at once and remember.
+            with open("Last_RP1210_Connection.json","r") as rp1210_file:
+                file_contents = json.load(rp1210_file)
+
+            for clientID,rp1210_settings in file_contents.items():
+                dll_name = rp1210_settings["dll_name"]
+                protocol = rp1210_settings["protocol"]  
+                deviceID = rp1210_settings["deviceID"]
+                self.setupRP1210(dll_name,protocol,deviceID)
+        except Exception as e:
+            print(e)
+            SelectRP1210()
+
+        self.init_ui()
+        
     def init_ui(self):
         #Builds GUI
 
         self.setGeometry(200,200,500,500)
 
         #Start with a status bar
-        self.statusBar().showMessage(self.dll_name)
+        self.statusBar().showMessage("Welcome!")
         
         #Build common menu options
         menubar = self.menuBar()
@@ -172,8 +252,22 @@ class RP1210(QMainWindow):
         open_file = QAction(QIcon(r'icons8_Open_48px_1.png'), '&Open', self)
         open_file.setShortcut('Ctrl+O')
         open_file.setStatusTip('Open new File')
-        open_file.triggered.connect(self.open_data)
+        open_file.triggered.connect(self.open_file)
         file_menu.addAction(open_file)
+
+        #RP1210 Menu Items
+        rp1210_menu = menubar.addMenu('&RP1210')
+        connect_rp1210 = QAction(QIcon(r'png/bug-8x.png'), '&Connect', self)
+        connect_rp1210.setShortcut('Ctrl+R')
+        connect_rp1210.setStatusTip('Connect Vehicle Diagnostic Adapter')
+        connect_rp1210.triggered.connect(self.selectRP1210)
+        rp1210_menu.addAction(connect_rp1210)
+
+        select_rp1210 = QAction(QIcon(r'png/globe-8x.png'), 'Confi&gure...', self)
+        select_rp1210.setShortcut('Ctrl+G')
+        select_rp1210.setStatusTip('Select RP1210 (VDA) Device')
+        select_rp1210.triggered.connect(self.selectRP1210)
+        rp1210_menu.addAction(select_rp1210)
 
         b1 = QWidget()
         self.version_button = QPushButton(b1)
@@ -189,13 +283,14 @@ class RP1210(QMainWindow):
         self.get_vin_button = QPushButton(b3)
         self.get_vin_button.setText('Request VIN on J1939')        
         self.get_vin_button.clicked.connect(self.get_j1939_vin)
-      
+        
+        
         #setup a Receive queue
-        self.rx_queue = queue.Queue()
-        self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.ReadMessage,self.nClientID)
-        self.read_message_thread.setDaemon(True)
-        self.read_message_thread.start()
-        print("Started RP1210ReadMessage Thread.")
+        #self.rx_queue = queue.Queue()
+        #self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.ReadMessage,self.nClientID)
+        #self.read_message_thread.setDaemon(True)
+        #self.read_message_thread.start()
+        #print("Started RP1210ReadMessage Thread.")
         
         self.scroll_CAN_message_button =  QCheckBox("Auto Scroll Message Window")   
 
@@ -218,29 +313,31 @@ class RP1210(QMainWindow):
         self.max_message_table = 10000
         self.message_table_ids=collections.deque(maxlen=self.max_message_table)
         
-        table_timer = QTimer(self)
-        table_timer.timeout.connect(self.fill_table)
-        table_timer.start(20) 
-        self.fill_table()
+        #table_timer = QTimer(self)
+        #table_timer.timeout.connect(self.fill_table)
+        #table_timer.start(20) 
+        #self.fill_table()
 
-        
-        #Define where the widgets go in the window        
         v_layout = QVBoxLayout()
+        #Define where the widgets go in the window        
         
         v_layout.addWidget(self.version_button)
         v_layout.addWidget(self.detailed_version_button)
         v_layout.addWidget(self.get_vin_button)
         v_layout.addWidget(self.scroll_CAN_message_button)
         v_layout.addWidget(self.received_CAN_message_table)
-
-        self.setLayout(v_layout)
+        
 
         main_widget = QWidget()
         main_widget.setLayout(v_layout)
         self.setCentralWidget(main_widget)
         self.setWindowTitle('RP1210 Interface')
         self.show()
+    
+    def selectRP1210(self):
+        print("Calling Select")
         
+
     def get_j1939_vin(self):
         print("This is a function call")
         pgn = 65260
@@ -268,8 +365,10 @@ class RP1210(QMainWindow):
                                         byref( ucTxRxBuffer ),
                                         c_short( 8 ), 0, 0)
         print("return value: {}".format(return_value))
-    def open_data(self):
-        print("Open Data")    
+    def open_file(self):
+        print("Open Data")  
+
+    
     def fill_table(self):
 
         while self.rx_queue.qsize():
@@ -393,7 +492,7 @@ class RP1210(QMainWindow):
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
-    execute = RP1210()
+    execute = TUDiagnostics()
     sys.exit(app.exec_())
     print(execute.ClientDisconnect())
 
