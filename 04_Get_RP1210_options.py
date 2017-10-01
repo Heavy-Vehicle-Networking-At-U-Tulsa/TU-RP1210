@@ -161,16 +161,17 @@ class RP1210():
             with open("Last_RP1210_Connection.json","w") as rp1210_file:
                 json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
         
-        # Set all filters to pass.  This allows messages to be read.
-        RP1210_Set_All_Filters_States_to_Pass = 3 
-        nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(nClientID), None, 0)
-        if nRetVal == 0 :
-           print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
-        else :
-           print('RP1210_Set_All_Filters_States_to_Pass returns {:d}'.format(nRetVal))
+             # Set all filters to pass.  This allows messages to be read.
+            RP1210_Set_All_Filters_States_to_Pass = 3 
+            nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(nClientID), None, 0)
+            if nRetVal == 0 :
+                print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
+            else :
+                print('RP1210_Set_All_Filters_States_to_Pass returns {:d}'.format(nRetVal))
+       
         
         return nClientID
-
+        
 
 class SelectRP1210(QDialog):
     def __init__(self):
@@ -387,7 +388,16 @@ class TUDiagnostics(QMainWindow):
 
         self.init_ui()
         self.selectRP1210()
-        
+        while self.nClientID > 127:
+            question_text ="The Client ID is: {}.\nDo you want to try again?".format(self.nClientID)
+            reply = QMessageBox.question(self, 
+                                                "Connection Issue",
+                                                question_text,
+                                                QMessageBox.Yes, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.selectRP1210()
+            else:
+                break
 
     def init_ui(self):
         #Builds GUI
