@@ -80,12 +80,9 @@ class RP1210ReadMessageThread(threading.Thread):
             time.sleep(.0005)
         print("RP1210 Recieve Thread is finished.")
 
-class RP1210():
+class RP1210Class():
     """A class to access RP1210 libraries for different devices."""
-    def __init__(self):
-       pass
-
-    def setup_RP1210(self,dll_name,protocol,deviceID):        
+    def __init__(self,dll_name,protocol,deviceID):        
         #Load the Windows Device Library
         print("Loading the {} file using the {} protocol for device {:d}".format(dll_name + ".dll", protocol, deviceID))
         try:
@@ -152,26 +149,23 @@ class RP1210():
             self.GetLastErrorMsg = None
         
         protocol_name = bytes(protocol,'ascii')
-        nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_name, 0, 0, 0  )
+        self.nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_name, 0, 0, 0  )
 
-        print("The Client ID is: {}".format(nClientID))
+        print("The Client ID is: {}".format(self.nClientID))
         
-        if nClientID < 128:
-            file_contents = {nClientID:{"dll_name":dll_name, "protocol":protocol ,"deviceID":deviceID}}
+        if self.nClientID < 128:
+            file_contents = {self.nClientID:{"dll_name":dll_name, "protocol":protocol ,"deviceID":deviceID}}
             with open("Last_RP1210_Connection.json","w") as rp1210_file:
                 json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
         
              # Set all filters to pass.  This allows messages to be read.
             RP1210_Set_All_Filters_States_to_Pass = 3 
-            nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(nClientID), None, 0)
+            nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(self.nClientID), None, 0)
             if nRetVal == 0 :
                 print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
             else :
                 print('RP1210_Set_All_Filters_States_to_Pass returns {:d}'.format(nRetVal))
-       
-        
-        return nClientID
-        
+    
 
 class SelectRP1210(QDialog):
     def __init__(self):
@@ -351,7 +345,9 @@ class SelectRP1210(QDialog):
         self.dll_name = self.vendor_combo_box.itemText(vendor_index).split("-")[0].strip()
         self.deviceID = int(self.device_combo_box.itemText(device_index).split(":")[0].strip())
         self.protocol = self.protocol_combo_box.itemText(protocol_index).split(":")[0].strip()
-        
+        file_contents={"dll_name":self.dll_name,"protocol":self.deviceID,"deviceID":self.protocol}
+        with open("Last_RP1210_Connection.json","w") as rp1210_file:
+                 json.dump(file_contents,rp1210_file)
     
     def reject_RP1210(self):
         self.dll_name = None
@@ -361,43 +357,11 @@ class SelectRP1210(QDialog):
 class TUDiagnostics(QMainWindow):
     def __init__(self):
         super(TUDiagnostics,self).__init__()
-        # Upon startup, open the vendor specific library. This DLL is named in the c:\Windows\RP1210.ini file
-        # TODO: let the user select the RP1210 device after parsing the RP1210 options. Change this to a dialog
-        # box control
-        # dll_name = "DGDPA5MA"
-        # protocol = "J1708"
-        # deviceID = 1
-        
-
-        # try:
-        #     # The json file holding the last connection of the RP1210 device is
-        #     # a dictionary of dictionarys where the main keys are the client ids
-        #     # and the entries are a dictionary needed for the connections. 
-        #     # This enables us to connect 2 or more clients at once and remember.
-        #     with open("Last_RP1210_Connection.json","r") as rp1210_file:
-        #         file_contents = json.load(rp1210_file)
-
-        #     for clientID,rp1210_settings in file_contents.items():
-        #         dll_name = rp1210_settings["dll_name"]
-        #         protocol = rp1210_settings["protocol"]  
-        #         deviceID = rp1210_settings["deviceID"]
-        #         self.setupRP1210(dll_name,protocol,deviceID)
-        # except Exception as e:
-        #     print(e)
-        #     SelectRP1210()
 
         self.init_ui()
-        self.selectRP1210()
-        while self.nClientID > 127:
-            question_text ="The Client ID is: {}.\nDo you want to try again?".format(self.nClientID)
-            reply = QMessageBox.question(self, 
-                                                "Connection Issue",
-                                                question_text,
-                                                QMessageBox.Yes, QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.selectRP1210()
-            else:
-                break
+        self.selectRP1210(automatic=True)
+        
+        
 
     def init_ui(self):
         #Builds GUI
@@ -426,28 +390,14 @@ class TUDiagnostics(QMainWindow):
         connect_rp1210.triggered.connect(self.selectRP1210)
         rp1210_menu.addAction(connect_rp1210)
 
-        b1 = QWidget()
-        self.version_button = QPushButton(b1)
-        self.version_button.setText('Display Version')
-        self.version_button.clicked.connect(self.display_version)
+        version_button = QPushButton('Display Version')
+        version_button.clicked.connect(self.display_version)
         
-        b2 = QWidget()
-        self.detailed_version_button = QPushButton(b2)
-        self.detailed_version_button.setText('Get Detailed Version')        
-        self.detailed_version_button.clicked.connect(self.display_detailed_version)
+        detailed_version_button = QPushButton('Get Detailed Version')        
+        detailed_version_button.clicked.connect(self.display_detailed_version)
      
-        b3 = QWidget()
-        self.get_vin_button = QPushButton(b3)
-        self.get_vin_button.setText('Request VIN on J1939')        
-        self.get_vin_button.clicked.connect(self.get_j1939_vin)
-        
-        
-        #setup a Receive queue
-        #self.rx_queue = queue.Queue()
-        #self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.ReadMessage,self.nClientID)
-        #self.read_message_thread.setDaemon(True)
-        #self.read_message_thread.start()
-        #print("Started RP1210ReadMessage Thread.")
+        get_vin_button = QPushButton('Request VIN on J1939')        
+        get_vin_button.clicked.connect(self.get_j1939_vin)
         
         self.scroll_CAN_message_button =  QCheckBox("Auto Scroll Message Window")   
 
@@ -470,17 +420,15 @@ class TUDiagnostics(QMainWindow):
         self.max_message_table = 10000
         self.message_table_ids=collections.deque(maxlen=self.max_message_table)
         
-        #table_timer = QTimer(self)
-        #table_timer.timeout.connect(self.fill_table)
-        #table_timer.start(20) 
+        
         #self.fill_table()
 
         v_layout = QVBoxLayout()
         #Define where the widgets go in the window        
         
-        v_layout.addWidget(self.version_button)
-        v_layout.addWidget(self.detailed_version_button)
-        v_layout.addWidget(self.get_vin_button)
+        v_layout.addWidget(version_button)
+        v_layout.addWidget(detailed_version_button)
+        v_layout.addWidget(get_vin_button)
         v_layout.addWidget(self.scroll_CAN_message_button)
         v_layout.addWidget(self.received_CAN_message_table)
         
@@ -491,15 +439,61 @@ class TUDiagnostics(QMainWindow):
         self.setWindowTitle('RP1210 Interface')
         self.show()
     
-    def selectRP1210(self):
-        select_dialog = SelectRP1210()
-        self.RP1210 = RP1210()
-        print(select_dialog.dll_name)
-        print(select_dialog.protocol)
-        print(select_dialog.deviceID)
-        self.nClientID = self.RP1210.setup_RP1210(select_dialog.dll_name,select_dialog.protocol,select_dialog.deviceID)
+    def selectRP1210(self,automatic=False):
+        if automatic:
+            try:
+                # The json file holding the last connection of the RP1210 device is
+                # a dictionary of dictionarys where the main keys are the client ids
+                # and the entries are a dictionary needed for the connections. 
+                # This enables us to connect 2 or more clients at once and remember.
+                with open("Last_RP1210_Connection.json","r") as rp1210_file:
+                    file_contents = json.load(rp1210_file)
+                for clientID,select_dialog in file_contents.items():
+                    dll_name = select_dialog["dll_name"]
+                    protocol = select_dialog["protocol"]
+                    deviceID = select_dialog["deviceID"]
+                    self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
+                    
+            except Exception as e:
+                print(e)
+                selection = SelectRP1210()
+                dll_name = selection.dll_name
+                protocol = selection.protocol
+                deviceID = selection.deviceID
+                self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
+
+        else:
+            selection = SelectRP1210()
+            dll_name = selection.dll_name
+            protocol = selection.protocol
+            deviceID = selection.deviceID
+            self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
 
         
+        self.statusBar().showMessage("Connected to {}".format(dll_name))
+        self.nClientID = self.RP1210.nClientID
+
+        while self.nClientID > 127:
+            question_text ="The Client ID is: {}.\nDo you want to try again?".format(self.nClientID)
+            reply = QMessageBox.question(self, "Connection Issue",
+                                                question_text,
+                                                QMessageBox.Yes, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.selectRP1210()
+            else:
+                return
+
+        if self.nClientID < 128:
+        #setup a Receive queue
+            self.rx_queue = queue.Queue()
+            self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.RP1210.ReadMessage,self.nClientID)
+            self.read_message_thread.setDaemon(True)
+            self.read_message_thread.start()
+            print("Started RP1210ReadMessage Thread.")
+            self.statusBar().showMessage("Connected to {}".format(dll_name))
+            table_timer = QTimer(self)
+            table_timer.timeout.connect(self.fill_table)
+            table_timer.start(20) 
 
     def get_j1939_vin(self):
         print("This is a function call")
@@ -524,10 +518,12 @@ class TUDiagnostics(QMainWindow):
         ucTxRxBuffer[7]=b2
         
             
-        return_value = self.SendMessage(c_short( self.nClientID ),
+        return_value = self.RP1210.SendMessage(c_short( self.nClientID ),
                                         byref( ucTxRxBuffer ),
                                         c_short( 8 ), 0, 0)
         print("return value: {}".format(return_value))
+    
+
     def open_file(self):
         print("Open Data")  
 
@@ -635,7 +631,7 @@ class TUDiagnostics(QMainWindow):
 
         self.result1.show()
 
-    def display_detailed_version(self, result2):
+    def display_detailed_version(self):
         if self.RP1210.ReadDetailedVersion is None:
             print("RP1210_ReadVersion() is not supported.")
             self.result1 = QMessageBox()
@@ -648,7 +644,10 @@ class TUDiagnostics(QMainWindow):
         chAPIVersionInfo    = (c_char*17)()
         chDLLVersionInfo    = (c_char*17)()
         chFWVersionInfo     = (c_char*17)()
-        nRetVal = self.RP1210.ReadDetailedVersion( c_short( self.nClientID ), byref( chAPIVersionInfo ), byref( chDLLVersionInfo ), byref( chFWVersionInfo ) )
+        nRetVal = self.RP1210.ReadDetailedVersion(c_short(self.nClientID), 
+                                                    byref(chAPIVersionInfo),
+                                                    byref(chDLLVersionInfo), 
+                                                    byref( chFWVersionInfo ) )
 
         self.result2 = QMessageBox()
         self.result2.setIcon(QMessageBox.Information)
@@ -667,11 +666,15 @@ class TUDiagnostics(QMainWindow):
            self.result2.setText('RP1210 Detailed Version Information:\nERROR %i' %nRetVal)
            
         self.result2.show()
-            
-if __name__ == '__main__':
+    def closeEvent(self, *args, **kwargs):
+        for n in range(self.nClientID):
+            print("Exiting. RP1210_ClientDisconnect Returns", end=' ')
+            print(self.RP1210.ClientDisconnect(n))
 
+def applicatin_execute():
     app = QApplication(sys.argv)
     execute = TUDiagnostics()
-    sys.exit(app.exec_())
-    print(execute.ClientDisconnect())
+    app.exec_()
 
+if __name__ == '__main__':
+    sys.exit(applicatin_execute())
