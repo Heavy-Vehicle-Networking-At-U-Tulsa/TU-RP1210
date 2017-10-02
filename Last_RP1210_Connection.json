@@ -1,0 +1,7 @@
+{
+    "1": {
+        "deviceID": 1,
+        "dll_name": "DPA4PMA",
+        "protocol": "CAN"
+    }
+}
