@@ -1,7 +1,7 @@
 {
-    "3": {
+    "1": {
         "deviceID": 1,
         "dll_name": "DPA4PMA",
-        "protocol": "J1708"
+        "protocol": "CAN"
     }
 }

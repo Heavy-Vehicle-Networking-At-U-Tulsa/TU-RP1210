@@ -48,6 +48,8 @@ import json
 
 import configparser
 
+from RP1210Constants import *
+
 class RP1210ReadMessageThread(threading.Thread):
     '''This thread is designed to recieve messages from the vehicle diagnostic adapter (VDA) and put the
     data into a queue. The class arguments are as follows:
@@ -65,8 +67,6 @@ class RP1210ReadMessageThread(threading.Thread):
 
     def run(self):
         ucTxRxBuffer = (c_char*2000)()
-        NON_BLOCKING_IO = 0
-        BLOCKING_IO = 1
         
         #display a valid connection upon start.
         print("Read Message Client ID: {}".format(self.nClientID))
@@ -152,27 +152,12 @@ class RP1210Class():
         self.nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_name, 0, 0, 0  )
 
         print("The Client ID is: {}".format(self.nClientID))
-        
-        if self.nClientID < 128:
-            file_contents = {self.nClientID:{"dll_name":dll_name, "protocol":protocol ,"deviceID":deviceID}}
-            with open("Last_RP1210_Connection.json","w") as rp1210_file:
-                json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
-        
-             # Set all filters to pass.  This allows messages to be read.
-            RP1210_Set_All_Filters_States_to_Pass = 3 
-            nRetVal = self.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(self.nClientID), None, 0)
-            if nRetVal == 0 :
-                print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS" )
-            else :
-                print('RP1210_Set_All_Filters_States_to_Pass returns {:d}'.format(nRetVal))
-    
 
 class SelectRP1210(QDialog):
     def __init__(self):
         super(SelectRP1210,self).__init__()
         RP1210_config = configparser.ConfigParser()
         RP1210_config.read("c:/Windows/RP121032.ini")
-        #self.setGeometry(800,800,100,100)
         self.apis = sorted(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
         self.current_api_index = 0
         print("Current RP1210 APIs installed are: " + ", ".join(self.apis))
@@ -357,7 +342,7 @@ class SelectRP1210(QDialog):
 class TUDiagnostics(QMainWindow):
     def __init__(self):
         super(TUDiagnostics,self).__init__()
-
+        self.setGeometry(200,200,700,500)
         self.init_ui()
         self.selectRP1210(automatic=True)
         
@@ -366,7 +351,7 @@ class TUDiagnostics(QMainWindow):
     def init_ui(self):
         #Builds GUI
 
-        self.setGeometry(200,200,500,500)
+        
 
         #Start with a status bar
         self.statusBar().showMessage("Welcome!")
@@ -474,7 +459,8 @@ class TUDiagnostics(QMainWindow):
         self.nClientID = self.RP1210.nClientID
 
         while self.nClientID > 127:
-            question_text ="The Client ID is: {}.\nDo you want to try again?".format(self.nClientID)
+            question_text = "The Client ID is: {}: {}.\nDo you want to try again?".format(self.nClientID,
+                                                                                          RP1210Errors[self.nClientID])
             reply = QMessageBox.question(self, "Connection Issue",
                                                 question_text,
                                                 QMessageBox.Yes, QMessageBox.No)
@@ -483,20 +469,41 @@ class TUDiagnostics(QMainWindow):
             else:
                 return
 
-        if self.nClientID < 128:
-        #setup a Receive queue
+        if self.nClientID < 128: 
+            file_contents = {self.nClientID:{"dll_name":dll_name,
+                                             "protocol":protocol,
+                                             "deviceID":deviceID}
+                                            }
+            with open("Last_RP1210_Connection.json","w") as rp1210_file:
+                json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
+        
+            # Set all filters to pass.  This allows messages to be read.
+            # Constants are defined in an included file
+            nRetVal = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(self.nClientID), None, 0)
+            if nRetVal == 0:
+                print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS")
+            else :
+                print('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(nRetVal,RP1210Errors[nRetVal]))
+                return
+
+            #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
             self.rx_queue = queue.Queue()
             self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.RP1210.ReadMessage,self.nClientID)
-            self.read_message_thread.setDaemon(True)
+            self.read_message_thread.setDaemon(True) #needed to close the thread when the application closes.
             self.read_message_thread.start()
             print("Started RP1210ReadMessage Thread.")
-            self.statusBar().showMessage("Connected to {}".format(dll_name))
+            
+            self.statusBar().showMessage("{} connected using {}".format(protocol,dll_name))
+            
+            #set up an event timer to fill a table of received messages
             table_timer = QTimer(self)
             table_timer.timeout.connect(self.fill_table)
-            table_timer.start(20) 
+            table_timer.start(20)
+        else:
+            print("The Client ID is: {}: {}.format(self.nClientID,RP1210Errors[self.nClientID])")
 
     def get_j1939_vin(self):
-        print("This is a function call")
+        """An Example of requesting a VIN over J1939"""
         pgn = 65260
         print("PGN: {:X}".format(pgn))
         b0 = pgn & 0xff
@@ -506,9 +513,10 @@ class TUDiagnostics(QMainWindow):
         dlc = 3
         b2 = 0 #(pgn & 0xff0000) >> 16
 
+        #initialize the buffer
         ucTxRxBuffer = (c_char*2000)()
         
-        ucTxRxBuffer[0]=0x01 #Message type is exetended per RP1210
+        ucTxRxBuffer[0]=0x01 #Message type is extended per RP1210
         ucTxRxBuffer[1]=0x18 #Priority 6
         ucTxRxBuffer[2]=0xEA #Request PGN
         ucTxRxBuffer[3]=0x00 #Destination address of Engine
@@ -517,11 +525,12 @@ class TUDiagnostics(QMainWindow):
         ucTxRxBuffer[6]=b1
         ucTxRxBuffer[7]=b2
         
+        msg_len = 8
             
         return_value = self.RP1210.SendMessage(c_short( self.nClientID ),
                                         byref( ucTxRxBuffer ),
-                                        c_short( 8 ), 0, 0)
-        print("return value: {}".format(return_value))
+                                        c_short( msg_len ), 0, 0)
+        print("return value: {}: {}".format(return_value,RP1210Errors[return_value]))
     
 
     def open_file(self):
@@ -529,14 +538,11 @@ class TUDiagnostics(QMainWindow):
 
     
     def fill_table(self):
-
+        #check to see if something is in the queue
         while self.rx_queue.qsize():
             
             #Get a message from the queue. These are raw bytes
             rxmessage = self.rx_queue.get()
-            
-            #Print received message to the console for debugging
-            
             
             if self.scroll_CAN_message_button.isChecked():
                 self.received_CAN_message_table.scrollToBottom()
@@ -547,12 +553,12 @@ class TUDiagnostics(QMainWindow):
             self.received_CAN_message_count += 1
             timestamp = time.time() #PC Time
             vda_timestamp = struct.unpack(">L",rxmessage[0:4])[0] # Vehicle Diagnostic Adapter Timestamp 
-            extended = rxmessage[0:4]
+            extended = rxmessage[4]
             if extended:
                 can_id = struct.unpack(">L",rxmessage[5:9])[0]
                 databytes = rxmessage[9:]
             else:
-                can_id = struct.unpack(">L",rxmessage[5:7])[0]
+                can_id = struct.unpack(">H",rxmessage[5:7])[0]
                 databytes = rxmessage[7:]
             dlc = len(databytes)
             
@@ -566,28 +572,27 @@ class TUDiagnostics(QMainWindow):
             #Insert a new row:
             row_count = self.received_CAN_message_table.rowCount()
             self.received_CAN_message_table.insertRow(row_count)
-            last_row = row_count
             
             #Populate the row with data
-            self.received_CAN_message_table.setItem(last_row,0,
+            self.received_CAN_message_table.setItem(row_count,0,
                  QTableWidgetItem("{}".format(self.received_CAN_message_count)))
             
-            self.received_CAN_message_table.setItem(last_row,1,
+            self.received_CAN_message_table.setItem(row_count,1,
                  QTableWidgetItem("{:0.6f}".format(timestamp)))
             
-            self.received_CAN_message_table.setItem(last_row,2,
+            self.received_CAN_message_table.setItem(row_count,2,
                  QTableWidgetItem("{:0.3f}".format(vda_timestamp* 0.001))) #Figure out what the multiplier is for the time stamp
             
-            self.received_CAN_message_table.setItem(last_row,3,
+            self.received_CAN_message_table.setItem(row_count,3,
                  QTableWidgetItem("{:08X}".format(can_id)))
             #Assignment: Make the ID format conditional on 29 or 11 bit IDs
             
-            self.received_CAN_message_table.setItem(last_row,4,
+            self.received_CAN_message_table.setItem(row_count,4,
                  QTableWidgetItem("{}".format(dlc)))
             
             col=5
             for b in databytes:
-                self.received_CAN_message_table.setItem(last_row,col,
+                self.received_CAN_message_table.setItem(row_count,col,
                     QTableWidgetItem("{:02X}".format(b)))
                 col+=1
 
@@ -599,11 +604,12 @@ class TUDiagnostics(QMainWindow):
     def display_version(self):
         if self.RP1210.ReadVersion is None:
             print("RP1210_ReadVersion() is not supported.")
-            self.result1 = QMessageBox()
-            self.result1.setText("RP1210_ReadVersion() function is not supported.")
-            self.result1.setIcon(QMessageBox.Information)
-            self.result1.setWindowTitle('RP1210 Version Information')
-            self.result1.setStandardButtons(QMessageBox.Ok)
+            message_window = QMessageBox()
+            message_window.setText("RP1210_ReadVersion() function is not supported.")
+            message_window.setIcon(QMessageBox.Information)
+            message_window.setWindowTitle('RP1210 Version Information')
+            message_window.setStandardButtons(QMessageBox.Ok)
+            message_window.show()
             return
 
         chDLLMajorVersion    = (c_char)()
@@ -623,24 +629,25 @@ class TUDiagnostics(QMainWindow):
         print("API Major Version: {}".format(APIMajor))
         print("API Minor Version: {}".format(APIMinor))
 
-        self.result1 = QMessageBox()
-        self.result1.setText('Driver software versions are as follows:\nDLL Major Version: %r' %DLLMajor + '\nDLL Minor Version: %r' %DLLMinor + '\nAPI Major Version: %r' %APIMajor + '\nAPI Minor Version: %r' %APIMinor)
-        self.result1.setIcon(QMessageBox.Information)
-        self.result1.setWindowTitle('RP1210 Version Information')
-        self.result1.setStandardButtons(QMessageBox.Ok)
+        message_window = QMessageBox()
+        message_window.setText('Driver software versions are as follows:\nDLL Major Version: %r' %DLLMajor + '\nDLL Minor Version: %r' %DLLMinor + '\nAPI Major Version: %r' %APIMajor + '\nAPI Minor Version: %r' %APIMinor)
+        message_window.setIcon(QMessageBox.Information)
+        message_window.setWindowTitle('RP1210 Version Information')
+        message_window.setStandardButtons(QMessageBox.Ok)
 
-        self.result1.show()
+        message_window.exec_()
 
     def display_detailed_version(self):
         if self.RP1210.ReadDetailedVersion is None:
             print("RP1210_ReadVersion() is not supported.")
-            self.result1 = QMessageBox()
-            self.result1.setText("RP1210_ReadDetailedVersion() function is not supported.")
-            self.result1.setIcon(QMessageBox.Information)
-            self.result1.setWindowTitle('RP1210 Detailed Version')
-            self.result1.setStandardButtons(QMessageBox.Ok)
-            self.result1.show()
-            return     
+            result1 = QMessageBox()
+            result1.setText("RP1210_ReadDetailedVersion() function is not supported.")
+            result1.setIcon(QMessageBox.Information)
+            result1.setWindowTitle('RP1210 Detailed Version')
+            result1.setStandardButtons(QMessageBox.Ok)
+            result1.show()
+            return
+
         chAPIVersionInfo    = (c_char*17)()
         chDLLVersionInfo    = (c_char*17)()
         chFWVersionInfo     = (c_char*17)()
@@ -649,32 +656,29 @@ class TUDiagnostics(QMainWindow):
                                                     byref(chDLLVersionInfo), 
                                                     byref( chFWVersionInfo ) )
 
-        self.result2 = QMessageBox()
-        self.result2.setIcon(QMessageBox.Information)
-        self.result2.setWindowTitle('RP1210 Detailed Version Information')
-        self.result2.setStandardButtons(QMessageBox.Ok)
+        result2 = QMessageBox()
+        result2.setIcon(QMessageBox.Information)
+        result2.setWindowTitle('RP1210 Detailed Version Information')
+        result2.setStandardButtons(QMessageBox.Ok)
         
         if nRetVal == 0 :
            print('Congratulations! You have connected to a VDA! No need to check your USB connection.')
            DLL = chDLLVersionInfo.value
            API = chAPIVersionInfo.value
            FW = chAPIVersionInfo.value
-           self.result2.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
+           result2.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
                        
         else :   
-           print("ReadDetailedVersion fails with a return value of  %i" %nRetVal )
-           self.result2.setText('RP1210 Detailed Version Information:\nERROR %i' %nRetVal)
+           print("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
+           result2.setText("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
            
-        self.result2.show()
+        result2.exec_()
     def closeEvent(self, *args, **kwargs):
         for n in range(self.nClientID):
-            print("Exiting. RP1210_ClientDisconnect Returns", end=' ')
-            print(self.RP1210.ClientDisconnect(n))
-
-def applicatin_execute():
-    app = QApplication(sys.argv)
-    execute = TUDiagnostics()
-    app.exec_()
+            nRetVal = self.RP1210.ClientDisconnect(n)
+            print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
 
 if __name__ == '__main__':
-    sys.exit(applicatin_execute())
+    app = QApplication(sys.argv)
+    execute = TUDiagnostics()
+    sys.exit(app.exec_())
