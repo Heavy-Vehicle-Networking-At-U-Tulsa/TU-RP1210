@@ -72,11 +72,11 @@ class RP1210ReadMessageThread(threading.Thread):
         print("Read Message Client ID: {}".format(self.nClientID))
         
         while self.runSignal:
-            nRetVal = self.RP1210_ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ),
+            return_value = self.RP1210_ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ),
                                         c_short( 2000 ), c_short( BLOCKING_IO ) )
-            if nRetVal > 0:
-                self.rx_queue.put(ucTxRxBuffer[:nRetVal])
-                #print(ucTxRxBuffer[:nRetVal])
+            if return_value > 0:
+                self.rx_queue.put(ucTxRxBuffer[:return_value])
+                #print(ucTxRxBuffer[:return_value])
             time.sleep(.0005)
         print("RP1210 Recieve Thread is finished.")
 
@@ -220,7 +220,6 @@ class SelectRP1210(QDialog):
 
     def fill_vendor(self):
         self.vendor_combo_box.clear()
-        vendor_combo_box_entries = []
         self.vendor_configs = {} 
         for api_string in self.apis:
             self.vendor_configs[api_string] = configparser.ConfigParser()
@@ -232,21 +231,24 @@ class SelectRP1210(QDialog):
                 vendor_name = self.vendor_configs[api_string]['VendorInformation']['name']
                 #print(vendor_name)
                 if vendor_name is not None:
-                    vendor_combo_box_entries.append("{:8} - {}".format(api_string,vendor_name))
+                    vendor_combo_box_entry = "{:8} - {}".format(api_string,vendor_name)
+                    if len(vendor_combo_box_entry) > 0:
+                        self.vendor_combo_box.addItem(vendor_combo_box_entry)
                 else:
                     self.apis.remove(api_string) #remove faulty/corrupt api_string   
             except Exception as e:
                 print(e)
                 self.apis.remove(api_string) #remove faulty/corrupt api_string 
-
-        self.vendor_combo_box.addItems(vendor_combo_box_entries)
         try:
             self.vendor_combo_box.setCurrentIndex(int(self.selection_index[0]))
         except:
             pass
 
-        self.fill_device()
-    
+        if self.vendor_combo_box.count() > 0:
+            self.fill_device()
+        else:
+            print("There are no entries in the RP1210 Vendor's ComboBox.")
+
     def fill_device(self):
         idx = self.vendor_combo_box.currentIndex()
         self.api_string = self.vendor_combo_box.itemText(idx).split("-")[0].strip()
@@ -279,7 +281,8 @@ class SelectRP1210(QDialog):
                 except KeyError:
                     device_name = "Device name not provided"
                 device_combo_box_entry = "{}: {}, {}".format(device_id,device_name,device_description)
-                self.device_combo_box.addItem(device_combo_box_entry)
+                if len(device_combo_box_entry) > 0:
+                    self.device_combo_box.addItem(device_combo_box_entry)
         try:
             self.device_combo_box.setCurrentIndex(int(self.selection_index[1]))
         except:
@@ -455,12 +458,11 @@ class TUDiagnostics(QMainWindow):
             self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
 
         
-        self.statusBar().showMessage("Connected to {}".format(dll_name))
-        self.nClientID = self.RP1210.nClientID
+        nClientID = self.RP1210.nClientID
 
-        while self.nClientID > 127:
-            question_text = "The Client ID is: {}: {}.\nDo you want to try again?".format(self.nClientID,
-                                                                                          RP1210Errors[self.nClientID])
+        while nClientID > 127 and nClientID is not None:
+            question_text = "The Client ID is: {}: {}.\nDo you want to try again?".format(nClientID,
+                                                                                          RP1210Errors[nClientID])
             reply = QMessageBox.question(self, "Connection Issue",
                                                 question_text,
                                                 QMessageBox.Yes, QMessageBox.No)
@@ -469,8 +471,8 @@ class TUDiagnostics(QMainWindow):
             else:
                 return
 
-        if self.nClientID < 128: 
-            file_contents = {self.nClientID:{"dll_name":dll_name,
+        if nClientID < 128: 
+            file_contents = {nClientID:{"dll_name":dll_name,
                                              "protocol":protocol,
                                              "deviceID":deviceID}
                                             }
@@ -479,16 +481,16 @@ class TUDiagnostics(QMainWindow):
         
             # Set all filters to pass.  This allows messages to be read.
             # Constants are defined in an included file
-            nRetVal = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(self.nClientID), None, 0)
-            if nRetVal == 0:
+            return_value = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), c_short(nClientID), None, 0)
+            if return_value == 0:
                 print("RP1210_Set_All_Filters_States_to_Pass - SUCCESS")
             else :
-                print('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(nRetVal,RP1210Errors[nRetVal]))
+                print('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,RP1210Errors[return_value]))
                 return
 
             #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
             self.rx_queue = queue.Queue()
-            self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.RP1210.ReadMessage,self.nClientID)
+            self.read_message_thread = RP1210ReadMessageThread(self, self.rx_queue,self.RP1210.ReadMessage,nClientID)
             self.read_message_thread.setDaemon(True) #needed to close the thread when the application closes.
             self.read_message_thread.start()
             print("Started RP1210ReadMessage Thread.")
@@ -500,38 +502,59 @@ class TUDiagnostics(QMainWindow):
             table_timer.timeout.connect(self.fill_table)
             table_timer.start(20)
         else:
-            print("The Client ID is: {}: {}.format(self.nClientID,RP1210Errors[self.nClientID])")
+            print("The Client ID is: {}: {}".format(nClientID,RP1210Errors[nClientID]))
 
     def get_j1939_vin(self):
         """An Example of requesting a VIN over J1939"""
-        pgn = 65260
-        print("PGN: {:X}".format(pgn))
-        b0 = pgn & 0xff
-        print("b0 = {:02X}".format(b0))
-        b1 = (pgn & 0xff00) >> 8
-        print("b1 = {:02X}".format(b1))
-        dlc = 3
-        b2 = 0 #(pgn & 0xff0000) >> 16
+        nClientID = self.RP1210.nClientID
+        if nClientID is not None or nClientID < 128:
+            pgn = 65260
+            print("PGN: {:X}".format(pgn))
+            b0 = pgn & 0xff
+            print("b0 = {:02X}".format(b0))
+            b1 = (pgn & 0xff00) >> 8
+            print("b1 = {:02X}".format(b1))
+            dlc = 3
+            b2 = 0 #(pgn & 0xff0000) >> 16
 
-        #initialize the buffer
-        ucTxRxBuffer = (c_char*2000)()
-        
-        ucTxRxBuffer[0]=0x01 #Message type is extended per RP1210
-        ucTxRxBuffer[1]=0x18 #Priority 6
-        ucTxRxBuffer[2]=0xEA #Request PGN
-        ucTxRxBuffer[3]=0x00 #Destination address of Engine
-        ucTxRxBuffer[4]=0xF9 #Source address of VDA
-        ucTxRxBuffer[5]=b0
-        ucTxRxBuffer[6]=b1
-        ucTxRxBuffer[7]=b2
-        
-        msg_len = 8
+            #initialize the buffer
+            ucTxRxBuffer = (c_char*2000)()
             
-        return_value = self.RP1210.SendMessage(c_short( self.nClientID ),
-                                        byref( ucTxRxBuffer ),
-                                        c_short( msg_len ), 0, 0)
-        print("return value: {}: {}".format(return_value,RP1210Errors[return_value]))
-    
+            ucTxRxBuffer[0]=0x01 #Message type is extended per RP1210
+            ucTxRxBuffer[1]=0x18 #Priority 6
+            ucTxRxBuffer[2]=0xEA #Request PGN
+            ucTxRxBuffer[3]=0x00 #Destination address of Engine
+            ucTxRxBuffer[4]=0xF9 #Source address of VDA
+            ucTxRxBuffer[5]=b0
+            ucTxRxBuffer[6]=b1
+            ucTxRxBuffer[7]=b2
+            
+            msg_len = 8
+                
+            return_value = self.RP1210.SendMessage(c_short(nClientID),
+                                            byref(ucTxRxBuffer),
+                                            c_short(msg_len), 0, 0)
+            if return_value != 0:
+                message_window = QMessageBox()
+                message_window.setIcon(QMessageBox.Information)
+                message_window.setWindowTitle('RP1210 Return Value')
+                message_window.setStandardButtons(QMessageBox.Ok)
+                if return_value in RP1210Errors:
+                    print("RP1210_SendMessage fails with a return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                    message_window.setText("RP1210_SendMessage failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                else:
+                    message_window.setText("RP1210_SendMessage failed with\nan unknown error. Code: {}".format(return_value))
+                    print("return value: {}: {}".format(return_value,RP1210Errors[return_value]))
+                message_window.exec_()
+
+        else:
+            print("RP1210 Device Needs to be Connected")
+            message_window = QMessageBox()
+            message_window.setText("RP1210 Device Needs to be Connected For This Feature to Work.")
+            message_window.setIcon(QMessageBox.Information)
+            message_window.setWindowTitle('RP1210 Connection Issue')
+            message_window.setStandardButtons(QMessageBox.Ok)
+            message_window.exec_()
 
     def open_file(self):
         print("Open Data")  
@@ -602,14 +625,14 @@ class TUDiagnostics(QMainWindow):
                 #Assignment: Change this automatic resizer to a button.
             
     def display_version(self):
-        if self.RP1210.ReadVersion is None:
+        if self.RP1210.ReadVersion is None or self.RP1210.nClientID is None:
             print("RP1210_ReadVersion() is not supported.")
             message_window = QMessageBox()
             message_window.setText("RP1210_ReadVersion() function is not supported.")
             message_window.setIcon(QMessageBox.Information)
             message_window.setWindowTitle('RP1210 Version Information')
             message_window.setStandardButtons(QMessageBox.Ok)
-            message_window.show()
+            message_window.exec_()
             return
 
         chDLLMajorVersion    = (c_char)()
@@ -638,45 +661,43 @@ class TUDiagnostics(QMainWindow):
         message_window.exec_()
 
     def display_detailed_version(self):
-        if self.RP1210.ReadDetailedVersion is None:
-            print("RP1210_ReadVersion() is not supported.")
-            result1 = QMessageBox()
-            result1.setText("RP1210_ReadDetailedVersion() function is not supported.")
-            result1.setIcon(QMessageBox.Information)
-            result1.setWindowTitle('RP1210 Detailed Version')
-            result1.setStandardButtons(QMessageBox.Ok)
-            result1.show()
-            return
-
-        chAPIVersionInfo    = (c_char*17)()
-        chDLLVersionInfo    = (c_char*17)()
-        chFWVersionInfo     = (c_char*17)()
-        nRetVal = self.RP1210.ReadDetailedVersion(c_short(self.nClientID), 
-                                                    byref(chAPIVersionInfo),
-                                                    byref(chDLLVersionInfo), 
-                                                    byref( chFWVersionInfo ) )
-
-        result2 = QMessageBox()
-        result2.setIcon(QMessageBox.Information)
-        result2.setWindowTitle('RP1210 Detailed Version Information')
-        result2.setStandardButtons(QMessageBox.Ok)
+        message_window = QMessageBox()
+        message_window.setIcon(QMessageBox.Information)
+        message_window.setWindowTitle('RP1210 Detailed Version')
+        message_window.setStandardButtons(QMessageBox.Ok)
         
-        if nRetVal == 0 :
-           print('Congratulations! You have connected to a VDA! No need to check your USB connection.')
-           DLL = chDLLVersionInfo.value
-           API = chAPIVersionInfo.value
-           FW = chAPIVersionInfo.value
-           result2.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
-                       
-        else :   
-           print("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
-           result2.setText("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
-           
-        result2.exec_()
+        if self.RP1210.ReadDetailedVersion is None or self.RP1210.nClientID is None:
+            print("RP1210_ReadVersion() is not supported.")
+            message_window.setText("RP1210_ReadDetailedVersion() function is not supported.")
+            message_window.exec_()
+        else:
+            chAPIVersionInfo    = (c_char*17)()
+            chDLLVersionInfo    = (c_char*17)()
+            chFWVersionInfo     = (c_char*17)()
+            return_value = self.RP1210.ReadDetailedVersion(c_short(self.RP1210.nClientID), 
+                                                        byref(chAPIVersionInfo),
+                                                        byref(chDLLVersionInfo), 
+                                                        byref(chFWVersionInfo))
+            if return_value == 0 :
+               print('Congratulations! You have connected to a VDA! No need to check your USB connection.')
+               DLL = chDLLVersionInfo.value
+               API = chAPIVersionInfo.value
+               FW = chAPIVersionInfo.value
+               message_window.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
+            else: 
+                if return_value in RP1210Errors:
+                    print("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                    message_window.setText("RP1210_ReadDetailedVersion failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                else:
+                    message_window.setText("RP1210_ReadDetailedVersion failed with\nan unknown error. Code: {}".format(return_value))
+            
+        message_window.exec_()
     def closeEvent(self, *args, **kwargs):
-        for n in range(self.nClientID):
-            nRetVal = self.RP1210.ClientDisconnect(n)
-            print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(nRetVal,RP1210Errors[nRetVal]))
+        nClientID = self.RP1210.nClientID
+        if nClientID is not None:
+            for n in range(nClientID):
+                return_value = self.RP1210.ClientDisconnect(n)
+                print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(return_value,RP1210Errors[return_value]))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

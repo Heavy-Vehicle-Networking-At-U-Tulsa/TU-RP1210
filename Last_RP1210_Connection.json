@@ -1,7 +1,1 @@
-{
-    "1": {
-        "deviceID": 1,
-        "dll_name": "DPA4PMA",
-        "protocol": "CAN"
-    }
-}
+{"dll_name": "DGDPA5MA", "protocol": 1, "deviceID": "CAN"}
