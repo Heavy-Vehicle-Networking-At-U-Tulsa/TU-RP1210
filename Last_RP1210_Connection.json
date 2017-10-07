@@ -1,1 +1,8 @@
-{"dll_name": "DGDPA5MA", "protocol": 1, "deviceID": "CAN"}
+{
+    "1": {
+        "deviceID": 1,
+        "dll_name": "DPA4PMA",
+        "protocol": "CAN",
+        "speed": "Auto"
+    }
+}

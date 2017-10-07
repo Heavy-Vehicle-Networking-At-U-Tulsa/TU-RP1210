@@ -82,76 +82,89 @@ class RP1210ReadMessageThread(threading.Thread):
 
 class RP1210Class():
     """A class to access RP1210 libraries for different devices."""
-    def __init__(self,dll_name,protocol,deviceID):        
+    def __init__(self,dll_name,protocol,deviceID,speed):        
         #Load the Windows Device Library
-        print("Loading the {} file using the {} protocol for device {:d}".format(dll_name + ".dll", protocol, deviceID))
-        try:
-            RP1210DLL = windll.LoadLibrary(dll_name + ".dll")
-        except Exception as e:
-            print(e)
-            print("\nIf RP1210 DLL fails to load, please check to be sure you are using"
-                + "a 32-bit version of Python and you have the correct drivers for the VDA installed.")
-            return None
+        self.nClientID = None
+        if dll_name is not None and protocol is not None and deviceID is not None:
+            print("Loading the {} file using the {} protocol for device {:d}".format(dll_name + ".dll", protocol, deviceID))
+            try:
+                RP1210DLL = windll.LoadLibrary(dll_name + ".dll")
+            except Exception as e:
+                print(e)
+                print("\nIf RP1210 DLL fails to load, please check to be sure you are using"
+                    + "a 32-bit version of Python and you have the correct drivers for the VDA installed.")
+                return None
 
-        # Define windows prototype functions:
-        try:
-            prototype = WINFUNCTYPE(c_short, HWND, c_short, c_char_p, c_long, c_long, c_short)
-            self.ClientConnect = prototype(("RP1210_ClientConnect", RP1210DLL))
+            # Define windows prototype functions:
+            try:
+                prototype = WINFUNCTYPE(c_short, HWND, c_short, c_char_p, c_long, c_long, c_short)
+                self.ClientConnect = prototype(("RP1210_ClientConnect", RP1210DLL))
 
-            prototype = WINFUNCTYPE(c_short, c_short)
-            self.ClientDisconnect = prototype(("RP1210_ClientDisconnect", RP1210DLL))
+                prototype = WINFUNCTYPE(c_short, c_short)
+                self.ClientDisconnect = prototype(("RP1210_ClientDisconnect", RP1210DLL))
 
-            prototype = WINFUNCTYPE(c_short, c_short,  POINTER(c_char*2000), c_short, c_short, c_short)
-            self.SendMessage = prototype(("RP1210_SendMessage", RP1210DLL))
+                prototype = WINFUNCTYPE(c_short, c_short,  POINTER(c_char*2000), c_short, c_short, c_short)
+                self.SendMessage = prototype(("RP1210_SendMessage", RP1210DLL))
 
-            prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*2000), c_short, c_short)
-            self.ReadMessage = prototype(("RP1210_ReadMessage", RP1210DLL))
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*2000), c_short, c_short)
+                self.ReadMessage = prototype(("RP1210_ReadMessage", RP1210DLL))
 
-            prototype = WINFUNCTYPE(c_short, c_short, c_short, POINTER(c_char*2000), c_short)
-            self.SendCommand = prototype(("RP1210_SendCommand", RP1210DLL))
-        except Exception as e:
-            print(e)
-            print("\n Critical RP1210 functions were not able to be loaded. There is something wrong with the DLL file.")
-            return None
-        
-        try:
-            prototype = WINFUNCTYPE(c_short, c_char_p, c_char_p, c_char_p, c_char_p)
-            self.ReadVersion = prototype(("RP1210_ReadVersion", RP1210DLL))
-        except Exception as e:
-            print(e)
-        
-        try:
-            prototype = WINFUNCTYPE( c_short, c_short, POINTER(c_char*17), POINTER(c_char*17), POINTER(c_char*17) )
-            self.ReadDetailedVersion  = prototype( ("RP1210_ReadDetailedVersion", RP1210DLL ) )
-        except Exception as e:
-            print(e)
-            self.ReadDetailedVersion = None
+                prototype = WINFUNCTYPE(c_short, c_short, c_short, POINTER(c_char*2000), c_short)
+                self.SendCommand = prototype(("RP1210_SendCommand", RP1210DLL))
+            except Exception as e:
+                print(e)
+                print("\n Critical RP1210 functions were not able to be loaded. There is something wrong with the DLL file.")
+                return None
+            
+            try:
+                prototype = WINFUNCTYPE(c_short, c_char_p, c_char_p, c_char_p, c_char_p)
+                self.ReadVersion = prototype(("RP1210_ReadVersion", RP1210DLL))
+            except Exception as e:
+                print(e)
+            
+            try:
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*17), POINTER(c_char*17), POINTER(c_char*17))
+                self.ReadDetailedVersion  = prototype(("RP1210_ReadDetailedVersion", RP1210DLL))
+            except Exception as e:
+                print(e)
+                self.ReadDetailedVersion = None
 
-        try:
-            prototype = WINFUNCTYPE( c_short, c_short, c_char_p, c_short, c_short             )
-            self.GetHardwareStatus = prototype( ("RP1210_GetHardwareStatus", RP1210DLL ) )
-        except Exception as e:
-            print(e)
-            self.GetHardwareStatus = None
+            try:
+                prototype = WINFUNCTYPE(c_short, c_short, c_char_p, c_short, c_short)
+                self.GetHardwareStatus = prototype(("RP1210_GetHardwareStatus", RP1210DLL))
+            except Exception as e:
+                print(e)
+                self.GetHardwareStatus = None
 
-        try:
-            prototype = WINFUNCTYPE( c_short, c_short, c_char_p                           )
-            self.GetErrorMsg = prototype( ("RP1210_GetErrorMsg", RP1210DLL ) )
-        except Exception as e:
-            print(e)
-            self.GetErrorMsg = None
-        
-        try:
-            prototype = WINFUNCTYPE( c_short, c_void_p, c_char_p, c_short             )
-            self.GetLastErrorMsg = prototype( ("RP1210_GetLastErrorMsg", RP1210DLL ) )
-        except Exception as e:
-            print(e)
-            self.GetLastErrorMsg = None
-        
-        protocol_name = bytes(protocol,'ascii')
-        self.nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_name, 0, 0, 0  )
-
-        print("The Client ID is: {}".format(self.nClientID))
+            try:
+                prototype = WINFUNCTYPE(c_short, c_short, c_char_p)
+                self.GetErrorMsg = prototype(("RP1210_GetErrorMsg", RP1210DLL))
+            except Exception as e:
+                print(e)
+                self.GetErrorMsg = None
+            
+            try:
+                prototype = WINFUNCTYPE(c_short, c_void_p, c_char_p, c_short)
+                self.GetLastErrorMsg = prototype(("RP1210_GetLastErrorMsg", RP1210DLL))
+            except Exception as e:
+                print(e)
+                self.GetLastErrorMsg = None
+            
+            if len(speed) > 0 and (protocol == "J1939" or protocol == "J1708" or protocol == "CAN" or protocol == "ISO15765"):
+                protocol_bytes = bytes(protocol + ":Baud={}".format(speed),'ascii')
+            else:
+                protocol_bytes = bytes(protocol,'ascii')
+            print("Connecting to ClientConnect using ", end = '')
+            print(protocol_bytes)
+            # if self.nClientID in locals():
+            #     return_value = self.RP1210.ClientDisconnect(self.nClientID)
+            #     print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(return_value,RP1210Errors[return_value]))
+            try:
+                self.nClientID = self.ClientConnect(HWND(None), c_short(deviceID), protocol_bytes, 0, 0, 0)
+                print("The Client ID is: {}".format(self.nClientID))
+            except Exception as e:
+                print(e)
+            
 
 class SelectRP1210(QDialog):
     def __init__(self):
@@ -185,7 +198,12 @@ class SelectRP1210(QDialog):
         self.protocol_combo_box = QComboBox()
         self.protocol_combo_box.setInsertPolicy(QComboBox.NoInsert)
         self.protocol_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        #self.protocol_combo_box.activated.connect(self.accept)
+        self.protocol_combo_box.activated.connect(self.fill_speed)
+        
+        speed_label = QLabel("Available Speed Settings")
+        self.speed_combo_box = QComboBox()
+        self.speed_combo_box.setInsertPolicy(QComboBox.NoInsert)
+        self.speed_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         
 
         self.buttons = QDialogButtonBox(
@@ -214,6 +232,8 @@ class SelectRP1210(QDialog):
         self.v_layout.addWidget(self.device_combo_box)
         self.v_layout.addWidget(protocol_label)
         self.v_layout.addWidget(self.protocol_combo_box)
+        self.v_layout.addWidget(speed_label)
+        self.v_layout.addWidget(self.speed_combo_box)
         self.v_layout.addWidget(self.buttons)
 
         self.setLayout(self.v_layout)
@@ -285,15 +305,17 @@ class SelectRP1210(QDialog):
                     self.device_combo_box.addItem(device_combo_box_entry)
         try:
             self.device_combo_box.setCurrentIndex(int(self.selection_index[1]))
+            self.fill_protocol()
         except:
             pass
 
-        self.fill_protocol()
+        
 
     def fill_protocol(self):
         idx = self.device_combo_box.currentIndex()
         self.device_id = self.device_combo_box.itemText(idx).split(":")[0].strip()
         self.protocol_combo_box.clear()
+        self.protocol_speed = {}
         for key in self.vendor_configs[self.api_string]:
             if "ProtocolInformation" in key:
                 try:
@@ -306,9 +328,12 @@ class SelectRP1210(QDialog):
                 except KeyError:
                     protocol_description = "No protocol description available"
                 try:
-                    protocol_speed = self.vendor_configs[self.api_string][key]["ProtocolSpeed"]
+                    if protocol_string is not None:
+                        self.protocol_speed[protocol_string] = self.vendor_configs[self.api_string][key]["ProtocolSpeed"]
+                    else:
+                        self.protocol_speed[protocol_string] = ""
                 except KeyError:
-                    protocol_speed = "No Speed Specified"
+                    self.protocol_speed[protocol_string] = ""
                 try:
                     protocol_params = self.vendor_configs[self.api_string][key]["ProtocolParams"]
                 except KeyError:
@@ -318,22 +343,45 @@ class SelectRP1210(QDialog):
                 if self.device_id in devices and protocol_string is not None:
                     device_combo_box_entry = "{}: {}".format(protocol_string,protocol_description)
                     self.protocol_combo_box.addItem(device_combo_box_entry)
+            else:
+                pass    
         try:
             self.protocol_combo_box.setCurrentIndex(int(self.selection_index[2]))
-        except:
-            pass
-   
+            self.fill_speed()
+        except Exception as e:
+            print(e) 
+
+        
+        
+
+    def fill_speed(self):
+        print("Filling Speed")
+        protocol_idx = self.protocol_combo_box.currentIndex()
+        protocol_string = self.protocol_combo_box.itemText(protocol_idx).split(":")[0].strip()
+        print(protocol_string)
+        print(self.protocol_speed[protocol_string])
+        self.speed_combo_box.clear()
+        
+        try:
+            protocol_speed = sorted(self.protocol_speed[protocol_string].strip().split(','),reverse=True)
+            self.speed_combo_box.addItems(protocol_speed)
+        except Exception as e:
+            print(e) 
+
     def connect_RP1210(self):
         print("Accepted Dialog OK")
         vendor_index = self.vendor_combo_box.currentIndex()
         device_index = self.device_combo_box.currentIndex()
         protocol_index = self.protocol_combo_box.currentIndex()
+        speed_index = self.speed_combo_box.currentIndex()
+
         with open("RP1210_selection.txt","w") as selection_file:
-            selection_file.write("{},{},{}".format(vendor_index,device_index,protocol_index))
+            selection_file.write("{},{},{}".format(vendor_index,device_index,protocol_index,speed_index))
         self.dll_name = self.vendor_combo_box.itemText(vendor_index).split("-")[0].strip()
         self.deviceID = int(self.device_combo_box.itemText(device_index).split(":")[0].strip())
+        self.speed = self.speed_combo_box.itemText(speed_index)
         self.protocol = self.protocol_combo_box.itemText(protocol_index).split(":")[0].strip()
-        file_contents={"dll_name":self.dll_name,"protocol":self.deviceID,"deviceID":self.protocol}
+        file_contents={"dll_name":self.dll_name,"protocol":self.deviceID,"deviceID":self.protocol,"speed":self.speed}
         with open("Last_RP1210_Connection.json","w") as rp1210_file:
                  json.dump(file_contents,rp1210_file)
     
@@ -341,6 +389,7 @@ class SelectRP1210(QDialog):
         self.dll_name = None
         self.protocol = None
         self.deviceID = None
+        self.speed = None
 
 class TUDiagnostics(QMainWindow):
     def __init__(self):
@@ -440,7 +489,8 @@ class TUDiagnostics(QMainWindow):
                     dll_name = select_dialog["dll_name"]
                     protocol = select_dialog["protocol"]
                     deviceID = select_dialog["deviceID"]
-                    self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
+                    speed = select_dialog["speed"]
+                    self.RP1210 = RP1210Class(dll_name,protocol,deviceID,speed)
                     
             except Exception as e:
                 print(e)
@@ -448,19 +498,24 @@ class TUDiagnostics(QMainWindow):
                 dll_name = selection.dll_name
                 protocol = selection.protocol
                 deviceID = selection.deviceID
-                self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
+                speed = selection.speed
+                self.RP1210 = RP1210Class(dll_name,protocol,deviceID,speed)
 
         else:
             selection = SelectRP1210()
             dll_name = selection.dll_name
             protocol = selection.protocol
             deviceID = selection.deviceID
-            self.RP1210 = RP1210Class(dll_name,protocol,deviceID)
+            speed = selection.speed
+            self.RP1210 = RP1210Class(dll_name,protocol,deviceID,speed)
 
         
         nClientID = self.RP1210.nClientID
+        if nClientID is None:
+            print("An RP1210 device is not connected properly.")
+            return
 
-        while nClientID > 127 and nClientID is not None:
+        while nClientID > 127:
             question_text = "The Client ID is: {}: {}.\nDo you want to try again?".format(nClientID,
                                                                                           RP1210Errors[nClientID])
             reply = QMessageBox.question(self, "Connection Issue",
@@ -471,10 +526,11 @@ class TUDiagnostics(QMainWindow):
             else:
                 return
 
-        if nClientID < 128: 
+        if nClientID < 128 and nClientID is not None: 
             file_contents = {nClientID:{"dll_name":dll_name,
                                              "protocol":protocol,
-                                             "deviceID":deviceID}
+                                             "deviceID":deviceID,
+                                             "speed":speed}
                                             }
             with open("Last_RP1210_Connection.json","w") as rp1210_file:
                 json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
@@ -502,7 +558,7 @@ class TUDiagnostics(QMainWindow):
             table_timer.timeout.connect(self.fill_table)
             table_timer.start(20)
         else:
-            print("The Client ID is: {}: {}".format(nClientID,RP1210Errors[nClientID]))
+            print("There was an error. Client ID is {}".format(nClientID))
 
     def get_j1939_vin(self):
         """An Example of requesting a VIN over J1939"""
