@@ -1,19 +1,18 @@
-#!/bin/env/python
+# !/bin/env/python
 # An introduction sample source code that provides RP1210 capabilities
 
-#Import 
+# Import
 from PyQt5.QtWidgets import (QMainWindow,
-                             QWidget, 
-                             QTreeView, 
-                             QMessageBox, 
-                             QHBoxLayout, 
-                             QFileDialog, 
-                             QLabel, 
-                             QSlider, 
-                             QCheckBox, 
-                             QLineEdit, 
-                             QVBoxLayout, 
-                             QApplication, 
+                             QWidget,
+                             QTreeView,
+                             QMessageBox,
+                             QFileDialog,
+                             QLabel,
+                             QSlider,
+                             QCheckBox,
+                             QLineEdit,
+                             QVBoxLayout,
+                             QApplication,
                              QPushButton,
                              QTableWidget,
                              QTableView,
@@ -29,19 +28,20 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QDockWidget,
                              QDialog,
                              QDialogButtonBox,
+                             QInputDialog,
                              QProgressDialog)
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QIcon 
+from PyQt5.QtCore import Qt, QTimer, QCoreApplication
+from PyQt5.QtGui import QIcon
 
-#Use ctypes to import the RP1210 DLL
+# Use ctypes to import the RP1210 DLL
 from ctypes import *
 from ctypes.wintypes import HWND
 
-#Use threads to set up asynchronous communications
+# Use threads to set up asynchronous communications
 import threading
 import queue
 import time
-import collections 
+import collections
 import sys
 import struct
 import json
@@ -50,14 +50,17 @@ import configparser
 
 from RP1210Constants import *
 
+
 class RP1210ReadMessageThread(threading.Thread):
-    '''This thread is designed to recieve messages from the vehicle diagnostic adapter (VDA) and put the
-    data into a queue. The class arguments are as follows:
+    '''This thread is designed to recieve messages from the vehicle diagnostic
+    adapter (VDA) and put thedata into a queue. The class arguments are as
+    follows:
     rx_queue - A datastructure that takes the recieved message.
     RP1210_ReadMessage - a function handle to the VDA DLL.
-    nClientID - this lets us know which network is being used to recieve the messages. This will likely be '''
+    nClientID - this lets us know which network is being used to recieve the
+                messages. This will likely be a 1 or 2'''
+
     def __init__(self, parent, rx_queue, RP1210_ReadMessage, nClientID):
-        #super().__init__()
         threading.Thread.__init__(self)
         self.root = parent
         self.rx_queue = rx_queue
@@ -66,19 +69,19 @@ class RP1210ReadMessageThread(threading.Thread):
         self.runSignal = True
 
     def run(self):
-        ucTxRxBuffer = (c_char*2000)()
-        
-        #display a valid connection upon start.
+        ucTxRxBuffer = (c_char * 2000)()
+        # display a valid connection upon start.
         print("Read Message Client ID: {}".format(self.nClientID))
-        
         while self.runSignal:
-            return_value = self.RP1210_ReadMessage( c_short( self.nClientID ), byref( ucTxRxBuffer ),
-                                        c_short( 2000 ), c_short( BLOCKING_IO ) )
+            return_value = self.RP1210_ReadMessage(c_short(self.nClientID),
+                                                   byref(ucTxRxBuffer),
+                                                   c_short(2000),
+                                                   c_short(BLOCKING_IO))
             if return_value > 0:
                 self.rx_queue.put(ucTxRxBuffer[:return_value])
-                #print(ucTxRxBuffer[:return_value])
             time.sleep(.0005)
-        print("RP1210 Recieve Thread is finished.")
+        print("RP1210 Receive Thread is finished.")
+
 
 class RP1210Class():
     """A class to access RP1210 libraries for different devices."""
@@ -130,27 +133,35 @@ class RP1210Class():
                 self.ReadDetailedVersion = None
 
             try:
-                prototype = WINFUNCTYPE(c_short, c_short, c_char_p, c_short, c_short)
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*64), c_short, c_short)
                 self.GetHardwareStatus = prototype(("RP1210_GetHardwareStatus", RP1210DLL))
             except Exception as e:
                 print(e)
                 self.GetHardwareStatus = None
+            try:
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*256))
+                self.GetHardwareStatusEx = prototype(("RP1210_GetHardwareStatusEx", RP1210DLL))
+            except Exception as e:
+                print(e)
+                self.GetHardwareStatusEx = None
 
             try:
-                prototype = WINFUNCTYPE(c_short, c_short, c_char_p)
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_char*80))
                 self.GetErrorMsg = prototype(("RP1210_GetErrorMsg", RP1210DLL))
             except Exception as e:
                 print(e)
                 self.GetErrorMsg = None
             
             try:
-                prototype = WINFUNCTYPE(c_short, c_void_p, c_char_p, c_short)
+                prototype = WINFUNCTYPE(c_short, c_short, POINTER(c_int), POINTER(c_char*80), c_short)
                 self.GetLastErrorMsg = prototype(("RP1210_GetLastErrorMsg", RP1210DLL))
             except Exception as e:
                 print(e)
                 self.GetLastErrorMsg = None
             
-            if len(speed) > 0 and (protocol == "J1939" or protocol == "J1708" or protocol == "CAN" or protocol == "ISO15765"):
+
+
+            if len(speed) > 0 and (protocol == "J1939"  or protocol == "CAN" or protocol == "ISO15765"):
                 protocol_bytes = bytes(protocol + ":Baud={}".format(speed),'ascii')
             else:
                 protocol_bytes = bytes(protocol,'ascii')
@@ -270,9 +281,10 @@ class SelectRP1210(QDialog):
             print("There are no entries in the RP1210 Vendor's ComboBox.")
 
     def fill_device(self):
-        idx = self.vendor_combo_box.currentIndex()
-        self.api_string = self.vendor_combo_box.itemText(idx).split("-")[0].strip()
+        self.api_string = self.vendor_combo_box.currentText().split("-")[0].strip()
         self.device_combo_box.clear()
+        self.protocol_combo_box.clear()
+        self.speed_combo_box.clear()
         for key in self.vendor_configs[self.api_string]:
             if "DeviceInformation" in key:
                 try:
@@ -305,16 +317,18 @@ class SelectRP1210(QDialog):
                     self.device_combo_box.addItem(device_combo_box_entry)
         try:
             self.device_combo_box.setCurrentIndex(int(self.selection_index[1]))
-            self.fill_protocol()
         except:
-            pass
-
-        
+            pass   
+        self.fill_protocol()
 
     def fill_protocol(self):
-        idx = self.device_combo_box.currentIndex()
-        self.device_id = self.device_combo_box.itemText(idx).split(":")[0].strip()
+
         self.protocol_combo_box.clear()
+        self.speed_combo_box.clear()
+        if self.device_combo_box.currentText() == "":
+                self.device_combo_box.setCurrentIndex(0)
+        self.device_id = self.device_combo_box.currentText().split(":")[0].strip()
+
         self.protocol_speed = {}
         for key in self.vendor_configs[self.api_string]:
             if "ProtocolInformation" in key:
@@ -347,21 +361,19 @@ class SelectRP1210(QDialog):
                 pass    
         try:
             self.protocol_combo_box.setCurrentIndex(int(self.selection_index[2]))
-            self.fill_speed()
+            
         except Exception as e:
             print(e) 
-
-        
-        
+        self.fill_speed()
 
     def fill_speed(self):
-        print("Filling Speed")
-        protocol_idx = self.protocol_combo_box.currentIndex()
-        protocol_string = self.protocol_combo_box.itemText(protocol_idx).split(":")[0].strip()
+        self.speed_combo_box.clear()
+        if self.protocol_combo_box.currentText() == "":
+                self.protocol_combo_box.setCurrentIndex(0)
+        self.device_id = self.device_combo_box.currentText().split(":")[0].strip()
+        protocol_string = self.protocol_combo_box.currentText().split(":")[0].strip()
         print(protocol_string)
         print(self.protocol_speed[protocol_string])
-        self.speed_combo_box.clear()
-        
         try:
             protocol_speed = sorted(self.protocol_speed[protocol_string].strip().split(','),reverse=True)
             self.speed_combo_box.addItems(protocol_speed)
@@ -391,54 +403,103 @@ class SelectRP1210(QDialog):
         self.deviceID = None
         self.speed = None
 
+
 class TUDiagnostics(QMainWindow):
     def __init__(self):
         super(TUDiagnostics,self).__init__()
         self.setGeometry(200,200,700,500)
         self.init_ui()
         self.selectRP1210(automatic=True)
-        
-        
 
     def init_ui(self):
-        #Builds GUI
-
-        
-
-        #Start with a status bar
+        # Builds GUI
+        # Start with a status bar
         self.statusBar().showMessage("Welcome!")
         
-        #Build common menu options
+        # Build common menu options
         menubar = self.menuBar()
         
-        #File Menu Items
+        # File Menu Items
         file_menu = menubar.addMenu('&File')
-        open_file = QAction(QIcon(r'icons8_Open_48px_1.png'), '&Open', self)
+        open_file = QAction(QIcon(r'icons/icons8_Open_48px_1.png'), '&Open', self)
         open_file.setShortcut('Ctrl+O')
         open_file.setStatusTip('Open new File')
         open_file.triggered.connect(self.open_file)
         file_menu.addAction(open_file)
 
-        #RP1210 Menu Items
+        # RP1210 Menu Items
         rp1210_menu = menubar.addMenu('&RP1210')
-        connect_rp1210 = QAction(QIcon(r'icons/bug-8x.png'), '&Connect', self)
-        connect_rp1210.setShortcut('Ctrl+R')
+        connect_rp1210 = QAction(QIcon(r'icons/icons8_Connected_48px.png'), '&Client Connect', self)
+        connect_rp1210.setShortcut('Ctrl+Shift+C')
         connect_rp1210.setStatusTip('Connect Vehicle Diagnostic Adapter')
         connect_rp1210.triggered.connect(self.selectRP1210)
         rp1210_menu.addAction(connect_rp1210)
 
-        version_button = QPushButton('Display Version')
-        version_button.clicked.connect(self.display_version)
+        rp1210_version = QAction(QIcon(r'icons/icons8_Versions_48px.png'), '&Driver Version', self)
+        rp1210_version.setShortcut('Ctrl+Shift+V')
+        rp1210_version.setStatusTip('Show Vehicle Diagnostic Adapter Driver Version Information') 
+        rp1210_version.triggered.connect(self.display_version)
+        rp1210_menu.addAction(rp1210_version)
         
-        detailed_version_button = QPushButton('Get Detailed Version')        
-        detailed_version_button.clicked.connect(self.display_detailed_version)
-     
+        rp1210_detailed_version = QAction(QIcon(r'icons/icons8_More_Details_48px.png'), 'De&tailed Version', self)
+        rp1210_detailed_version.setShortcut('Ctrl+Shift+T')
+        rp1210_detailed_version.setStatusTip('Show Vehicle Diagnostic Adapter Detailed Version Information') 
+        rp1210_detailed_version.triggered.connect(self.display_detailed_version)
+        rp1210_menu.addAction(rp1210_detailed_version)
+        
+        rp1210_get_error_msg = QAction(QIcon(r'icons/icons8_Attention_48px_1.png'), '&Lookup Error Message', self)
+        rp1210_get_error_msg.setShortcut('Ctrl+Shift+L')
+        rp1210_get_error_msg.setStatusTip('Translates an RP1210 error code into a textual description of the error.') 
+        rp1210_get_error_msg.triggered.connect(self.lookup_error_code)
+        rp1210_menu.addAction(rp1210_get_error_msg)
+
+        rp1210_get_last_error_msg = QAction(QIcon(r'icons/icons8_Error_48px.png'), 'Lookup Last Error &Message', self)
+        rp1210_get_last_error_msg.setShortcut('Ctrl+Shift+M')
+        rp1210_get_last_error_msg.setStatusTip('Translates an RP1210 error code into a more detailed error code and textual description.') 
+        rp1210_get_last_error_msg.triggered.connect(self.get_last_error_msg)
+        rp1210_menu.addAction(rp1210_get_last_error_msg)
+
+        rp1210_get_hardware_status = QAction(QIcon(r'icons/icons8_Steam_48px.png'), 'Get &Hardware Status', self)
+        rp1210_get_hardware_status.setShortcut('Ctrl+Shift+H')
+        rp1210_get_hardware_status.setStatusTip('Determine details regarding the hardware interface status and its connections.') 
+        rp1210_get_hardware_status.triggered.connect(self.get_hardware_status)
+        rp1210_menu.addAction(rp1210_get_hardware_status)
+
+        rp1210_get_hardware_status_ex = QAction(QIcon(r'icons/icons8_System_Information_48px.png'), 'Get &Extended Hardware Status', self)
+        rp1210_get_hardware_status_ex.setShortcut('Ctrl+Shift+E')
+        rp1210_get_hardware_status_ex.setStatusTip('Determine the hardware interface status and whether the VDA device is physically connected.') 
+        rp1210_get_hardware_status_ex.triggered.connect(self.get_hardware_status_ex)
+        rp1210_menu.addAction(rp1210_get_hardware_status_ex)
+
+        disconnect_rp1210 = QAction(QIcon(r'icons/icons8_Disconnected_48px.png'), 'Client &Disconnect', self)
+        disconnect_rp1210.setShortcut('Ctrl+Shift+D')
+        disconnect_rp1210.setStatusTip('Disconnect all RP1210 Clients')
+        disconnect_rp1210.triggered.connect(self.disconnectRP1210)
+        rp1210_menu.addAction(disconnect_rp1210)
+
+        help_menu = menubar.addMenu('&Help')
+        about = QAction(QIcon(r'icons/icons8_Help_48px_1.png'), 'A&bout', self)
+        about.setShortcut('Ctrl+B')
+        about.setStatusTip('Display a dialog box with information about the program.')
+        about.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about)
+       
+        #build the entries in the dockable tool bar
+        RP1210_toolbar = self.addToolBar("Main")
+        RP1210_toolbar.addAction(connect_rp1210)
+        RP1210_toolbar.addAction(rp1210_version)
+        RP1210_toolbar.addAction(rp1210_detailed_version)
+        RP1210_toolbar.addAction(rp1210_get_error_msg)
+        RP1210_toolbar.addAction(rp1210_get_last_error_msg)
+        RP1210_toolbar.addAction(rp1210_get_hardware_status)
+        RP1210_toolbar.addAction(rp1210_get_hardware_status_ex)
+        RP1210_toolbar.addAction(disconnect_rp1210)
+
         get_vin_button = QPushButton('Request VIN on J1939')        
-        get_vin_button.clicked.connect(self.get_j1939_vin)
-        
+        get_vin_button.clicked.connect(self.get_j1939_vin)        
         self.scroll_CAN_message_button =  QCheckBox("Auto Scroll Message Window")   
 
-        
+
         #Set up a Table to display recieved messages
         self.received_CAN_message_table = QTableWidget()
         
@@ -460,23 +521,31 @@ class TUDiagnostics(QMainWindow):
         
         #self.fill_table()
 
-        v_layout = QVBoxLayout()
+        grid_layout = QGridLayout()
         #Define where the widgets go in the window        
-        
-        v_layout.addWidget(version_button)
-        v_layout.addWidget(detailed_version_button)
-        v_layout.addWidget(get_vin_button)
-        v_layout.addWidget(self.scroll_CAN_message_button)
-        v_layout.addWidget(self.received_CAN_message_table)
+        #Grid layouts have the addWidget arguement with the following form:
+        # grid_layout.addWidget(widget,row,column,rowspan,colspan)
+        grid_layout.addWidget(get_vin_button,0,0,1,1)
+        grid_layout.addWidget(self.scroll_CAN_message_button,1,0,1,1)
+        grid_layout.addWidget(self.received_CAN_message_table,2,0,1,1)
         
 
         main_widget = QWidget()
-        main_widget.setLayout(v_layout)
+        main_widget.setLayout(grid_layout)
         self.setCentralWidget(main_widget)
         self.setWindowTitle('RP1210 Interface')
         self.show()
-    
+
     def selectRP1210(self,automatic=False):
+
+        try:
+            nClientID = self.RP1210.nClientID
+            if nClientID is not None:
+                return_value = self.RP1210.ClientDisconnect(nClientID)
+                print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(return_value,RP1210Errors[return_value]))
+        except AttributeError:
+            pass
+
         if automatic:
             try:
                 # The json file holding the last connection of the RP1210 device is
@@ -507,22 +576,28 @@ class TUDiagnostics(QMainWindow):
             protocol = selection.protocol
             deviceID = selection.deviceID
             speed = selection.speed
-            self.RP1210 = RP1210Class(dll_name,protocol,deviceID,speed)
-
-        
+            self.RP1210 = RP1210Class(dll_name, protocol, deviceID, speed)
+   
         nClientID = self.RP1210.nClientID
         if nClientID is None:
             print("An RP1210 device is not connected properly.")
             return
 
         while nClientID > 127:
-            question_text = "The Client ID is: {}: {}.\nDo you want to try again?".format(nClientID,
-                                                                                          RP1210Errors[nClientID])
+            question_text = "The return value is {}: {}.\n".format(nClientID,
+                            self.get_error_code(nClientID))
+            question_text += "Do you want to try again?"
             reply = QMessageBox.question(self, "Connection Issue",
                                                 question_text,
                                                 QMessageBox.Yes, QMessageBox.No)
             if reply == QMessageBox.Yes:
-                self.selectRP1210()
+                selection = SelectRP1210()
+                dll_name = selection.dll_name
+                protocol = selection.protocol
+                deviceID = selection.deviceID
+                speed = selection.speed
+                self.RP1210 = RP1210Class(dll_name, protocol, deviceID, speed)
+                nClientID = self.RP1210.nClientID
             else:
                 return
 
@@ -675,57 +750,380 @@ class TUDiagnostics(QMainWindow):
                     QTableWidgetItem("{:02X}".format(b)))
                 col+=1
 
-            
             if self.received_CAN_message_count < 100:
-                self.received_CAN_message_table.resizeColumnsToContents()    
-                #Assignment: Change this automatic resizer to a button.
+                self.received_CAN_message_table.resizeColumnsToContents()
+
+    def show_about_dialog(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("TU-RP1210 Application")
+        msg.setInformativeText("""Icons by Icons8\nhttps://icons8.com/""")
+        msg.setWindowTitle("About")
+        msg.setDetailedText("There will be some details here.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setWindowModality(Qt.ApplicationModal)
+        msg.exec_()
+
+    def get_hardware_status_ex(self):
+        message_window = QMessageBox()
+        message_window.setIcon(QMessageBox.Information)
+        message_window.setWindowTitle('RP1210 Extended Hardware Status')
+        message_window.setStandardButtons(QMessageBox.Ok)
+
+        if self.RP1210.GetHardwareStatusEx is None or self.RP1210.nClientID is None:
+            message = "RP1210_GetHardwareStatusEx() function is not available."
+        else:
+            nClientID = self.RP1210.nClientID
+            fpchClientInfo = (c_char*256)()
+           
+            #There is no return value for RP1210_ReadVersion
+            return_value = self.RP1210.GetHardwareStatusEx(c_short(nClientID),
+                                                         byref(fpchClientInfo))
+            if return_value == 0 :
+                message = ""
+                status_bytes = fpchClientInfo.raw
+                print(status_bytes)
+                
+                
+                hw_device_located = (status_bytes[0] & 0x01) >> 0
+                if hw_device_located:
+                    message += "The hardware device was located and it is ready.\n"
+                else:
+                    message += "The hardware device was not located.\n"
+                
+                hw_device_internal = (status_bytes[0] & 0x02) >> 1
+                if hw_device_internal:
+                    message += "The hardware device is an internal device, non-wireless.\n"
+                else:
+                    message += "The hardware device is not an internal device, non-wireless.\n"
+                
+                hw_device_external = (status_bytes[0] & 0x04) >> 2
+                if hw_device_external:
+                    message += "The hardware device is an external device, non-wireless.\n"
+                else:
+                    message += "The hardware device is not an external device, non-wireless.\n"
+                
+                hw_device_internal = (status_bytes[0] & 0x08) >> 3
+                if hw_device_internal:
+                    message += "The hardware device is an internal device, wireless.\n"
+                else:
+                    message += "The hardware device is not an internal device, wireless.\n"
+                
+                hw_device_external = (status_bytes[0] & 0x10) >> 4
+                if hw_device_external:
+                    message += "The hardware device is an external device, wireless.\n"
+                else:
+                    message += "The hardware device is not an external device, wireless.\n"
+                
+                auto_baud = (status_bytes[0] & 0x20) >> 5
+                if auto_baud:
+                    message += "The hardware device CAN auto-baud capable.\n"
+                else:
+                    message += "The hardware device is not CAN auto-baud capable.\n"
+                
+                number_of_clients = status_bytes[1]
+                message += "The number of connected clients is {}.\n\n".format(number_of_clients)
+                
+                number_of_can = status_bytes[1]
+                message += "The number of simultaneous CAN channels is {}.\n\n".format(number_of_can)
+                
+                message += "There may be more information available than what is currently shown."
+            else: 
+                if return_value in RP1210Errors:
+                    message = "RP1210_GetHardwareStatusEx failed with a return value of  {}: {}".format(return_value,RP1210Errors[return_value])
+                else:
+                    message = "RP1210_GetHardwareStatusEx failed with\nan unknown error. Code: {}".format(return_value)
+        
+        print(message)
+        message_window.setText(message)
+        message_window.exec_()
+
+    def get_hardware_status(self):
+        message_window = QMessageBox()
+        message_window.setIcon(QMessageBox.Information)
+        message_window.setWindowTitle('RP1210 Hardware Status')
+        message_window.setStandardButtons(QMessageBox.Ok)
+
+        if self.RP1210.GetHardwareStatus is None or self.RP1210.nClientID is None:
+            message = "RP1210_GetHardwareStatus() function is not available."
+            message_window.setText(message)
             
+        else:
+            nClientID = self.RP1210.nClientID
+            fpchClientInfo = (c_char*64)()
+            nInfoSize = 64
+           
+            #There is no return value for RP1210_ReadVersion
+            return_value = self.RP1210.GetHardwareStatus(c_short(nClientID),
+                                                         byref(fpchClientInfo),
+                                                         c_short(nInfoSize),
+                                                         c_short(NON_BLOCKING_IO))
+            if return_value == 0 :
+                message = ""
+                status_bytes = fpchClientInfo.raw
+                print(status_bytes)
+                
+                
+                hw_device_located = (status_bytes[0] & 0x01) >> 0
+                if hw_device_located:
+                    message += "The hardware device was located.\n"
+                else:
+                    message += "The hardware device was not located.\n"
+                
+                hw_device_internal = (status_bytes[0] & 0x02) >> 1
+                if hw_device_internal:
+                    message += "The hardware device is an internal device.\n"
+                else:
+                    message += "The hardware device is not an internal device.\n"
+                
+                hw_device_external = (status_bytes[0] & 0x04) >> 2
+                if hw_device_external:
+                    message += "The hardware device is an external device.\n"
+                else:
+                    message += "The hardware device is not an external device.\n"
+                
+                number_of_clients = status_bytes[1]
+                message += "The number of connected clients is {}.\n\n".format(number_of_clients)
+            
+                    
+                j1939_active = (status_bytes[2] & 0x01) >> 0
+                if j1939_active:
+                    message += "The J1939 link is activated.\n"
+                else:
+                    message += "The J1939 link is not activated.\n"
+
+                traffic_detected = (status_bytes[2] & 0x02) >> 1
+                if traffic_detected:
+                    message += "J1939 network traffic was detected in the last second.\n"
+                else:
+                    message += "J1939 network traffic was not detected in the last second.\n"
+
+                bus_off = (status_bytes[2] & 0x04) >> 2
+                if bus_off:
+                    message += "The CAN controller reports a BUS_OFF status.\n"
+                else:
+                    message += "The CAN controller does not report a BUS_OFF status.\n"
+                number_of_clients = status_bytes[3]
+                message += "The number of clients connected to J1939 is {}.\n\n".format(number_of_clients)
+                
+                
+                j1708_active = (status_bytes[4] & 0x01) >> 0
+                if j1708_active:
+                    message += "The J1708 link is activated.\n"
+                else:
+                    message += "The J1708 link is not activated.\n"
+
+                traffic_detected = (status_bytes[4] & 0x02) >> 1
+                if traffic_detected:
+                    message += "J1708 network traffic was detected in the last second.\n"
+                else:
+                    message += "J1708 network traffic was not detected in the last second.\n"
+
+                number_of_clients = status_bytes[5]
+                message += "The number of clients connected to J1708 is {}.\n\n".format(number_of_clients)
+                
+                can_active = (status_bytes[6] & 0x01) >> 0
+                if can_active:
+                    message += "The CAN link is activated.\n"
+                else:
+                    message += "The CAN link is not activated.\n"
+
+                traffic_detected = (status_bytes[6] & 0x02) >> 1
+                if traffic_detected:
+                    message += "CAN network traffic was detected in the last second.\n"
+                else:
+                    message += "CAN network traffic was not detected in the last second.\n"
+
+                bus_off = (status_bytes[6] & 0x04) >> 2
+                if bus_off:
+                    message += "The CAN controller reports a BUS_OFF status.\n"
+                else:
+                    message += "The CAN controller does not report a BUS_OFF status.\n"
+                number_of_clients = status_bytes[7]
+                message += "The number of clients connected to CAN is {}.\n\n".format(number_of_clients)
+
+                j1850_active = (status_bytes[8] & 0x01) >> 0
+                if j1850_active:
+                    message += "The J1850 link is activated.\n"
+                else:
+                    message += "The J1850 link is not activated.\n"
+
+                traffic_detected = (status_bytes[8] & 0x02) >> 1
+                if traffic_detected:
+                    message += "J1850 network traffic was detected in the last second.\n"
+                else:
+                    message += "J1850 network traffic was not detected in the last second.\n"
+
+                number_of_clients = status_bytes[9]
+                message += "The number of clients connected to J1850 is {}.\n\n".format(number_of_clients)
+
+                iso_active = (status_bytes[16] & 0x01) >> 0
+                if iso_active:
+                    message += "The ISO15765 link is activated.\n"
+                else:
+                    message += "The ISO15765 link is not activated.\n"
+
+                traffic_detected = (status_bytes[16] & 0x02) >> 1
+                if traffic_detected:
+                    message += "ISO15765 network traffic was detected in the last second.\n"
+                else:
+                    message += "ISO15765 network traffic was not detected in the last second.\n"
+
+                bus_off = (status_bytes[16] & 0x04) >> 2
+                if bus_off:
+                    message += "The CAN controller reports a BUS_OFF status.\n"
+                else:
+                    message += "The CAN controller does not report a BUS_OFF status.\n"
+                number_of_clients = status_bytes[17]
+                message += "The number of clients connected to ISO15765 is {}.\n\n".format(number_of_clients)
+
+
+            else: 
+                if return_value in RP1210Errors:
+                    message = "RP1210_GetHardwareStatus failed with a return value of  {}: {}".format(return_value,RP1210Errors[return_value])
+                else:
+                    message = "RP1210_GetHardwareStatus failed with\nan unknown error. Code: {}".format(return_value)
+        
+        print(message)
+        message_window.setText(message)
+        message_window.exec_()
+
     def display_version(self):
-        if self.RP1210.ReadVersion is None or self.RP1210.nClientID is None:
-            print("RP1210_ReadVersion() is not supported.")
-            message_window = QMessageBox()
-            message_window.setText("RP1210_ReadVersion() function is not supported.")
-            message_window.setIcon(QMessageBox.Information)
-            message_window.setWindowTitle('RP1210 Version Information')
-            message_window.setStandardButtons(QMessageBox.Ok)
-            message_window.exec_()
-            return
-
-        chDLLMajorVersion    = (c_char)()
-        chDLLMinorVersion    = (c_char)()
-        chAPIMajorVersion    = (c_char)()
-        chAPIMinorVersion    = (c_char)()
-
-        self.RP1210.ReadVersion( byref( chDLLMajorVersion ), byref( chDLLMinorVersion ), byref( chAPIMajorVersion ), byref( chAPIMinorVersion  ) )
-
-        print('Successfully Read DLL and API Versions.')
-        DLLMajor = chDLLMajorVersion.value.decode('ascii')
-        DLLMinor = chDLLMinorVersion.value.decode('ascii')
-        APIMajor = chAPIMajorVersion.value.decode('ascii')
-        APIMinor = chAPIMinorVersion.value.decode('ascii')
-        print("DLL Major Version: {}".format(DLLMajor))
-        print("DLL Minor Version: {}".format(DLLMinor))
-        print("API Major Version: {}".format(APIMajor))
-        print("API Minor Version: {}".format(APIMinor))
 
         message_window = QMessageBox()
-        message_window.setText('Driver software versions are as follows:\nDLL Major Version: %r' %DLLMajor + '\nDLL Minor Version: %r' %DLLMinor + '\nAPI Major Version: %r' %APIMajor + '\nAPI Minor Version: %r' %APIMinor)
         message_window.setIcon(QMessageBox.Information)
         message_window.setWindowTitle('RP1210 Version Information')
         message_window.setStandardButtons(QMessageBox.Ok)
 
+        if self.RP1210.ReadVersion is None or self.RP1210.nClientID is None:
+            message_window.setText("RP1210_ReadVersion() function is not available.")
+            print("RP1210_ReadVersion() is not supported.")
+        else:        
+            chDLLMajorVersion    = (c_char)()
+            chDLLMinorVersion    = (c_char)()
+            chAPIMajorVersion    = (c_char)()
+            chAPIMinorVersion    = (c_char)()
+
+            #There is no return value for RP1210_ReadVersion
+            self.RP1210.ReadVersion(byref(chDLLMajorVersion), 
+                                    byref(chDLLMinorVersion), 
+                                    byref(chAPIMajorVersion), 
+                                    byref(chAPIMinorVersion))
+            print('Successfully Read DLL and API Versions.')
+            DLLMajor = chDLLMajorVersion.value.decode('ascii','ignore')
+            DLLMinor = chDLLMinorVersion.value.decode('ascii','ignore')
+            APIMajor = chAPIMajorVersion.value.decode('ascii','ignore')
+            APIMinor = chAPIMinorVersion.value.decode('ascii','ignore')
+            print("DLL Major Version: {}".format(DLLMajor))
+            print("DLL Minor Version: {}".format(DLLMinor))
+            print("API Major Version: {}".format(APIMajor))
+            print("API Minor Version: {}".format(APIMinor))
+            message_window.setText("Driver software versions are as follows:\nDLL Major Version: {}\nDLL Minor Version: {}\nAPI Major Version: {}\nAPI Minor Version: {}".format(DLLMajor,DLLMinor,APIMajor,APIMinor))
         message_window.exec_()
+    
+    def get_last_error_msg(self):
+
+        nErrorCode, ok = QInputDialog.getInt(self, 'Last Error Code','Enter Error Code:',value = -1,min = 0,max=255)
+
+        message_window = QMessageBox()
+        message_window.setIcon(QMessageBox.Information)
+        message_window.setWindowTitle('RP1210 Get Last Error Message')
+        message_window.setStandardButtons(QMessageBox.Ok)
+        # Make sure the function prototype is available:
+        if self.RP1210.GetLastErrorMsg is not None and self.RP1210.nClientID is not None:
+            clientID = int(self.RP1210.nClientID)
+            fpchDescription = (c_char*80)()
+            nSubErrorCode = (c_int)()
+            return_value = self.RP1210.GetLastErrorMsg(c_short(nErrorCode),
+                                                       byref(nSubErrorCode),
+                                                       byref(fpchDescription),
+                                                       c_short(clientID))
+            description = fpchDescription.value.decode('ascii','ignore')
+            sub_error = nSubErrorCode.value
+            if return_value == 0 :
+                message = "Client ID is {}.\nError Code {} means {}".format(clientID, nErrorCode, description)
+                if sub_error < 0:
+                    message_window.setInformativeText("No subordinate error code is available.")
+                else:
+                    message_window.setInformativeText("Additional Code: {}".format(sub_error))
+            else: 
+                if return_value in RP1210Errors:
+                    message = "RP1210_GetLastErrorMsg failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value])
+                else:
+                    message = "RP1210_GetLastErrorMsg failed with\nan unknown error. Code: {}".format(return_value)          
+        else:
+            message = "RP1210_GetLastErrorMsg() function is not available."
+        
+        print(message)
+        message_window.setText(message)
+        message_window.exec_()
+
+    def get_error_code(self,code):
+        # Make sure the function prototype is available:
+        if self.RP1210.GetErrorMsg is not None:
+            #make sure the error code is an integer
+            try:
+                code = int(code)
+            except Exception as e:
+                print(e)
+                code = -1
+            # Set up the decription buffer
+            fpchDescription = (c_char*80)()
+            return_value = self.RP1210.GetErrorMsg(c_short(code),
+                                                   byref(fpchDescription))
+            description = fpchDescription.raw.decode('ascii','ignore')
+            
+            if return_value == 0:
+               return description
+            else: 
+                if return_value in RP1210Errors:
+                    print("RP1210_GetErrorMsg failed with a return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                    return "RP1210_GetErrorMsg failed with a return value of  {}: {}".format(return_value,RP1210Errors[return_value])
+                else:
+                    return "RP1210_GetErrorMsg failed with an unknown error. Code: {}".format(return_value)
+        else:
+            return "Error code interpretation not available."
+        message_window.exec_()
+
+    def lookup_error_code(self):
+        """This functions returns the textual description of the error code returned by a routine."""
+        nErrorCode, ok = QInputDialog.getInt(self, 'Error Code','Enter Error Code:',value = -1,min = 0,max=255)
+        if ok:
+            message_window = QMessageBox()
+            message_window.setIcon(QMessageBox.Information)
+            message_window.setWindowTitle('RP1210 Get Error Message')
+            message_window.setStandardButtons(QMessageBox.Ok)
+
+            if self.RP1210.GetErrorMsg is None:
+                print("RP1210_GetErrorMsg() is not available.")
+                message_window.setText("RP1210_GetErrorMsg() function is not available.")
+            else:
+                
+                fpchDescription = (c_char*80)()
+                return_value = self.RP1210.GetErrorMsg(c_short(nErrorCode),
+                                                       byref(fpchDescription))
+                code = nErrorCode #.decode('ascii',ignore)
+                description = fpchDescription.raw.decode('ascii','ignore')
+                if return_value == 0 :
+                   message = "Error Code {} means {}".format(code, description)
+                   print(message)
+                   message_window.setText(message)
+                else: 
+                    if return_value in RP1210Errors:
+                        print("RP1210_GetErrorMsg failed with a return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                        message_window.setText("RP1210_GetErrorMsg failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                    else:
+                        message_window.setText("RP1210_GetErrorMsg failed with\nan unknown error. Code: {}".format(return_value))           
+            message_window.exec_()
 
     def display_detailed_version(self):
         message_window = QMessageBox()
         message_window.setIcon(QMessageBox.Information)
         message_window.setWindowTitle('RP1210 Detailed Version')
         message_window.setStandardButtons(QMessageBox.Ok)
-        
+            
         if self.RP1210.ReadDetailedVersion is None or self.RP1210.nClientID is None:
-            print("RP1210_ReadVersion() is not supported.")
-            message_window.setText("RP1210_ReadDetailedVersion() function is not supported.")
-            message_window.exec_()
+            message = "RP1210_ReadDetailedVersion() function is not available."
         else:
             chAPIVersionInfo    = (c_char*17)()
             chDLLVersionInfo    = (c_char*17)()
@@ -735,27 +1133,48 @@ class TUDiagnostics(QMainWindow):
                                                         byref(chDLLVersionInfo), 
                                                         byref(chFWVersionInfo))
             if return_value == 0 :
-               print('Congratulations! You have connected to a VDA! No need to check your USB connection.')
-               DLL = chDLLVersionInfo.value
-               API = chAPIVersionInfo.value
-               FW = chAPIVersionInfo.value
-               message_window.setText('Congratulations!\nYou have connected to a vehicle diagnostic adapter (VDA)!\nNo need to check your USB connection.\nDLL = {}\nAPI = {}\nFW = {}'.format(DLL.decode('ascii'),API.decode('ascii'),FW.decode('ascii')))
+                message = 'The PC computer has successfully connected to the RP1210 Device.\nThere is no need to check your USB connection.\n'
+                DLL = chDLLVersionInfo.value
+                API = chAPIVersionInfo.value
+                FW = chAPIVersionInfo.value
+                message += "DLL = {}\n".format(DLL.decode('ascii','ignore'))
+                message += "API = {}\n".format(API.decode('ascii','ignore'))
+                message += "FW  = {}".format(FW.decode('ascii','ignore'))
             else: 
                 if return_value in RP1210Errors:
-                    print("RP1210_ReadDetailedVersion fails with a return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
-                    message_window.setText("RP1210_ReadDetailedVersion failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value]))
+                    message = "RP1210_ReadDetailedVersion failed with\na return value of  {}: {}".format(return_value,RP1210Errors[return_value])
                 else:
-                    message_window.setText("RP1210_ReadDetailedVersion failed with\nan unknown error. Code: {}".format(return_value))
-            
+                    message = "RP1210_ReadDetailedVersion failed with\nan unknown error. Code: {}".format(return_value)          
+        message_window.setText(message)
         message_window.exec_()
-    def closeEvent(self, *args, **kwargs):
+
+    def disconnectRP1210(self):
         nClientID = self.RP1210.nClientID
         if nClientID is not None:
-            for n in range(nClientID):
-                return_value = self.RP1210.ClientDisconnect(n)
-                print("Exiting. RP1210_ClientDisconnect returns {}: {}".format(return_value,RP1210Errors[return_value]))
+            # Many RP1210 devices can handle 16 clients, so lets close all of those down.
+            # TODO, keep track of the actual clients connected.
+            for n in range(16,1,-1): 
+                try:
+                    return_value = self.RP1210.ClientDisconnect(n)
+                    message = "RP1210_ClientDisconnect returns {}: {}".format(return_value,RP1210Errors[return_value])
+                except Exception as e:
+                    print(e)
+                    message = "There was an exception with RP1210.ClientDisconnect({})".format(n)
+                print(message)
+                self.statusBar().showMessage(message)
+        else:
+            print("nClientID is ", end='')
+            print(nClientID)
+
+    def closeEvent(self, *args, **kwargs):
+        self.disconnectRP1210()
+        print("Exiting")
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        app.close()
     execute = TUDiagnostics()
     sys.exit(app.exec_())
