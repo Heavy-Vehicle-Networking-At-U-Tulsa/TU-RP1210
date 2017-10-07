@@ -2,6 +2,7 @@
     "1": {
         "deviceID": 1,
         "dll_name": "DPA4PMA",
-        "protocol": "CAN"
+        "protocol": "CAN",
+        "speed": "Auto"
     }
 }
