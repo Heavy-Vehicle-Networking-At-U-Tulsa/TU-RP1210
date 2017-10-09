@@ -1,0 +1,24 @@
+2017-10-08 08:29:22., DEBUG, in __init__, Loading the DPA4PMA.dll file using the CAN protocol for device 1
+2017-10-08 08:29:22., WARNING, in __init__, function 'RP1210_GetHardwareStatusEx' not found
+2017-10-08 08:29:22., DEBUG, in __init__, Connecting to ClientConnect using b'CAN:Baud=Auto'
+2017-10-08 08:29:23., DEBUG, in __init__, The Client ID is: 1
+2017-10-08 08:29:23., DEBUG, in selectRP1210, RP1210_Set_All_Filters_States_to_Pass - SUCCESS
+2017-10-08 08:29:23., DEBUG, in run, Read Message Client ID: 1
+2017-10-08 08:29:23., DEBUG, in selectRP1210, Started RP1210ReadMessage Thread.
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, Sending read_message_thread run signal a false.
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in disconnectRP1210, RP1210_ClientDisconnect returns 129: ERR INVALID CLIENT ID
+2017-10-08 08:29:42., DEBUG, in closeEvent, Exiting
