@@ -1,5 +1,0 @@
-2017-10-11 11:03:05., DEBUG, in __init__, Loading the CIL7R32.dll file using the J1708 protocol for device 1
-2017-10-11 11:03:05., WARNING, in __init__, function 'RP1210_GetHardwareStatusEx' not found
-2017-10-11 11:03:05., DEBUG, in __init__, Connecting to ClientConnect using b'J1708'
-2017-10-11 11:03:05., DEBUG, in __init__, The Client ID is: 134
-2017-10-11 11:03:10., DEBUG, in disconnectRP1210, Sending read_message_thread run signal a false.
