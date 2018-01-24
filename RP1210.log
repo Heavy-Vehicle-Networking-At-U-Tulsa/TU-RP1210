@@ -1,0 +1,25 @@
+2017-10-16 11:23:22., DEBUG, in __init__, Loading the CIL7R32.dll file using the J1708 protocol for device 1
+2017-10-16 11:23:22., WARNING, in __init__, function 'RP1210_GetHardwareStatusEx' not found
+2017-10-16 11:23:22., DEBUG, in __init__, Connecting to ClientConnect using b'J1708'
+2017-10-16 11:23:22., DEBUG, in __init__, The Client ID is: 134
+2017-10-16 11:23:40., DEBUG, in __init__, Current RP1210 APIs installed are: CA2RP32, CA3rp32, CAIPRP32, CCARP32, CIL7R32, CMNSIM32, CMNSIP32, DD121032, DGDPA5MA, DM121032, DPA4PMA, IC121032, RFSRP32, UDIF32
+2017-10-16 11:23:40., WARNING, in fill_vendor, Source contains parsing errors: 'c:/Windows/CMNSIM32.ini'
+	[line 197]: '0,All\n'
+	[line 205]: '0,All\n'
+2017-10-16 11:23:40., DEBUG, in fill_speed, J1708
+2017-10-16 11:23:40., DEBUG, in fill_speed, 9600
+2017-10-16 11:23:44., DEBUG, in fill_speed, J1850_104K
+2017-10-16 11:23:44., DEBUG, in fill_speed, 10.4
+2017-10-16 11:23:47., DEBUG, in fill_speed, J1939
+2017-10-16 11:23:47., DEBUG, in fill_speed, 250
+2017-10-16 11:23:49., DEBUG, in connect_RP1210, Accepted Dialog OK
+2017-10-16 11:23:49., DEBUG, in __init__, Loading the DGDPA5MA.dll file using the J1939 protocol for device 1
+2017-10-16 11:23:49., WARNING, in __init__, function 'RP1210_GetHardwareStatusEx' not found
+2017-10-16 11:23:49., DEBUG, in __init__, Connecting to ClientConnect using b'J1939:Baud=250'
+2017-10-16 11:23:51., DEBUG, in __init__, The Client ID is: 142
+2017-10-16 11:23:58., DEBUG, in __init__, Current RP1210 APIs installed are: CA2RP32, CA3rp32, CAIPRP32, CCARP32, CIL7R32, CMNSIM32, CMNSIP32, DD121032, DGDPA5MA, DM121032, DPA4PMA, IC121032, RFSRP32, UDIF32
+2017-10-16 11:23:58., WARNING, in fill_vendor, Source contains parsing errors: 'c:/Windows/CMNSIM32.ini'
+	[line 197]: '0,All\n'
+	[line 205]: '0,All\n'
+2017-10-16 11:23:58., DEBUG, in fill_speed, J1939
+2017-10-16 11:23:58., DEBUG, in fill_speed, 250

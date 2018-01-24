@@ -1,8 +1,8 @@
 {
-    "1": {
+    "2": {
         "deviceID": 1,
-        "dll_name": "DPA4PMA",
-        "protocol": "CAN",
+        "dll_name": "CIL7R32",
+        "protocol": "J1939",
         "speed": "Auto"
     }
 }
