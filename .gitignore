@@ -2,3 +2,6 @@ RXdata.txt
 *.pyc
 *.log
 *.log
+*.bin
+J1708NetworkTraffic.bin
+CANNetworkTraffic.bin
