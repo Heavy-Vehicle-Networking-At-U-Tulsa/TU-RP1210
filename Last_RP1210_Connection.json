@@ -1,8 +1,8 @@
 {
-    "0": {
+    "2": {
         "deviceID": 1,
         "dll_name": "CIL7R32",
-        "protocol": "J1708",
-        "speed": "9600"
+        "protocol": "J1939",
+        "speed": "Auto"
     }
 }
