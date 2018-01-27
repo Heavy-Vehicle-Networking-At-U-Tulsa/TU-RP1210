@@ -1,8 +1,6 @@
 
-from PyQt5.QtCore import Qt
-#from PyQt5.QtGui import *
-from PyQt5.QtWidgets import (QSizePolicy,
-                             QMessageBox,
+#from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QMessageBox,
                              QFileDialog,
                              QLabel,
                              QGridLayout,
@@ -20,28 +18,16 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import datetime as dt
-
-from matplotlib import rcParams
-
 import os
 import csv
-from TU_RP1210functions import *
-
+from RP1210Functions import *
 import logging
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-file_handler = logging.FileHandler('TruckCRYPT.log', mode='w')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
-
-
+from matplotlib import rcParams
+rcParams.update({'figure.autolayout': True}) #Depends on matplotlib from graphing
+markers = [ "D", "o", "v", "*", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "h", "H", "+", "x", "X", "d", "|"]
+ 
 class GraphDialog(QDialog):
     def __init__(self, parent=None, title="Graph"):
         super(GraphDialog, self).__init__(parent)

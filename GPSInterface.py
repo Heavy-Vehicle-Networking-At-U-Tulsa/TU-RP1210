@@ -40,18 +40,8 @@ import logging
 import threading
 import traceback
 from micropyGPS import MicropyGPS
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TruckCRYPT.log',mode='a')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
 
 class GPSThread(threading.Thread):
     '''This thread is designed to receive messages from a GPS,
@@ -194,3 +184,5 @@ class GPSDialog(QDialog):
         except FileNotFoundError:
             self.connected = False
         return self.connected 
+
+

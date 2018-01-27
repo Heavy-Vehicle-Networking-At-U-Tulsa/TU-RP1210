@@ -5,22 +5,10 @@ import sys
 import struct
 import base64
 
-from TU_RP1210functions import *
+from RP1210Functions import *
 
 import logging
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("{timestamp: '%(asctime)s', level: '%(levelname)s', function: '%(funcName)s', message: '%(message)s'}",
-    datefmt='%Y-%m-%d %H:%M:%S')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TruckCRYPT.log', mode='w')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
 
 
 ISO_PGN = 0xDA00
@@ -221,124 +209,3 @@ def init_session(isodriver):
     message_bytes = bytes([0x2, 0x10, 0x81, 0, 0, 0, 0, 0])
     isodriver.send_message(message_bytes, 0)
 
-def get_paccar_hard_brakes():
-#    data_page_num = int(sys.argv[1])
-    data_pages = [None]*6
-    snapshotter = TrafficSnapshotter.TrafficSnapshotter()
-    __isodriver = ISO15765Driver(snapshotter)
-    
-    message_bytes = bytes([0x2, 0x10, 0x81, 0, 0, 0, 0,0])
-    
-    for data_page_num in [0,1,2,3,4,5]:
-
-        '''        print("initializing session for datapage %d" % data_page_num)
-        init_session(__isodriver)
-        done = False
-        while not done:
-            (pgn, priority, src_addr, dst_addr, data) = __isodriver.read_message()
-            #        print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-            if pgn == 0xDA00:
-                print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-                done = True'''
-
-        print("requesting PACCAR data page %d" % data_page_num)
-
-        message_bytes = bytes([0x2, 0x33, 0x60 | data_page_num, 0, 0, 0, 0, 0])
-        __isodriver.send_message(message_bytes, 0)
-        time.sleep(2)
-        done = False
-        while not done:
-            (pgn, priority, src_addr, dst_addr, data) = __isodriver.read_message()
-            #           print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-            if pgn == 0xDA00:
-                data_pages[data_page_num] = data
-                done = True
-        saved_snapshot = snapshotter.snapshot
-        del(snapshotter)
-        del(__isodriver)
-        snapshotter = TrafficSnapshotter.TrafficSnapshotter(saved_snapshot)
-        __isodriver = ISO15765Driver(snapshotter)
-        
-    datas = []
-    for i in range(0, 5, 2):
-        datas.append(data_pages[i][2:]+data_pages[i+1][2:])
-    
-
-def get_paccar_snapshot_recorder():
-#    data_page_num = int(sys.argv[1])
-    data_pages = [None] * 33
-    total_pages = 0
-    page_lengths = []
-    snapshotter = TrafficSnapshotter.TrafficSnapshotter()
-    __isodriver = ISO15765Driver(snapshotter)
-    
-    message_bytes = bytes([0x2, 0x10, 0x81, 0, 0, 0, 0,0])
-    
-    for data_page_num in range(0x31, 0x52):
-
-        '''        print("initializing session for datapage %d" % data_page_num)
-        init_session(__isodriver)
-        done = False
-        while not done:
-            (pgn, priority, src_addr, dst_addr, data) = __isodriver.read_message()
-            #        print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-            if pgn == 0xDA00:
-                print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-                done = True'''
-
-        print("requesting PACCAR data page %s" % hex(data_page_num))
-
-        message_bytes = bytes([0x2, 0x33, data_page_num, 0, 0, 0, 0, 0])
-        __isodriver.send_message(message_bytes, 0)
-        done = False
-        while not done:
-            (pgn, priority, src_addr, dst_addr, data) = __isodriver.read_message()
-            #           print( repr( (hex(pgn), priority, src_addr, dst_addr, data) ) )
-            if pgn == 0xDA00:
-      #          data_pages[data_page_num] = data
-                print(data)
-                page_lengths.append(len(data))
-                data_pages[data_page_num - 0x31] = data
-                done = True
-        snapshotter.cleanup()
-        del(snapshotter)
-        del(__isodriver)
-        snapshotter = TrafficSnapshotter.TrafficSnapshotter()
-        __isodriver = ISO15765Driver(snapshotter)
-        total_pages +=1
-
-
-    print("Total pages: %d" % total_pages)
-    print("Page lengths: %s" % str(page_lengths))
-    return data_pages
-
-def get_unknown_parameter(filename):
-#    data_page_num = int(sys.argv[1])
-    data_pages = [None]
-    total_pages = 0
-    page_lengths = []
-    snapshotter = TrafficSnapshotter.TrafficSnapshotter()
-    __isodriver = ISO15765Driver(snapshotter)
- 
-    message_bytes0 = bytes([0x02, 0x10, 0x03] + [0x00] * 5)
-    message_bytes1 = bytes([0x03, 0x22, 0xf1, 0x57] + [0x00] * 4)
-
-    
-    
-
-    __isodriver.send_message(message_bytes1, 0)
-    done = False
-    start_time = time.time()
-    while not done and time.time() - start_time < 30:
-        (pgn, priority, src_addr, dst_addr, data) = __isodriver.read_message()
-        if pgn == 0xDA00:
-            print(data)
-            page_lengths.append(len(data))
-            data_pages[0] = data
-            done = True
-    snapshotter.cleanup()
-    snapshotter.snapshot.dump_to_log(filename)
-    return data_pages
-
-
-    

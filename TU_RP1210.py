@@ -3,9 +3,6 @@
 # Import
 TU_RP1210_version={"major":2,"minor":0}
 
-#from geopy.geocoders import Nominatim
-#from geopy.exc import GeopyError
-
 from PyQt5.QtWidgets import (QMainWindow,
                              QWidget,
                              QTreeView,
@@ -39,13 +36,6 @@ from PyQt5.QtWidgets import (QMainWindow,
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication
 from PyQt5.QtGui import QIcon
 
-from Cryptodome.Hash import SHA256
-from Cryptodome.PublicKey import ECC
-from Cryptodome.Signature import DSS
-from Cryptodome.Cipher import PKCS1_OAEP
-
-import stat
-
 import pgpy
 from pgpy.constants import (PubKeyAlgorithm, 
                             KeyFlags, 
@@ -55,19 +45,13 @@ from pgpy.constants import (PubKeyAlgorithm,
                             EllipticCurveOID, 
                             SignatureType)
 
-from ctypes import *
+#from ctypes import *
 import subprocess 
-
-# Use threads to set up asynchronous communications
 import requests
-import threading
 import queue
 import time
 import shutil
-
 import base64
-
-#import calendar
 import sys
 import struct
 import json
@@ -75,161 +59,26 @@ import humanize
 import random
 import os
 
-from RP1210Constants import *
+#Import all the submodules in the
 from RP1210 import *
+from RP1210Functions import *
 from RP1210Select import *
 from GPSInterface import *
 from J1939Tab import *
 from J1587Tab import *
 from ComponentInfoTab import *
-from TU_RP1210functions import *
 from UserData import *
 from PDFReports import *
 from ISO15765 import *
+from graphing import * 
 
-from matplotlib import pyplot as plt
-
-from graphing import * #this is a custom class file for graphics
-rcParams.update({'figure.autolayout': True}) #Depends on matplotlib from graphing
-markers = [ "D", "o", "v", "*", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "h", "H", "+", "x", "X", "d", "|"]
- 
 
 import logging
-
+import logging.config
+with open("logging.config.json",'r') as f:
+    logging_dictionary = json.load(f)
+logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("{timestamp: '%(asctime)s', level: '%(levelname)s', function: '%(funcName)s', message: '%(message)s'}",
-    datefmt='%Y-%m-%d %H:%M:%S')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TU_RP1210.log', mode='w')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
-
-
-current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
-current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
-
-start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-logger.info("Starting TU_RP1210 Version {} at {}".format(TU_RP1210_version, start_time))
-
-os.system("TASKKILL /F /IM DGServer2.exe")
-os.system("TASKKILL /F /IM DGServer1.exe")  
-
-class RP1210ReadMessageThread(threading.Thread):
-    '''This thread is designed to receive messages from the vehicle diagnostic
-    adapter (VDA) and put the data into a queue. The class arguments are as
-    follows:
-    rx_queue - A data structure that takes the received message.
-    RP1210_ReadMessage - a function handle to the VDA DLL.
-    nClientID - this lets us know which network is being used to receive the
-                messages. This will likely be a 1 or 2'''
-
-    def __init__(self, parent, rx_queue, extra_queue, RP1210_ReadMessage, nClientID, protocol, filename="NetworkTraffic"):
-        threading.Thread.__init__(self)
-        self.root = parent
-        self.rx_queue = rx_queue
-        self.extra_queue = extra_queue
-        self.RP1210_ReadMessage = RP1210_ReadMessage
-        self.nClientID = nClientID
-        self.runSignal = True
-        self.message_count = 0
-        self.start_time = time.time()
-        self.duration = 0
-        self.filename = protocol + filename + ".bin"
-        self.protocol = protocol
-        self.pgns_to_block=[61444, 61443, 65134, 65215]
-        self.sources_to_block=[0, 11]
-        self.can_ids_to_block = []
-
-    def run(self):
-        ucTxRxBuffer = (c_char * 2000)()
-        # display a valid connection upon start.
-        logger.debug("Read Message Client ID: {}".format(self.nClientID))
-        message_bytes = b'1234'
-        with open(self.filename,'wb') as log_file:
-            pass
-        while self.runSignal: #Look into threading.events
-                self.duration = time.time() - self.start_time
-                return_value = self.RP1210_ReadMessage(c_short(self.nClientID),
-                                                       byref(ucTxRxBuffer),
-                                                       c_short(2000),
-                                                       c_short(BLOCKING_IO))
-                if return_value > 0:
-                    if ucTxRxBuffer[4] == b'\x00': #Echo is on, so we only want to see what others are sending.
-                        self.message_count +=1
-                    current_time = time.time()
-                    time_bytes = struct.pack("<L",int(current_time))                 
-                    if self.protocol == "CAN": 
-                        dlc = int(return_value - 10)
-                        #the following conversion is to emulate the data structure from the NMFTA CAN Logger Project
-                        # See https://github.com/Heavy-Vehicle-Networking-At-U-Tulsa/NMFTA-CAN-Logger/tree/master/_07_Low_Latency_Logger_with_Requests
-                        microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
-                        # RP1210_ReadMessage API:
-                        #Reverse endianess
-                        vda_timestamp = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[0:4])[0])  
-                        
-                        #echo_byte = ucTxRxBuffer[4]
-                        extended = ucTxRxBuffer[5]
-                        if extended:
-                            can_id = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[6:10])[0]) #Swap endianness
-                            can_data = ucTxRxBuffer[10:18]
-                        else:
-                            can_id = struct.pack("<H",struct.unpack(">H",ucTxRxBuffer[6:8])[0]) #Swap endianness
-                            can_data = ucTxRxBuffer[8:16]
-                        # Build the 24 bytes that make up a CAN message.
-                        
-                        if can_id not in self.can_ids_to_block:
-                            self.rx_queue.put(ucTxRxBuffer[:return_value])
-                    
-                        message_bytes += time_bytes
-                        message_bytes += vda_timestamp
-                        message_bytes += microsecond_bytes
-                        message_bytes += can_id
-                        message_bytes += can_data
-                        if len(message_bytes) >= 504:
-                            message_bytes += b'\xFF\xFF\xFF\xFF'
-                            with open(self.filename,'ab') as log_file:
-                                log_file.write(message_bytes)
-                            message_bytes = b'1234'
-
-                    elif self.protocol == "J1708": 
-                        self.rx_queue.put(ucTxRxBuffer[:return_value])
-                        self.extra_queue.put(ucTxRxBuffer[5:return_value])
-                        #long_message += self.make_log_data(b'J1708',return_value,time_bytes,ucTxRxBuffer)
-                        #if len(long_message) >= 100:
-                        with open(self.filename,'a') as log_file:
-                            log_file.write(" ".join("{:02X}".format(c) for c in ucTxRxBuffer[5:return_value]) + "\n")
-                            #del long_message
-                            #long_message = b''
-
-                    elif self.protocol == "J1939":
-                        pgn = struct.unpack("<L", ucTxRxBuffer[5:8] + b'\x00')[0]
-                        sa = struct.unpack("B",ucTxRxBuffer[9])[0]
-                        
-                        if (pgn not in self.pgns_to_block) or (sa not in self.sources_to_block):
-                                self.rx_queue.put(ucTxRxBuffer[:return_value])
-                        #ISO 15765 traffic only
-                        if pgn == 0xDA00:
-                            dst_addr = struct.unpack("B",ucTxRxBuffer[10])[0]
-                            message_data = ucTxRxBuffer[11:return_value]
-                            self.extra_queue.put((pgn, 6, sa, dst_addr, message_data))
-                        #else:
-                        #    print("Blocked {} {}".format(pgn,sa))
-                        # Logging for J1939 is taken care of by CAN
-                
-        logger.debug("RP1210 Receive Thread is finished.")
-
-    def make_log_data(self,message_bytes,return_value,time_bytes,ucTxRxBuffer):
-        length_bytes = struct.pack("<H",return_value + 4)
-        message_bytes += length_bytes
-        message_bytes += time_bytes
-        message_bytes += ucTxRxBuffer[:return_value]
-        return message_bytes
-
 
 class TU_RP1210(QMainWindow):
     def __init__(self):
@@ -244,7 +93,14 @@ class TU_RP1210(QMainWindow):
 
         self.isodriver = None
 
-        self.user_private_key, key_props = pgpy.PGPKey.from_file("TUPrivatePGPkey.pgp")
+        self.user_key_file = "TUPrivatePGPkey.pgp"
+        try:
+            self.load_private_key(self.user_key_file)
+        except FileNotFoundError:
+            self.user_private_key = pgpy.PGPKey.new(PubKeyAlgorithm.ECDSA, EllipticCurveOID.NIST_P256)
+            with open(self.user_key_file,'w') as f:
+                f.write(str(self.user_private_key))
+            logger.info("Created and saved private user key {}".format(self.user_key_file))
         self.user_public_key = self.user_private_key.pubkey
 
         # 65227 = DM02, 65227 = DM02,
@@ -280,12 +136,11 @@ class TU_RP1210(QMainWindow):
 
         read_timer = QTimer(self)
         read_timer.timeout.connect(self.read_rp1210)
-        read_timer.start(100) #milliseconds
+        read_timer.start(80) #milliseconds
         
         backup_timer = QTimer(self)
         backup_timer.timeout.connect(self.save_backup_file)
         backup_timer.start(30000)
-
         
 
     def init_ui(self):
@@ -662,8 +517,8 @@ class TU_RP1210(QMainWindow):
         logger.info("Current Data Directory is set to {}".format(self.export_path))
         logger.info("Current Data Package file is set to {}".format(self.filename))
 
-        self.data_package = {"TU_RP1210 File Format":{"major":TU_RP1210_version["major"],
-                                                       "minor":TU_RP1210_version["minor"]}}
+        self.data_package = {"File Format":{"major":TU_RP1210_version["major"],
+                                            "minor":TU_RP1210_version["minor"]}}
         
         try:
             CAN_log_name = self.read_message_threads["CAN"].filename
@@ -879,7 +734,7 @@ class TU_RP1210(QMainWindow):
             logger.info("Saved signed file {} to {}".format(filename, self.export_path))
             self.filename = os.path.basename(self.filename)
             self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
-        
+        return pgp_message
 
     def save_file_as(self):
         filters = "TU_RP1210 Data Files (*.cpt);;All Files (*.*)"
@@ -895,7 +750,7 @@ class TU_RP1210(QMainWindow):
             else:
                 self.filename = fname[0]+".cpt"
             self.export_path, self.filename = os.path.split(fname[0])
-            self.save_file()
+            return self.save_file()
     
     def export_to_pdf(self):
         
@@ -907,17 +762,15 @@ class TU_RP1210(QMainWindow):
         progress.setMaximum(2)
 
         logger.debug("Export to PDF Selected.")
-        self.save_file()
+        data_message = self.save_file()
         fname = os.path.join(self.export_path, self.filename)
-        with open(fname,'r') as f:
-            data_file = json.load(f)
         progress.setValue(1)
         QCoreApplication.processEvents()
         try:
-            ret = self.pdf_engine.go(data_file['Data_Package'], data_file['Verification'], self.filename[:-3]+'pdf')
+            ret = self.pdf_engine.go(data_message, self.filename[:-3]+'pdf')
         except:
             logger.warning(traceback.format_exc())
-            ret = "error"
+            ret = "Error"
         logger.info("PDF Export returned {}".format(ret))
         progress.setValue(2)
         if ret == "Success":
@@ -1129,31 +982,66 @@ class TU_RP1210(QMainWindow):
             pass
 
     def get_hardware_status_ex(self):
+        """
+        Show a dialog box for valid connections for the extended get hardware status command implemented in the 
+        vendor's RP1210 DLL.
+        """
         logger.debug("get_hardware_status_ex")
         for protocol,nClientID in self.client_ids.items():
             if nClientID is not None:
                 self.RP1210.get_hardware_status_ex(nClientID)
-                break
-                
+                return
+        QMessageBox.warning(self, 
+                    "Connection Not Present",
+                    "There were no Client IDs for an RP1210 device that support the extended hardware status command.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
+
     def get_hardware_status(self):
+        """
+        Show a dialog box for valid connections for the regular get hardware status command implemented in the 
+        vendor's RP1210 DLL.
+        """
         logger.debug("get_hardware_status")
         for protocol,nClientID in self.client_ids.items():
             if nClientID is not None:
                 self.RP1210.get_hardware_status(nClientID)
-                break
+                return
+        QMessageBox.warning(self, 
+                    "Connection Not Present",
+                    "There were no Client IDs for an RP1210 device that support the hardware status command.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
                 
     def display_detailed_version(self):
+        """
+        Show a dialog box for valid connections for the detailed version command implemented in the 
+        vendor's RP1210 DLL.
+        """
         logger.debug("display_detailed_version")
-        for protocol,nClientID in self.client_ids.items():
+        for protocol, nClientID in self.client_ids.items():
             if nClientID is not None:
                 self.RP1210.display_detailed_version(nClientID)
-                break
+                return
+        # otherwise show a dialog that there are no client IDs
+        QMessageBox.warning(self, 
+                    "Connection Not Present",
+                    "There were no Client IDs for an RP1210 device.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
     
     def display_version(self):
+        """
+        Show a dialog box for valid connections for the extended get hardware status command implemented in the 
+        vendor's RP1210 DLL. This does not require connection to a device, just a valid RP1210 DLL.
+        """
         logger.debug("display_version")
         self.RP1210.display_version()
 
     def disconnectRP1210(self):
+        """
+        Close all the RP1210 read message threads and disconnect the client.
+        """
         logger.debug("disconnectRP1210")
         for protocol, nClientID in self.client_ids.items():
             try:
@@ -1167,15 +1055,35 @@ class TU_RP1210(QMainWindow):
                 self.RP1210.ClientDisconnect(n)
             except:
                 pass
-        logger.debug("self.RP1210.ClientDisconnect() Finished.")
+        logger.debug("RP1210.ClientDisconnect() Finished.")
+
+    def get_iso_parameters(self, additional_params=[]):
+        """
+        Get Parameters defined in ISO 14229-1 Annex C.
+        Additional 2-byte parameters can be passed in as a list.
+        Returns a dictionary sieht the 2-byte request parameters as the key and the data as the value.
+        """
+        container = {}
+        data_page_numbers = [[0xf1, b] for b in range(0x80,0x9F)]
+        for i in range(len(data_page_numbers)):
+            QCoreApplication.processEvents()
+            progress_message = "Requesting ISO Data Element 0x{:02X}{:02X}".format(data_page_numbers[i][0],data_page_numbers[i][1])
+            logger.info(progress_message)
+            message_bytes = bytes(data_page_numbers[i])
+            data = self.isodriver.uds_read_data_by_id(message_bytes)
+            logger.debug(data)
+            container[bytes_to_hex_string(message_bytes)] = data
+        return container
 
     def start_scan(self):
-        #if not self.network_connected["J1708"] or not self.network_connected["J1939"]:
-        #    logger.info("Vehicle Network Not Detected.")
-        #    QMessageBox.information(self,"No Network","There was no messages from the vehicle.\nPlease check your RP1210 device and be sure the key switch is on.")
-        #    return    
+        """
+        Perform a scan of the vehicle network by sending a series of request messages over the
+        different vehicle networks. The requests are randomized.
+        """
         if self.ask_permission():
             logger.info("Starting Vehicle Network Scan.")
+
+            # Log the time when this starts
             self.extraction_time_pc = time.time()
             try:
                 self.extraction_time_gps = self.gps_thread.gpstime
@@ -1184,11 +1092,9 @@ class TU_RP1210(QMainWindow):
                 self.extraction_time_gps = 0
             logger.debug("PC Time = {}, GPS time = {}, PC - GPS = {:02f} seconds".format(self.extraction_time_pc, 
                 self.extraction_time_gps, self.extraction_time_pc - self.extraction_time_gps))
-            
-            
 
             passes = 5
-            total_requests = passes * len(self.J1939.j1939_request_pgns) * 3#len(self.source_addresses)
+            total_requests = passes * len(self.J1939.j1939_request_pgns) * 3 #len(self.source_addresses)
 
             progress = QProgressDialog(self)
             progress.setMinimumWidth(600)
@@ -1242,7 +1148,6 @@ class TU_RP1210(QMainWindow):
                         if progress.wasCanceled():
                             logger.info("Network scan stopped by user.")
                             progress.deleteLater()
-                            self.cleanup_standards_extraction()
                             return
                         
                     #J1587
@@ -1264,7 +1169,6 @@ class TU_RP1210(QMainWindow):
             
             progress.deleteLater()
             logger.info("Finished with Standards Based Data Extraction.")
-            self.cleanup_standards_extraction()
             
     def find_j1939_data(self, pgn, sa=0):
         '''
@@ -1432,20 +1336,20 @@ class TU_RP1210(QMainWindow):
     def load_private_key(self, private_key_file):
         #Load the key
         try:
-            synercon_private_key, properties = pgpy.PGPKey.from_file(private_key_file)
-            logger.info("Using a PGP private key to sign files with the following fingerprint {}".format(synercon_private_key.fingerprint))
-            return synercon_private_key
+            private_key, properties = pgpy.PGPKey.from_file(private_key_file)
+            logger.info("Using a PGP private key to sign files with the following fingerprint {}".format(private_key.fingerprint))
+            self.user_private_key = private_key
+            self.user_public_key = private_key.pubkey
         except FileNotFoundError:
             logger.debug(traceback.format_exc())
             logger.info("Missing Private Key File.")
             #TODO open dialog 
-            return
         except ValueError:
             logger.debug(traceback.format_exc())
             logger.info("Expecting PGP data")
         except:
             logger.debug(traceback.format_exc())
-            return
+
 
     def sign_stream(self, message, private_key_file):
         """
@@ -1534,20 +1438,6 @@ class TU_RP1210(QMainWindow):
                 "Failed to open {} as a valid PGP message. Be sure the file was saved by TU_RP1210".format(filename),
                 QMessageBox.Close,
                 QMessageBox.Close)
-            return False
-        #Load the PGP key
-        try:
-            key, properties = pgpy.PGPKey.from_file(self.user_public_key_file)
-            logger.info("Successfully loaded {} as a PGP public key.".format(self.user_public_key_file))
-        except ValueError:
-            logger.debug("A properly formed PGP block was not found in {}".format(self.user_public_key_file))
-            return False
-        except FileNotFoundError:
-            logger.debug("The file {} was not found.".format(self.user_public_key_file))
-            #TODO open file
-            return False
-        except:
-            logger.debug(traceback.format_exc())
             return False
         
         return self.verify_stream(message, key)
@@ -1767,6 +1657,14 @@ class TU_RP1210(QMainWindow):
         pass
 
 if __name__ == '__main__':
+    current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
+    current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
+
+    start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
+    logger.info("Starting TU_RP1210 Version {} at {}".format(TU_RP1210_version, start_time))
+
+    os.system("TASKKILL /F /IM DGServer2.exe")
+    os.system("TASKKILL /F /IM DGServer1.exe")  
     app = QCoreApplication.instance()
     if app is None:
         app = QApplication(sys.argv)

@@ -1,3 +1,37 @@
+import time
+import traceback
+import string
+import logging
+logger = logging.getLogger(__name__)
+
+
+def get_printable_chars(data_bytes):
+    return ''.join([x if x in string.printable else '' for x in data_bytes.decode('ascii','ignore')])
+
+def get_list_from_dict(data_dict):
+    return_list=[]
+    for k1,v1 in data_dict.items():
+        try:
+            if len(v1.items()) > 0:
+                return_list.append(['',k1])
+            for k2,v2 in v1.items():
+                return_list.append(['','',k2,v2])
+        except (TypeError, AttributeError):
+            pass
+    return return_list
+
+def bytes_to_hex_string(byte_string):
+    try:
+        return " ".join("{:02X}".format(c) for c in byte_string)
+    except (TypeError, IndexError):
+        # When unable to iterate over byte_string just return an empty string                                                                                                                             
+        logger.debug(traceback.format_exc)
+        return ""
+
+def get_local_time_string(ts):
+    return time.strftime("%A, %d %b %Y at %H:%M:%S %Z", time.localtime(ts))
+
+
 # A file with constants useful for RP1210 accplications
 
 # RP1210B   RP1210_SendCommand Defines (From RP1210B Document)

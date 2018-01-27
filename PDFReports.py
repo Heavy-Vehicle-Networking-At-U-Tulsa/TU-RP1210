@@ -14,19 +14,24 @@ from reportlab.lib.pagesizes import letter
 from reportlab.rl_config import defaultPageSize
 from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT, TA_CENTER
 from io import BytesIO
-#import matplotlib.pyplot as plt
 from pdfrw import PdfReader, PdfDict
 from pdfrw.buildxobj import pagexobj
 from pdfrw.toreportlab import makerl
 import string
-
-#import pdb
 import traceback
 import sys
 import time
 import json
-#from copy import deepcopy
-
+import pgpy
+from pgpy.constants import (PubKeyAlgorithm, 
+                            KeyFlags, 
+                            HashAlgorithm, 
+                            SymmetricKeyAlgorithm, 
+                            CompressionAlgorithm, 
+                            EllipticCurveOID, 
+                            SignatureType)
+import logging
+logger = logging.getLogger(__name__)
 
 #Simple table style that makes a table with an inner grid, with a thick line below the header.
 FLAReportTableStyle = TableStyle([('BOX', (0,0), (-1,-1), 0.25, colors.black),
@@ -49,24 +54,7 @@ def time_string(timestamp):
     except TypeError:
         return "time not given"
 
-import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TruckCRYPT.log', mode='w')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
-
-# __all__ = ['FLAReportTemplate', 'FLAReportStyleSheet', 'FLAReportTableStyle', 'FLAReportTable',
-#            'FLAReportHeaderlessTable', 'FLAJ1939Table', 'FLAJ1587Table', 'FLAJ1587FaultTable',
-#            'FLAJ1939DMTable']
 def hours_min_sec(seconds):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
@@ -107,20 +95,15 @@ class FLAReportTemplate(SimpleDocTemplate):
             self.pagesize = kwargs.pop('pagesize')
         else:
             self.pagesize = letter
-        SimpleDocTemplate.__init__(self, 'TEMPFILE.pdf',
-                                   pagesize=self.pagesize,
-                                   showBoundary=0,
-                                   leftMargin=0.5*inch,
-                                   rightMargin= 0.5*inch,
-                                   topMargin=1.1*inch,
-                                   bottomMargin=0.6*inch,
-                                   allowSplitting=1,
-                                   title="TruckCRYPT 2.0 Data Report",
-                                   author="Copyright {} Synercon Technologies, LLC".format(time.strftime("%Y")),
-                                   _pageBreakQuick=1,
-                                   encrypt=None)
+
+        self.descriptor = "Heavy Vehicle"
+        self.author = "Student CyberTruck Experience {}".format(time.strftime("%Y"))
+        
         
         self.total_pages = 0
+
+        self.logo_file = "SCE Logo 2 color.pdf"
+
 
         # Set Up styles for the Document
         self.styles = getSampleStyleSheet()
@@ -154,12 +137,28 @@ class FLAReportTemplate(SimpleDocTemplate):
             elif style == 'Heading3':
                 self.notify('TOCEntry', (2, text, self.page))
 
-    def go(self, data, cert, outputfilename):
+    def go(self, pgp_message, outputfilename):
         '''
         Loads a data package and parses it.
+        This function builds and the story and produces it.
+        It follows along in order of the PDF.
         '''
+        SimpleDocTemplate.__init__(self, outputfilename,
+                                   pagesize=self.pagesize,
+                                   showBoundary=0,
+                                   leftMargin=0.5*inch,
+                                   rightMargin= 0.5*inch,
+                                   topMargin=1.1*inch,
+                                   bottomMargin=0.6*inch,
+                                   allowSplitting=1,
+                                   title="{} Data Report".format(self.descriptor),
+                                   author=self.author,
+                                   _pageBreakQuick=1,
+                                   encrypt=None)
+        
         table_options = self.table_options
-        self.data_package = data
+        
+        self.data_package = json.loads(pgp_message.message)
         self.datafilename = self.data_package["File Name"]
 
          #Extract header and footer data for each page.
@@ -206,7 +205,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         
         # Build the story 
         self.story = []
-        self.story.append(Paragraph("TruckCRYPT Data Report", self.styles['title']))
+        self.story.append(Paragraph("{} Data Report".format(self.descriptor), self.styles['title']))
         
         centered_normal_style = PS(name='centered', alignment=TA_CENTER)
         self.story.append(Paragraph("Report Creation Date: {}".format(time.strftime("%A, %B %d, %Y")), centered_normal_style))
@@ -263,7 +262,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.story.append(Paragraph(key, self.styles["Heading2"]))
                 self.story.append(value)
         else:
-            self.story.append(Paragraph("No Event Data is available through TruckCRYPT for this report.", self.styles["Normal"]))
+            self.story.append(Paragraph("No Event Data is available for this report.", self.styles["Normal"]))
 
 
 
@@ -299,7 +298,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                               ])
        
         self.story.append(Paragraph("System Reference Times", self.styles["Heading2"]))
-        self.story.append(Paragraph("The following values were obtained through the computer running the TruckCRYPT Software.", self.styles['Normal']))
+        self.story.append(Paragraph("The following values were obtained through the computer running the software.", self.styles['Normal']))
         time_table = Table(time_data, repeatRows=1, colWidths='*')
         self.story.append(time_table)
 
@@ -502,12 +501,12 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value), self.styles["Normal"]))
         except KeyError:
             self.story.append(Paragraph("{} is not available.".format(main_key), self.styles["Normal"]))
-        self.story.append(Paragraph("TruckCRYPT Data File Information", self.styles["Heading2"]))
+        self.story.append(Paragraph("{} Data File Information".format(self.descriptor), self.styles["Heading2"]))
         key = "File Name"
         value = self.data_package[key]
         self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value), self.styles["Normal"]))
         
-        key = "TruckCRYPT File Format"
+        key = "File Format"
         value = self.data_package[key]
         try:
             self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}.{}</para>".format(key,value['major'],value['minor']), self.styles["Normal"]))
@@ -522,63 +521,31 @@ class FLAReportTemplate(SimpleDocTemplate):
         value = self.data_package[key]
         self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value), self.styles["Normal"]))
 
-        key = "User Private Key File"
-        value = cert["Signer"][key]
-        self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value), self.styles["Normal"]))
-        
-        key = "User Public Key File"
-        value = cert["Signer"][key]
-        self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value), self.styles["Normal"]))
-
-        key = "Signature"
-        value = cert[key]
+        key = "Signatures"
         self.story.append(Paragraph("<para leftIndent=20><b>{}:</b></para>".format(key), self.styles["Normal"]))
-        self.story.append(Paragraph("{}".format(value), self.styles["Normal"]))
-        
+        for sig in pgp_message.signatures:
+            for value in str(sig).split('\n'):
+                self.story.append(Paragraph("<para leftIndent=30>{}</para>".format(value), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>cipherprefs:    {}</para>".format(sig.cipherprefs), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>compprefs:      {}</para>".format(sig.compprefs), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>created:        {}</para>".format(sig.created), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>expires_at:     {}</para>".format(sig.expires_at), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>exportable:     {}</para>".format(sig.exportable), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>features:       {}</para>".format(sig.features), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>hashprefs:      {}</para>".format(sig.hashprefs), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>hash_algorithm: {}</para>".format(str(pgpy.constants.HashAlgorithm(sig.hash_algorithm))), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>is_expired:     {}</para>".format(sig.is_expired), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>key_algorithm:  {}</para>".format(str(pgpy.constants.PubKeyAlgorithm(sig.key_algorithm))), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>key_flags:      {}</para>".format(sig.key_flags), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>keyserver:      {}</para>".format(sig.keyserver), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>keyserverprefs: {}</para>".format(sig.keyserverprefs), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>notation:       {}</para>".format(sig.notation), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>policy_uri:     {}</para>".format(sig.policy_uri), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>revocable:      {}</para>".format(sig.revocable), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>signer:         {}</para>".format(sig.signer), self.styles["Normal"]))
+            self.story.append(Paragraph("<para leftIndent=50>type:           {}</para>".format(str(pgpy.constants.SignatureType(sig.type))), self.styles["Normal"]))
+
         # User Data
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        SimpleDocTemplate.__init__(self, outputfilename,
-                                   pagesize=self.pagesize,
-                                   showBoundary=0,
-                                   leftMargin=0.5*inch,
-                                   rightMargin= 0.5*inch,
-                                   topMargin=1.1*inch,
-                                   bottomMargin=0.6*inch,
-                                   allowSplitting=1,
-                                   title="TruckCRYPT 2.0 Data Report",
-                                   author="Copyright {} Synercon Technologies, LLC".format(time.strftime("%Y")),
-                                   _pageBreakQuick=1,
-                                   encrypt=None)
-
 
         # Build the PDF file with calls to functions for each page. Use multibuild for the Table of Contents    
         try:
@@ -626,7 +593,7 @@ class FLAReportTemplate(SimpleDocTemplate):
 
     def _on_first_page(self, canvas, doc):
         scale = 2
-        img = PdfImage("SynerconLogo.pdf",
+        img = PdfImage(self.logo_file,
                         width=scale*inch,
                         height=scale * 394/905 * inch)
         img.drawOn(canvas,
@@ -637,7 +604,7 @@ class FLAReportTemplate(SimpleDocTemplate):
 
     def _on_other_page(self, canvas, doc):
         scale = 1.5
-        img = PdfImage("SynerconLogo.pdf",
+        img = PdfImage(self.logo_file,
                         width=scale*inch,
                         height=scale * 394/905 * inch)
         img.drawOn(canvas,
@@ -646,7 +613,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         canvas.setFont("Helvetica", 14)
         canvas.drawString(0.5 * inch, 
                           10.5 * inch, 
-                          "TruckCRYPT Data Report"
+                          "{} Data Report".format(self.descriptor),
                           )
         canvas.setFont("Helvetica", 10)
         canvas.drawString(0.5 * inch, 
@@ -903,19 +870,13 @@ if __name__ == '__main__':
     logger.debug("Running tests for generating PDFs for TruckCRYPT.")
     output = FLAReportTemplate()
     
-    with open("SynerconLogo.pdf",'rb') as f:
-        img_bytes = f.read()
-    img = BytesIO(img_bytes)
-    output.add_event_chart("Test Logo", img)
-    #with open("TruckCRYPTdata 2018-01-04 142401.cpt",'r') as f:
-    with open("DDEC 6 Example.json",'r') as f:
-
-        data_file = json.load(f)
-    print(data_file['Data_Package'])
-    print()
-    print(data_file['Verification'])
-    code = output.go(data_file['Data_Package'], data_file['Verification'], "TestReport.pdf")
+    #with open("SynerconLogo.pdf",'rb') as f:
+    #    img_bytes = f.read()
+    #img = BytesIO(img_bytes)
+    #output.add_event_chart("Test Logo", img)
+    
+    pgp_file_contents = pgpy.PGPMessage.from_file("Example Data.cpt")
+    code = output.go(pgp_file_contents, "TestReport.pdf")
     print(code)
-    #output.go("DDEC Data after.txt")
         
 

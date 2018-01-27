@@ -37,32 +37,14 @@ import calendar
 import struct
 import base64
 import traceback
-
-
 from collections import OrderedDict
 
-from RP1210Constants import *
+from RP1210Functions import *
 from TableModel import *
-from TU_RP1210functions import bytes_to_hex_string
-
 from graphing import *
 
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TruckCRYPT.log',mode='a')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
-
-
-
 
 class J1939Tab(QWidget):
     def __init__(self,parent,tabs):

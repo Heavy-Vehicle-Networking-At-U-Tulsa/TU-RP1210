@@ -144,6 +144,20 @@
         "253" : " "
     },
     "PID" : {
+        "0" : {
+            "BitResolution" : 0,
+            "Category" : "live",
+            "DataForm" : "a",
+            "DataLength" : 1,
+            "DataType" : "",
+            "FormatStr" : "",
+            "Maximum" : 0.0,
+            "Minimum" : 0.0,
+            "Name" : "Request",
+            "Period" : "On Request",
+            "Priority" : 2,
+            "Unit" : ""
+        },
         "100" : {
             "BitResolution" : 0.5,
             "Category" : "live",
@@ -270,6 +284,20 @@
             "Priority" : 8,
             "Unit" : "rpm"
         },
+        "121" : {
+            "BitResolution" : -3,
+            "Category" : "live",
+            "DataForm" : "a",
+            "DataLength" : 1,
+            "DataType" : "Binary Bit-Mapped",
+            "FormatStr" : "",
+            "Maximum" : 255,
+            "Minimum" : 0.0,
+            "Name" : "Engine Retarder Status",
+            "Period" : "0.2",
+            "Priority" : 3,
+            "Unit" : ""
+        },
         "127" : {
             "BitResolution" : 2.0,
             "Category" : "live",
@@ -283,6 +311,20 @@
             "Period" : "1",
             "Priority" : 4,
             "Unit" : "psi"
+        },
+        "132" : {
+            "BitResolution" : 0.125,
+            "Category" : "live",
+            "DataForm" : "a a",
+            "DataLength" : 2,
+            "DataType" : "Unsigned Integer",
+            "FormatStr" : "%0.3f",
+            "Maximum" : 8192.875,
+            "Minimum" : 0.0,
+            "Name" : "Mass Air Flow",
+            "Period" : "1",
+            "Priority" : 4,
+            "Unit" : "kg/min"
         },
         "134" : {
             "BitResolution" : -3,
@@ -466,6 +508,34 @@
             "Priority" : 5,
             "Unit" : "deg F"
         },
+        "173" : {
+            "BitResolution" : 0.25,
+            "Category" : "live",
+            "DataForm" : "a a ",
+            "DataLength" : 2,
+            "DataType" : "Signed Integer",
+            "FormatStr" : "%0.2f",
+            "Maximum" : 8191.75,
+            "Minimum" : -8192.0,
+            "Name" : "Exhaust Gas Temperature",
+            "Period" : "10",
+            "Priority" : 5,
+            "Unit" : "deg F"
+        },
+        "203" : {
+            "BitResolution" : 0.25,
+            "Category" : "live",
+            "DataForm" : "a a",
+            "DataLength" : 2,
+            "DataType" : "Signed Integer",
+            "FormatStr" : "%0.2f",
+            "Maximum" : 8191.75,
+            "Minimum" : -8192.0,
+            "Name" : "Particulate Trap Gas Outlet Temperature",
+            "Period" : "1",
+            "Priority" : 5,
+            "Unit" : "deg F"
+        },
         "174" : {
             "BitResolution" : 0.25,
             "Category" : "live",
@@ -521,6 +591,20 @@
             "Period" : "10",
             "Priority" : 7,
             "Unit" : "gallons"
+        },
+        "183" : {
+            "BitResolution" : 0.015625,
+            "Category" : "live",
+            "DataForm" : "a a",
+            "DataLength" : 2,
+            "DataType" : "Unsigned Integer",
+            "FormatStr" : "%0.3f",
+            "Maximum" : 1023.98,
+            "Minimum" : 0.0,
+            "Name" : "Fuel Rate (Instantaneous)",
+            "Period" : "0.2",
+            "Priority" : 3,
+            "Unit" : "gal/hr"
         },
         "184" : {
             "BitResolution" : 0.00390625,
@@ -643,7 +727,7 @@
             "FormatStr" : "",
             "Maximum" : 255.0,
             "Minimum" : 0.0,
-            "Name" : "Transmitter System Diagnostic Code and Occurrence Count Table",
+            "Name" : "Diagnostic Code and Occurrence Count",
             "Period" : "As needed",
             "Priority" : 8,
             "Unit" : ""
@@ -914,6 +998,20 @@
             "Priority" : 8,
             "Unit" : ""
         },
+        "254" : {
+            "BitResolution" : 0,
+            "Category" : "",
+            "DataForm" : "",
+            "DataLength" : 3,
+            "DataType" : "Special",
+            "FormatStr" : "",
+            "Maximum" : 0.0,
+            "Minimum" : 0.0,
+            "Name" : "Data Link Escape",
+            "Period" : "",
+            "Priority" : 8,
+            "Unit" : ""
+        },
         "38" : {
             "BitResolution" : 0.5,
             "Category" : "live",
@@ -998,6 +1096,20 @@
             "Priority" : 5,
             "Unit" : "psi"
         },
+        "49" : {
+            "BitResolution" : -3,
+            "Category" : "live",
+            "DataForm" : "a",
+            "DataLength" : 1,
+            "DataType" : "Binary Bit-Mapped",
+            "FormatStr" : "",
+            "Maximum" : 255.0,
+            "Minimum" : 0.0,
+            "Name" : "ABS Control Status",
+            "Period" : "0.5",
+            "Priority" : 5,
+            "Unit" : ""
+        },
         "507" : {
             "BitResolution" : -2,
             "Category" : "conf",
@@ -1053,6 +1165,20 @@
             "Period" : "On request",
             "Priority" : 8,
             "Unit" : "mph"
+        },
+        "83" : {
+            "BitResolution" : -3,
+            "Category" : "live",
+            "DataForm" : "a",
+            "DataLength" : 1,
+            "DataType" : "Binary Bit-Mapped",
+            "FormatStr" : "",
+            "Maximum" : 255,
+            "Minimum" : 0.0,
+            "Name" : "Road Speed Limit Status",
+            "Period" : "1.0",
+            "Priority" : 4,
+            "Unit" : ""
         },
         "84" : {
             "BitResolution" : 0.5,
