@@ -1,26 +1,48 @@
 from PyQt5.QtWidgets import (QMainWindow,
+                             QApplication,
                              QWidget,
                              QComboBox,
                              QLabel,
                              QDialog,
                              QDialogButtonBox,
                              QGridLayout,
+                             QVBoxLayout,
                              QFileDialog,
                              QPushButton,
+                             QGroupBox,
+                             QPlainTextEdit,
                              QLineEdit)
 from PyQt5.QtCore import (Qt, QCoreApplication)
+from PyQt5.QtGui import QIcon, QFont
+#import bcrypt #use this for passwords
+import jwt
+import pgpy
+from pgpy.constants import (PubKeyAlgorithm, 
+                            KeyFlags, 
+                            HashAlgorithm, 
+                            SymmetricKeyAlgorithm, 
+                            CompressionAlgorithm, 
+                            EllipticCurveOID, 
+                            SignatureType)
 import traceback
+import sys
 import os
 import json
 import logging
+import logging.config
+with open("logging.config.json",'r') as f:
+    logging_dictionary = json.load(f)
+
+logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
 
+
 class UserData(QDialog):
-    def __init__(self, path_to_file = "TruckCRYPT User Data.txt"):
+    def __init__(self, path_to_file = "User Data.json"):
         super(UserData, self).__init__()
         self.path_to_file = path_to_file
-        
+        self.token = None
         self.required_user_keys = ["Last Name",
                                   "First Name",
                                   "Title",
@@ -33,15 +55,12 @@ class UserData(QDialog):
                                   "Country",
                                   "Phone",
                                   "E-mail",
-                                  "TruckCRYPT Web Site",
-                                  "TruckCRYPT Web Public Key File",
-                                  "User Private Key File",
-                                  "User Public Key File"]
-        left_align = ["TruckCRYPT Web Site",
-                      "TruckCRYPT Web Public Key File",
-                      "User Private Key File",
-                      #"TruckCRYPT API Key File",
-                      "User Public Key File"]
+                                  "Decoder Web Site Address",
+                                  "Decoder Public Key",
+                                  "Local Private Key File"]
+        left_align = ["Decoder Web Site Address",
+                      "Decoder Public Key",
+                      "Local Private Key File"]
         
         self.labels = {}
         self.inputs = {}
@@ -56,7 +75,8 @@ class UserData(QDialog):
 
         self.setup_dialog()
         self.load_file()
-    
+        self.load_private_key_contents()
+        
     def get_user_data_list(self):
         return_list = []
         for k in self.required_user_keys:
@@ -72,18 +92,20 @@ class UserData(QDialog):
             user_file = open(self.path_to_file, 'r')
         except FileNotFoundError:
             logger.debug("User data file could not be found.")
-            self.reset_user_dict()
-        else:
-            try:
-                self.user_data = json.load(user_file)
-            except ValueError:
-                logger.warning("User data file could not load.")
-                self.reset_user_dict()
+            #self.reset_user_dict()
+            return
         
+        try:
+            self.user_data = json.load(user_file)
+        except ValueError:
+            logger.warning("User data file could not load.")
+                #self.reset_user_dict()
+
+
         # Check all entries
-        if self.check_entries():
-            self.reset_user_dict()
-            #QCoreApplication.processEvents()
+        # if self.check_entries():
+        #     self.reset_user_dict()
+        #     #QCoreApplication.processEvents()
         
     def check_entries(self):
         for key, value in self.user_data.items():
@@ -106,10 +128,35 @@ class UserData(QDialog):
         return self.user_data
 
     def setup_dialog(self):
-        self.grid_layout = QGridLayout()
+        """
+        Sets up the Graphical User interface for the dialog box. 
+        There are 4 main areas
+        """
+
+        dialog_box = QWidget()
+        dialog_box_layout = QGridLayout()
+
+        user_data_frame = QGroupBox("User Details")
+        decoding_service_frame = QGroupBox("Data Decoding Service")
+        subscription_status_frame = QGroupBox("Subscription Status")
+        pgp_frame = QGroupBox("Pretty Good Privacy (PGP) Setup")
+
+        user_data_frame_layout = QGridLayout()
+        user_data_frame.setLayout(user_data_frame_layout)
         
+        decoding_service_frame_layout = QGridLayout()
+        decoding_service_frame.setLayout(decoding_service_frame_layout)
+        
+        subscription_status_frame_layout = QGridLayout()
+        subscription_status_frame.setLayout(subscription_status_frame_layout)
+               
+        pgp_frame_layout = QGridLayout()
+        pgp_frame.setLayout(pgp_frame_layout)
+               
+
         self.inputs["State/Province"] = QComboBox()
         self.inputs["State/Province"].addItems(state_names.values())
+        self.inputs["State/Province"].setEditable(True)
         #self.inputs["State/Province"].setSizeAdjustPolicy(QComboBox.AdjustToContents)
         
         self.inputs["Country"] = QComboBox()
@@ -127,90 +174,134 @@ class UserData(QDialog):
         
         # Setup grids 
 
-        # ["Last Name",
-        #  "First Name",
-        #  "Title",
-        #  "Company",
-        #  "Address 1",
-        #  "Address 2",
-        #  "City",
-        #  "State",
-        #  "Zip",
-        #  "Country",
-        #  "Phone",
-        #  "TruckCRYPT Web Site",
-        #  "TruckCRYPT Web Public Key File",
-        #  "User Private Key File",
-        #  "User Public Key File"]
-
-        self.grid_layout.addWidget(self.labels["First Name"],       0, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["First Name"],       0, 1, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["First Name"],       0, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["First Name"],       0, 1, 1, 1)
             
-        self.grid_layout.addWidget(self.labels["Last Name"],        0, 2, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Last Name"],        0, 3, 1, 3)
+        user_data_frame_layout.addWidget(self.labels["Last Name"],        0, 2, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Last Name"],        0, 3, 1, 3)
             
-        self.grid_layout.addWidget(self.labels["Title"],            1, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Title"],            1, 1, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["Title"],            1, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Title"],            1, 1, 1, 1)
             
-        self.grid_layout.addWidget(self.labels["E-mail"],           1, 2, 1, 1)
-        self.grid_layout.addWidget(self.inputs["E-mail"],           1, 3, 1, 3)
+        user_data_frame_layout.addWidget(self.labels["E-mail"],           1, 2, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["E-mail"],           1, 3, 1, 3)
               
-        self.grid_layout.addWidget(self.labels["Company"],          2, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Company"],          2, 1, 1, 5)
+        user_data_frame_layout.addWidget(self.labels["Company"],          2, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Company"],          2, 1, 1, 5)
             
-        self.grid_layout.addWidget(self.labels["Address 1"],        3, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Address 1"],        3, 1, 1, 5)
+        user_data_frame_layout.addWidget(self.labels["Address 1"],        3, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Address 1"],        3, 1, 1, 5)
             
-        self.grid_layout.addWidget(self.labels["Address 2"],        4, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Address 2"],        4, 1, 1, 5)
+        user_data_frame_layout.addWidget(self.labels["Address 2"],        4, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Address 2"],        4, 1, 1, 5)
             
-        self.grid_layout.addWidget(self.labels["City"],             5, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["City"],             5, 1, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["City"],             5, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["City"],             5, 1, 1, 1)
             
-        self.grid_layout.addWidget(self.labels["State/Province"],   5, 2, 1, 1)
-        self.grid_layout.addWidget(self.inputs["State/Province"],   5, 3, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["State/Province"],   5, 2, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["State/Province"],   5, 3, 1, 1)
         
-        self.grid_layout.addWidget(self.labels["Postal Code"],      5, 4, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Postal Code"],      5, 5, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["Postal Code"],      5, 4, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Postal Code"],      5, 5, 1, 1)
             
-        self.grid_layout.addWidget(self.labels["Country"],          6, 0, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Country"],          6, 1, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["Country"],          6, 0, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Country"],          6, 1, 1, 1)
         
-        self.grid_layout.addWidget(self.labels["Phone"],            6, 2, 1, 1)
-        self.grid_layout.addWidget(self.inputs["Phone"],            6, 3, 1, 1)
+        user_data_frame_layout.addWidget(self.labels["Phone"],            6, 2, 1, 1)
+        user_data_frame_layout.addWidget(self.inputs["Phone"],            6, 3, 1, 1)
         
-        self.inputs["TruckCRYPT Web Site"].setToolTip("Enter the URL for the TruckCRYPT web portal to decrypt, decode, store, and verify your data package files.")
-        self.grid_layout.addWidget(self.labels["TruckCRYPT Web Site"], 7, 0, 1, 3),
-        self.grid_layout.addWidget(self.inputs["TruckCRYPT Web Site"], 8, 0, 1, 5)
+        
+        self.inputs["Decoder Web Site Address"] = QComboBox()
+        self.inputs["Decoder Web Site Address"].addItems(["https://localhost:7774",
+                                                          "https://truckcrypt.synercontechnologies.com"])
+        self.inputs["Decoder Web Site Address"].setEditable(True)
+        self.inputs["Decoder Web Site Address"].setToolTip("Enter the URL for the URL pointing to the portal to decrypt, decode, store, and verify your data package files.")
+        decoding_service_frame_layout.addWidget(self.labels["Decoder Web Site Address"], 0, 0, 1, 1),
+        decoding_service_frame_layout.addWidget(self.inputs["Decoder Web Site Address"], 1, 0, 1, 1)
 
-        web_public_key_file_button = QPushButton("Select File")
+        web_public_key_file_button = QPushButton("Load from File")
         web_public_key_file_button.setToolTip("Browse to the file that was sent to you when you activated your account.")
         web_public_key_file_button.clicked.connect(self.find_web_key)
-        self.grid_layout.addWidget(web_public_key_file_button,                    10, 5, 1, 1)
-        self.grid_layout.addWidget(self.labels["TruckCRYPT Web Public Key File"],  9, 0, 1, 3),
-        self.grid_layout.addWidget(self.inputs["TruckCRYPT Web Public Key File"], 10, 0, 1, 5)
-        self.inputs["TruckCRYPT Web Public Key File"].setToolTip("This file is needed so you can have encrypted and authenticated communications with the TruckCRYPT Server.")
+        decoding_service_frame_layout.addWidget(self.labels["Decoder Public Key"],  2, 0, 1, 1),
+        self.inputs["Decoder Public Key"] = QPlainTextEdit(self)
+        self.inputs["Decoder Public Key"].setFont(QFont("Lucida Sans Typewriter"))
+        #self.inputs["Decoder Public Key"].setFixedHeight(150)
+        #self.inputs["Decoder Public Key"].setFixedWidth(480)
+        
+        decoding_service_frame_layout.addWidget(self.inputs["Decoder Public Key"], 3, 0, 1, 1)
+        self.inputs["Decoder Public Key"].setToolTip("This file is needed so you can have encrypted and authenticated communications with the TruckCRYPT Server.")
+        decoding_service_frame_layout.addWidget(web_public_key_file_button, 4, 0, 1, 1)
+        
 
-        user_private_key_file_button = QPushButton("Select File")
+
+        pgp_frame_layout.addWidget(self.labels["Local Private Key File"], 0, 0, 1, 2),
+        pgp_frame_layout.addWidget(self.inputs["Local Private Key File"], 1, 0, 1, 2)
+        self.inputs["Local Private Key File"].setToolTip("This private key is your secret. This key is used to digitally sign files that are attributed to you. You must never share this key.")
+        self.inputs["Local Private Key"] = QPlainTextEdit(self)
+        self.inputs["Local Private Key"].setFont(QFont("Lucida Sans Typewriter"))
+        #self.inputs["Local Private Key"].setFixedHeight(150)
+        #self.inputs["Local Private Key"].setFixedWidth(480)
+        
+        user_private_key_file_button = QPushButton("Select Private Key File")
         user_private_key_file_button.clicked.connect(self.find_user_private_key)
-        self.grid_layout.addWidget(user_private_key_file_button,         12, 5, 1, 1)
-        self.grid_layout.addWidget(self.labels["User Private Key File"], 11, 0, 1, 3),
-        self.grid_layout.addWidget(self.inputs["User Private Key File"], 12, 0, 1, 5)
-        self.inputs["User Private Key File"].setToolTip("This private key is your secret. TruckCRYPT uses this key to digitally sign files that are attributed to you. Therefore, you must never share this key.")
+        pgp_frame_layout.addWidget(user_private_key_file_button, 2, 0, 1, 1)
+        
+        show_private_key_contents_button = QPushButton("Show PGP Key Details")
+        show_private_key_contents_button.clicked.connect(self.show_private_key_details)
+        pgp_frame_layout.addWidget(show_private_key_contents_button, 2, 1, 1, 1)
+        
+        pgp_frame_layout.addWidget(self.inputs["Local Private Key"], 3, 0, 1, 2)
+        generate_private_key_button = QPushButton("Create New Private Key")
+        generate_private_key_button.setToolTip("Generate a new Private Key file for PGP based on your User Details")
+        generate_private_key_button.clicked.connect(self.generate_private_key)
+        pgp_frame_layout.addWidget(generate_private_key_button, 4, 0, 1, 1)
+        register_key_button = QPushButton("Register PGP Public Key")
+        register_key_button.setToolTip("Uploads a PGP public Key to a trusted website to establish trust.")
+        register_key_button.clicked.connect(self.register_public_key)
+        pgp_frame_layout.addWidget(register_key_button, 4, 1, 1, 1)
+        
+        # user_public_key_file_button = QPushButton("Select File")
+        # user_public_key_file_button.clicked.connect(self.find_user_public_key)
+        # user_data_frame_layout.addWidget(user_public_key_file_button,         14, 5, 1, 1)
+        # user_data_frame_layout.addWidget(self.labels["User Public Key File"], 13, 0, 1, 3)
+        # user_data_frame_layout.addWidget(self.inputs["User Public Key File"], 14, 0, 1, 5)
+        # self.inputs["User Public Key File"].setToolTip("TruckCRYPT uses this key to verify digitally signed files that you signed with the private key. Therefore, you should share this key so others can verify your signature.")
 
-        user_public_key_file_button = QPushButton("Select File")
-        user_public_key_file_button.clicked.connect(self.find_user_public_key)
-        self.grid_layout.addWidget(user_public_key_file_button,         14, 5, 1, 1)
-        self.grid_layout.addWidget(self.labels["User Public Key File"], 13, 0, 1, 3)
-        self.grid_layout.addWidget(self.inputs["User Public Key File"], 14, 0, 1, 5)
-        self.inputs["User Public Key File"].setToolTip("TruckCRYPT uses this key to verify digitally signed files that you signed with the private key. Therefore, you should share this key so others can verify your signature.")
+        dialog_box_layout.addWidget(user_data_frame,0,0,1,3)
+        dialog_box_layout.addWidget(decoding_service_frame, 1,0,1,1)
+        dialog_box_layout.addWidget(subscription_status_frame, 1,1,1,1)
+        dialog_box_layout.addWidget(pgp_frame, 1,2,1,1)
 
-        self.grid_layout.addWidget(self.buttons, 15, 2, 1, 3)
+        dialog_box_layout.addWidget(self.buttons, 2, 2, 1, 1)
 
-        self.setLayout(self.grid_layout)
+        self.setLayout(dialog_box_layout)
 
-        self.setWindowTitle("Enter User Information")
-        self.setWindowModality(Qt.ApplicationModal)      
+        self.setWindowTitle("User and Service Information")
+        self.setWindowModality(Qt.ApplicationModal) 
+    
+    def show_private_key_details(self):
+        pass
+    
+    def load_private_key_contents(self):
+        logger.debug("Trying to open the private key file from {}".format(self.user_data["Local Private Key File"]))
+        try:
+            with open(self.user_data["Local Private Key File"],'r') as f:
+                self.inputs["Local Private Key"].setPlainText(f.read())
+
+        except FileNotFoundError:
+            logger.debug("Local Private Key File not Found")
+            return
+        try:
+            self.private_key = pgpy.PGPKey.from_file(self.user_data["Local Private Key File"])
+        except:
+            logger.debug("Private key failed to load.")
+            logger.debug(traceback.format_exc())
+            self.private_key = None #maybe we can generate the private key here
+
+    def register_public_key(self):
+        pass
+    def generate_private_key(self):
+        pass
 
     def find_user_private_key(self):
         fname = QFileDialog.getOpenFileName(self, 
@@ -219,8 +310,9 @@ class UserData(QDialog):
                                             "PEM Files (*.pem)",
                                             "PEM Files (*.pem)")
         if fname[0]:
-            self.inputs["User Private Key File"].setText(fname[0])
-    
+            self.inputs["Local Private Key File"].setText(fname[0])
+            self.load_private_key_contents()
+
     def find_user_public_key(self):
 
         fname = QFileDialog.getOpenFileName(self, 
@@ -233,25 +325,32 @@ class UserData(QDialog):
 
     def find_web_key(self):
         fname = QFileDialog.getOpenFileName(self, 
-                                            'Find TruckCRYPT Web Public Key File', 
+                                            'Find Decoder Public Key', 
                                             os.getcwd(), 
                                             "PEM Files (*.pem)", 
                                             "PEM Files (*.pem)")
         if fname[0]:
-            self.inputs["TruckCRYPT Web Public Key File"].setText(fname[0])
+            with open(fname[0],'r') as f:
+                self.inputs["Decoder Public Key"].setPlainText(f.read())
+            self.inputs["Decoder Public Key"].setReadOnly(True)
 
     def show_dialog(self):
 
         for label in self.required_user_keys:
-            
             try:
                 self.inputs[label].setText(self.user_data[label])
-            except AttributeError: #Then it is a QCombobox
+                logger.debug("Setting {} to {}".format(label,self.user_data[label]))
+            except AttributeError: #Then it is a QCombobox or QPlainTextEdit
                 try:
-                    idx = self.inputs[label].findText(self.user_data[label])
-                except:
-                    idx = 0
-                self.inputs[label].setCurrentIndex(idx)
+                    self.inputs[label].setPlainText(self.user_data[label])
+                    logger.debug("Setting {} to {}".format(label,self.user_data[label]))
+                except AttributeError: #Then it is a QCombobox
+                    try:
+                        idx = self.inputs[label].findText(self.user_data[label])
+                        logger.debug("Setting {} to {}".format(label,self.user_data[label]))
+                    except:
+                        idx = 0
+                    self.inputs[label].setCurrentIndex(idx)
                  
         self.exec_()
 
@@ -261,7 +360,10 @@ class UserData(QDialog):
             try:
                 self.user_data[label] = self.inputs[label].text()
             except AttributeError:
-                self.user_data[label] = self.inputs[label].currentText()
+                try:
+                    self.user_data[label] = self.inputs[label].currentText()
+                except AttributeError:
+                    self.user_data[label] = self.inputs[label].toPlainText()
         try:
             with open(self.path_to_file,'w') as out_file:
                 json.dump(self.user_data, out_file, sort_keys=True, indent=4)
@@ -592,3 +694,34 @@ country_names = {
     "ZM":"ZAMBIA",
     "ZW ":"ZIMBABWE"
 }
+
+def user_data_standalone():
+    """
+    Use this function to test the basic functionality.
+    """
+    print(os.terminal_size.lines)
+    print(os.terminal_size.columns)
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        app.close()
+    execute = Standalone()
+    sys.exit(app.exec_())
+
+class Standalone(QMainWindow):
+    def __init__(self):
+        super(Standalone, self).__init__()
+        self.init_ui()
+        user_data = UserData()
+        user_data.show_dialog()  
+    
+    def init_ui(self):
+        self.statusBar().showMessage("Testing UserData Module")
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        self.setWindowTitle('UserData Test')
+        self.show()
+
+if __name__ == '__main__':
+    user_data_standalone()
