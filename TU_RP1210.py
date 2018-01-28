@@ -544,7 +544,6 @@ class TU_RP1210(QMainWindow):
                                              "PC Time minus GPS Time": []
                                              }
         
-            
         self.user_data = UserData()
         self.data_package["User Data"] = self.user_data.get_current_data()
         self.data_package["Warnings"] = []
@@ -778,9 +777,13 @@ class TU_RP1210(QMainWindow):
     def export_to_json(self):
         logger.debug("Export to JSON Selected.") 
         
-        filename, json_contents = self.open_file(reload=False)
-        if json_contents is None:
-            logger.debug("Failed to Export JSON. json_contents is None.")
+        try:
+            filename, json_contents = self.open_file(reload=False)
+        except TypeError:
+            return #no decent file was selected.
+        except:
+            logger.debug("Failed to Export JSON. json_contents may be None.")
+            logger.debug(traceback.format_exc())
             return
 
         try:
@@ -1591,8 +1594,6 @@ class TU_RP1210(QMainWindow):
             self.GPS.ser.close()
         except:
             pass
-        #os.system("TASKKILL /F /IM DGServer2.exe")
-        #os.system("TASKKILL /F /IM DGServer1.exe")
         
         logger.debug("Exiting.")
 
@@ -1609,8 +1610,9 @@ if __name__ == '__main__':
     start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
     logger.info("Starting TU_RP1210 Version {} at {}".format(TU_RP1210_version, start_time))
 
-    os.system("TASKKILL /F /IM DGServer2.exe")
-    os.system("TASKKILL /F /IM DGServer1.exe")  
+    #os.system("TASKKILL /F /IM DGServer2.exe")
+    #os.system("TASKKILL /F /IM DGServer1.exe")  
+
     app = QCoreApplication.instance()
     if app is None:
         app = QApplication(sys.argv)

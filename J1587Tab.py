@@ -521,7 +521,7 @@ class J1587Tab(QWidget):
                     try:
                         self.root.data_package["Time Records"][source_key]["Last ECM Time"] = calendar.timegm(time.strptime(time_string,"%m/%d/%YT%H:%M:%S"))
                         self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"] = time.time() - self.root.data_package["Time Records"][source_key]["Last ECM Time"]
-                    except (TypeError,ValueError):
+                    except (TypeError, ValueError):
                         logger.debug(traceback.format_exc())
                         self.root.data_package["Time Records"][source_key]["Last ECM Time"] = None
                         self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"] = None

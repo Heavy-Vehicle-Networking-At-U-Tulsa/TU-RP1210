@@ -1,7 +1,17 @@
-from PyQt5.QtWidgets import QMessageBox, QInputDialog, QProgressDialog, QTableWidgetItem,  QLabel
+from PyQt5.QtWidgets import QMessageBox, QInputDialog, QProgressDialog, QTableWidgetItem,  QLabel, QWidget
 from PyQt5.QtCore import Qt, QCoreApplication
 
-class DDEC_J1587():
+from graphing import *
+from TU_crypt import *
+
+import base64
+import time
+import struct
+import logging
+logger = logging.getLogger(__name__)
+
+
+class DDEC_J1587(QWidget):
     def __init__(self, parent):
         super(DDEC_J1587, self).__init__()
         self.root = parent
@@ -60,7 +70,7 @@ class DDEC_J1587():
         if title in [k for k in self.graph_tabs.keys()]:
             return #Don't add another tab
 
-        self.graph_tabs[title] = GraphTab(self, self.tabs, title)
+        self.graph_tabs[title] = GraphTab(self, self.root.tabs, title)
         self.graph_tabs[title].event_name_label.setText("Name of Event: {}".format(title))
         self.graph_tabs[title].ecm_rtc_label.setText("ECM Real Time Clock at Event: {} UTC".format(incident_time['value']))
         try:
@@ -296,16 +306,16 @@ class DDEC_J1587():
             # Bytes are priority, tool MID, PID, N, desitination MID, Command
             # Send an connection manager abort command 3 times.
             for i in range(3):
-                self.root.RP1210.send_message(self.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\xff') 
+                self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\xff') 
                 time.sleep(.05)
                 QCoreApplication.processEvents()
             # Let the ECU know we are going to start a DDEC Data Pages download.
-            self.root.RP1210.send_message(self.client_ids["J1708"], b'\x05\xb6\xfe\x80\x00\xdb')
+            self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xfe\x80\x00\xdb')
             time.sleep(.1)
             
             request_length = len(request)
             # Send a Request to Send message
-            self.root.RP1210.send_message(self.client_ids["J1708"], 
+            self.root.RP1210.send_message(self.root.client_ids["J1708"], 
                 b'\x05\xb6\xc5\x05\x80\x01\x01' + request_length.to_bytes(2,'little'))
             
             # Wait for a clear to send message from the ECU
@@ -345,7 +355,7 @@ class DDEC_J1587():
                 send_buffer += b'\x80' #Destination MID
                 send_buffer += start_segment.to_bytes(1, 'little') #N
                 send_buffer += request # Different Data Page Requests
-                self.root.RP1210.send_message(self.client_ids["J1708"], send_buffer)
+                self.root.RP1210.send_message(self.root.client_ids["J1708"], send_buffer)
                 
                 # Wait from ECM to hear that the message was sent.
                 ACK = False
@@ -403,7 +413,7 @@ class DDEC_J1587():
                                 send_buffer = b'\x05\xb6\xc5\x04\x80\x02' # Start a CTS message
                                 send_buffer += segments_to_get.to_bytes(1,'little') # Message size
                                 send_buffer += b'\x01' # Starting with the first segment
-                                self.root.RP1210.send_message(self.client_ids["J1708"], send_buffer)
+                                self.root.RP1210.send_message(self.root.client_ids["J1708"], send_buffer)
 
                     if time.time() - start_time > 5:
                         err_msg = "Operation timed out when looking for a Request to Send Messsage from the Engine."
@@ -452,11 +462,11 @@ class DDEC_J1587():
                 if bytes_received == total_bytes_to_get:
                     logger.debug("Sending Acknowledgment")                
                     for i in range(3):
-                        self.root.RP1210.send_message(self.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\x03') # ACK/EOM
+                        self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\x03') # ACK/EOM
                 else:
                     logger.warning("The number of bytes received was different than the number promised for {}".format(data_page_name))                
                     for i in range(3):
-                        self.root.RP1210.send_message(self.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\xFF') # Abort   
+                        self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\xFF') # Abort   
                     return
                 # Store the raw bytes to use later.
                 raw_pages[data_page_name] = response
@@ -472,7 +482,7 @@ class DDEC_J1587():
         for pid in pids:
             looking_for_pid = True
             req_msg = b'\xb6\xfe\x80\x00'+bytes([pid])
-            self.root.RP1210.send_message(self.client_ids["J1708"], req_msg)
+            self.root.RP1210.send_message(self.root.client_ids["J1708"], req_msg)
             self.ddec_progress_label.setText("Getting DDEC Specific Parameters: {}".format(bytes_to_hex_string(req_msg)))       
             while looking_for_pid:
                 QCoreApplication.processEvents()
@@ -493,7 +503,7 @@ class DDEC_J1587():
                             send_buffer = b'\x05\xb6\xc5\x04\x80\x02' # Start a CTS message
                             send_buffer += segments_to_get.to_bytes(1,'little') # Message size
                             send_buffer += b'\x01' # Starting with the first segment
-                            self.root.RP1210.send_message(self.client_ids["J1708"], send_buffer)
+                            self.root.RP1210.send_message(self.root.client_ids["J1708"], send_buffer)
 
                 if time.time() - start_time > 5:
                     logger.warning("Operation timed out when looking for DDEC PID {}.".format(req_msg[-1]))
@@ -529,30 +539,3 @@ class DDEC_J1587():
         self.ddec_preview_graph.plot_xy()
         self.root.ok_to_send_j1587_requests = True
         
-        # Generate an XTR file for DDEC Reports
-        logger.info("Generating DDEC Reports Compatible File.")
-        try:
-            xtr_file = generate_xtr.generate_xtr_file(encoded_pages)
-        except:
-            logger.warning("Could not generate DDEC XTR file.")
-            logger.warning(traceback.format_exc())
-        else:
-            xtr_file_name = 'DDEC Reports.xtr'
-            with open(xtr_file_name, 'wb') as f:
-                f.write(xtr_file)
-            logger.info("Wrote {} bytes to {}".format(len(xtr_file), xtr_file_name))
-            self.root.data_package["Network Logs"]["DDEC XTR File"] = xtr_file_name
-        
-        self.sign_file(xtr_file_name)
-
-        raw_report = json.dumps(encoded_pages)
-        encryption_file = self.user_data.user_data["TruckCRYPT Web Public Key File"]
-        self.root.data_package["DDEC J1587 Encrypted"] = synercon_crypt.encrypt_bytes(raw_report.encode(), encryption_file)
-
-        msg = QMessageBox.question(self, 
-                                   "Finished DDEC Data Download", 
-                                   "Would you like to save all the files in a new directory?", 
-                                   QMessageBox.Yes | QMessageBox.No, 
-                                   QMessageBox.Yes)
-        if msg == QMessageBox.Yes:
-            self.copy_and_sign_files([xtr_file_name])

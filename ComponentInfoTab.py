@@ -128,13 +128,18 @@ class ComponentInfoTab(QWidget):
                     self.fill_item(child, val)
     
     def get_display_value(self, key, val):
+        """
+        Format the time stamp to be human readable, but still have the UNIX timestamp.
+        """
         if "PC Time minus" in key:
-            display_val = "{:0.3} seconds".format(val)
+            display_val = "{:0.3f} seconds".format(val)
         elif "PC Time" in key:
-            display_val = get_local_time_string(int(val))
+            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
         elif "GPS Time" in key:
-            display_val = get_local_time_string(int(val))
-        else:
+            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+        elif "ECM Time" in key:
+            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+        else: 
             display_val = str(val)
         return display_val
 

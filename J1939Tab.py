@@ -497,17 +497,14 @@ class J1939Tab(QWidget):
                 day     = int(self.unique_spns[repr((962, sa))]["Value"])
                 year    = int(self.unique_spns[repr((964, sa))]["Value"])
                 time_struct = time.strptime("{:02d} {:02d} {} ".format(day, month, year) + 
-                "{:02d} {:02d} {:02d}".format(hours, minutes, seconds), "%d %m %Y %H %M %S")
+                    "{:02d} {:02d} {:02d}".format(hours, minutes, seconds), "%d %m %Y %H %M %S")
             
-            # Save ecm time along with PC time as a tuple
+                # Save ecm time along with PC time as a tuple
                 new_ecm_time = calendar.timegm(time_struct) #Convert to UTC
                 #self.ecm_time[sa].append((time.time(), new_ecm_time)) #Put into floating point UTC
                 self.root.data_package["Time Records"][source_key]["Last ECM Time"] = new_ecm_time
-                try:
-                    self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"].append((time.time(), time.time() - new_ecm_time))
-                except TypeError: #Need to create a new list
-                    self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"] = [(time.time(), time.time() - new_ecm_time)]    
-            
+                self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"] = time.time() - new_ecm_time
+
             elif pgn == 65259: #Component ID
                 make   = self.unique_spns[repr((586, sa))]["Value"]
                 model  = self.unique_spns[repr((587, sa))]["Value"]
