@@ -87,10 +87,17 @@ class ComponentInfoTab(QWidget):
         hours_button = QPushButton("Request ECU Hours")
         hours_button.clicked.connect(self.request_hours)
         component_button_layout.addWidget(hours_button)
-        
+                
         refresh_button = QPushButton("Refresh Data")
         refresh_button.clicked.connect(self.rebuild_trees)
         component_button_layout.addWidget(refresh_button)
+ 
+        component_button_layout.addWidget(QLabel())
+
+        clear_button = QPushButton("Clear Data")
+        clear_button.clicked.connect(self.clear_data)
+        component_button_layout.addWidget(clear_button)
+
 
         self.tabs.currentChanged.connect(self.rebuild_trees)
 
@@ -100,6 +107,12 @@ class ComponentInfoTab(QWidget):
         self.realtime_tree = QTreeWidget()
         self.tab_layout.addWidget(self.realtime_tree)
 
+    def clear_data(self):
+        self.root.data_package["Component Information"] = {}
+        self.root.data_package["Distance Information"] = {}
+        self.root.data_package["ECU Time Information"] = {}
+        self.root.data_package["Time Records"] = {}
+        self.rebuild_trees()
 
     def fill_item(self, item, value):
         item.setExpanded(True)
@@ -109,11 +122,22 @@ class ComponentInfoTab(QWidget):
                 if type(val) is dict:
                     child.setText(0, str(key))
                 else:
-                    child.setText(0, str(key) + ": " + str(val))
+                    child.setText(0, str(key) + ": " + self.get_display_value(key, val))
                 if val: #Add only if it is not an empty dictionary. Empty dictionaries are False.
                     item.addChild(child)
                     self.fill_item(child, val)
-        
+    
+    def get_display_value(self, key, val):
+        if "PC Time minus" in key:
+            display_val = "{:0.3} seconds".format(val)
+        elif "PC Time" in key:
+            display_val = get_local_time_string(int(val))
+        elif "GPS Time" in key:
+            display_val = get_local_time_string(int(val))
+        else:
+            display_val = str(val)
+        return display_val
+
     def rebuild_trees(self): 
         self.component_tree.clear()
         tree_root = self.component_tree.invisibleRootItem()
@@ -141,6 +165,7 @@ class ComponentInfoTab(QWidget):
 
     def request_VIN(self):
         self.send_requests(65260, 237)
+        self.rebuild_trees()
     
     def request_hours(self):
         self.send_requests(65253, 247)

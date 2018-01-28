@@ -12,15 +12,7 @@
 
 from math import floor, modf
 
-# Import pyb or time for fix time handling
-try:
-    # Assume running on pyboard
-    import pyb
-except ImportError:
-    # Otherwise default to time module for non-embedded implementations
-    # Note that this forces the resolution of the fix time 1 second instead
-    # of milliseconds as on the pyboard
-    import time
+import time
 
 
 class MicropyGPS(object):

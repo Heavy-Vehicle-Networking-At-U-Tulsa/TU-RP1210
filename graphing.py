@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True}) #Depends on matplotlib from graphing
 markers = [ "D", "o", "v", "*", "^", "<", ">", "1", "2", "3", "4", "8", "s", "p", "P", "h", "H", "+", "x", "X", "d", "|"]
+
+def get_plot_bytes(self, fig):
+    """
+    A helper function to produce a bytestream from a matplotlib figure
+    """
+    img = BytesIO()
+    fig.figsize=(7.5, 10) #inches
+    fig.savefig(img, format='PDF',)
+    return img
  
 class GraphDialog(QDialog):
     def __init__(self, parent=None, title="Graph"):

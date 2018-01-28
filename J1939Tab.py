@@ -47,17 +47,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class J1939Tab(QWidget):
-    def __init__(self,parent,tabs):
+    def __init__(self, parent, tabs):
         super(J1939Tab,self).__init__()
         self.root = parent
         self.tabs = tabs
-        self.j1939_unique_ids = OrderedDict()
-        self.unique_spns = OrderedDict()
-        self.uds_messages = OrderedDict()
-        self.active_trouble_codes = {}
-        self.previous_trouble_codes = {}
-        self.freeze_frame = {}
-        self.pgn_rows = []
+        self.reset_data()
         self.spn_needs_updating = True
         self.dm01_needs_updating = True
         self.dm02_needs_updating = True
@@ -68,8 +62,7 @@ class J1939Tab(QWidget):
         
         self.j1939db = self.root.j1939db
         self.time_spns = [959, 960, 961, 963, 962, 964]
-        self.ecm_time = {}
-        self.battery_potential = {}
+        
         
 
         stop_broadcast_timer = QTimer(self)
@@ -91,7 +84,7 @@ class J1939Tab(QWidget):
         self.j1939_request_pgns += [65259 for i in range(6)] #Component ID
         self.j1939_request_pgns += [65260 for i in range(6)] #VIN 
         self.j1939_request_pgns += [65242 for i in range(6)] #Software ID
-        self.j1939_count = 0  # successful 1939 messages
+        
         self.pgns_to_not_decode = [ 59392, #Ack
                                     0xEA00, #request messages
                                     0xEB00, # Transport
@@ -99,7 +92,19 @@ class J1939Tab(QWidget):
                                     0xDA00, #ISO 15765
                                     65247, # EEC3 at 20 ms
                                     ]
-    
+    def reset_data(self):
+        self.j1939_count = 0  # successful 1939 messages
+        self.ecm_time = {}
+        self.battery_potential = {}
+        self.pgn_rows = []
+        self.j1939_unique_ids = OrderedDict()
+        self.unique_spns = OrderedDict()
+        self.active_trouble_codes = {}
+        self.previous_trouble_codes = {}
+        self.freeze_frame = {}
+        self.uds_messages = OrderedDict()
+        
+
     def init_pgn(self):
         logger.debug("Setting up J1939 PGN Tab.")
         self.j1939_tab = QWidget()
@@ -313,7 +318,7 @@ class J1939Tab(QWidget):
         self.dm01_data_model.aboutToUpdate()
         self.dm01_data_model.signalUpdate()
         self.dm01_table.resizeColumnsToContents()
-        self.uds_table.resizeRowsToContents()
+        self.dm01_table.resizeRowsToContents()
         self.root.data_package["Diagnostic Codes"]["DM01"] = self.active_trouble_codes
 
     def fill_dm02_table(self):
@@ -321,7 +326,7 @@ class J1939Tab(QWidget):
         self.dm02_data_model.aboutToUpdate()
         self.dm02_data_model.signalUpdate()
         self.dm02_table.resizeColumnsToContents()
-        self.uds_table.resizeRowsToContents()
+        self.dm02_table.resizeRowsToContents()
         self.root.data_package["Diagnostic Codes"]["DM02"] = self.previous_trouble_codes
 
 
@@ -330,7 +335,7 @@ class J1939Tab(QWidget):
         self.dm04_data_model.aboutToUpdate()
         self.dm04_data_model.signalUpdate()
         self.dm04_table.resizeColumnsToContents()
-        self.uds_table.resizeRowsToContents()
+        self.dm04_table.resizeRowsToContents()
         #for row in range(self.dm04_data_model.rowCount()):
         #    self.dm04_table.resizeRowToContents(row)
         self.root.data_package["Diagnostic Codes"]["DM04"] = self.freeze_frame
@@ -340,20 +345,40 @@ class J1939Tab(QWidget):
             self.spn_data_model.aboutToUpdate()
             self.spn_data_model.signalUpdate()
             self.spn_table.resizeColumnsToContents()
-            self.uds_table.resizeRowsToContents()
+            self.spn_table.resizeRowsToContents()
         #self.spn_table.scrollToBottom()
 
     def clear_j1939_table(self):
-        self.pgn_data_model.aboutToUpdate()
-        self.j1939_unique_ids = {}
-        self.pgn_data_model.signalUpdate()
-        self.j1939_id_table.resizeColumnsToContents()
 
-        self.unique_spns = {}
-        self.spn_data_model.aboutToUpdate()
-        self.spn_data_model.signalUpdate()
-        self.spn_table.resizeColumnsToContents()
-        logger.info("Cleared J1939 PGN and SPN table data.")
+        self.pgn_data_model.beginResetModel()
+        self.j1939_unique_ids = OrderedDict()
+        self.pgn_data_model.setDataDict(self.j1939_unique_ids)
+        self.pgn_data_model.endResetModel()
+        
+        self.spn_data_model.beginResetModel()
+        self.unique_spns = OrderedDict()
+        self.spn_data_model.setDataDict(self.unique_spns)
+        self.spn_data_model.endResetModel()
+        
+        self.dm01_data_model.beginResetModel()
+        self.active_trouble_codes = {}
+        self.dm01_data_model.setDataDict(self.active_trouble_codes)
+        self.dm01_data_model.endResetModel()
+        
+        self.dm02_data_model.beginResetModel()
+        self.previous_trouble_codes = {}
+        self.dm02_data_model.setDataDict(self.previous_trouble_codes)
+        self.dm02_data_model.endResetModel()
+        
+        self.dm04_data_model.beginResetModel()
+        self.freeze_frame = {}
+        self.dm04_data_model.setDataDict(self.freeze_frame)
+        self.dm04_data_model.endResetModel()
+
+        self.uds_data_model.beginResetModel()
+        self.uds_messages = OrderedDict()
+        self.uds_data_model.setDataDict(self.uds_messages)
+        self.uds_data_model.endResetModel()
         
     def fill_j1939_table(self, rx_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210

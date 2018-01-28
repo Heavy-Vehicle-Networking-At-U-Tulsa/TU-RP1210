@@ -7,26 +7,14 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QGridLayout,
                              QFileDialog,
                              QPushButton,
-                             QLineEdit
-                             )
+                             QLineEdit)
 from PyQt5.QtCore import (Qt, QCoreApplication)
-
+import traceback
 import os
 import json
 import logging
-import traceback
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-file_handler = logging.FileHandler('TruckCRYPT.log', mode='a')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
 
 class UserData(QDialog):
     def __init__(self, path_to_file = "TruckCRYPT User Data.txt"):

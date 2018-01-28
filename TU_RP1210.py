@@ -33,7 +33,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QInputDialog,
                              QProgressDialog,
                              QTabWidget)
-from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication
+from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QSize
 from PyQt5.QtGui import QIcon
 
 import pgpy
@@ -71,12 +71,13 @@ from UserData import *
 from PDFReports import *
 from ISO15765 import *
 from graphing import * 
-
+from DDEC_1587 import * 
 
 import logging
 import logging.config
 with open("logging.config.json",'r') as f:
     logging_dictionary = json.load(f)
+
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class TU_RP1210(QMainWindow):
             logger.info("Created and saved private user key {}".format(self.user_key_file))
         self.user_public_key = self.user_private_key.pubkey
 
-        # 65227 = DM02, 65227 = DM02,
+        self.source_addresses=[]
         self.long_pgn_timeouts = [65227, ]
         self.long_pgn_timeout_value = 2
         self.short_pgn_timeout_value = .1
@@ -129,6 +130,9 @@ class TU_RP1210(QMainWindow):
         self.setup_gps(dialog = False)
 
         self.pdf_engine = FLAReportTemplate()
+
+        #Load the ddec module
+        self.ddec_j1587 = DDEC_J1587(self)
 
         connections_timer = QTimer(self)
         connections_timer.timeout.connect(self.check_connections)
@@ -235,12 +239,6 @@ class TU_RP1210(QMainWindow):
         run_action.setStatusTip('Scan for all data using standard data and known EDR recovery routines.')
         run_action.triggered.connect(self.start_scan)
         run_menu.addAction(run_action)
-
-        cat_action = QAction(QIcon(r'icons/icons8_C_52px.png'), 'Start &Cat J1708 Download', self)
-        cat_action.setShortcut('Ctrl+Shift+C')
-        cat_action.setStatusTip('Send requests to download Caterpillar Snapshot Data.')
-        cat_action.triggered.connect(self.start_cat)
-        run_menu.addAction(cat_action)
         
         ddec1587_action = QAction(QIcon(r'icons/icons8_D_52px.png'), 'Start &DDEC J1708 Download', self)
         ddec1587_action.setShortcut('Ctrl+Shift+D')
@@ -248,29 +246,12 @@ class TU_RP1210(QMainWindow):
         ddec1587_action.triggered.connect(self.start_ddec_J1587)
         run_menu.addAction(ddec1587_action)
         
-        paccar_action = QAction(QIcon(r'icons/icons8_P_52px.png'), 'Start &PACCAR MX Download', self)
-        paccar_action.setShortcut('Ctrl+Shift+P')
-        paccar_action.setStatusTip('Send requests to download PACCAR MX Fast Stop and Chart Data.')
-        paccar_action.triggered.connect(self.start_paccar)
-        run_menu.addAction(paccar_action)
-        
-        navistar_action = QAction(QIcon(r'icons/icons8_M_52px.png'), 'Start &MaxxForce Download.', self)
-        navistar_action.setShortcut('Ctrl+Shift+M')
-        navistar_action.setStatusTip('Send requests to download Navistar MaxxForce ECM Event Data and Parameters.')
-        navistar_action.triggered.connect(self.start_navistar)
-        run_menu.addAction(navistar_action)
         
         setup_gps_action = QAction(QIcon(r'icons/icons8_GPS_Signal_48px.png'), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
         setup_gps_action.setStatusTip('Adjust settings for integrating GPS data into the report.')
         setup_gps_action.triggered.connect(self.setup_gps)
         run_menu.addAction(setup_gps_action)
-
-        show_encrypted_action = QAction(QIcon(r'icons/icons8_Palm_Scan_48px.png'), 'Show Encrypted Data', self)
-        show_encrypted_action.setShortcut('Ctrl+Shift+E')
-        show_encrypted_action.setStatusTip('Check to see if any event data was downloaded and encrypted.')
-        show_encrypted_action.triggered.connect(self.show_encrypted)
-        run_menu.addAction(show_encrypted_action)
         
         upload_action = QAction(QIcon(r'icons/icons8_Upload_to_Cloud_48px.png'), 'Upload to EDR Data', self)
         upload_action.setShortcut('Ctrl+Shift+U')
@@ -281,10 +262,7 @@ class TU_RP1210(QMainWindow):
 
         run_toolbar = self.addToolBar("&Download")
         run_toolbar.addAction(run_action)
-        run_toolbar.addAction(cat_action)
         run_toolbar.addAction(ddec1587_action)
-        run_toolbar.addAction(paccar_action)
-        run_toolbar.addAction(navistar_action)
         run_toolbar.addAction(upload_action)
         
         graph_menu = menubar.addMenu("&Graph")
@@ -326,7 +304,9 @@ class TU_RP1210(QMainWindow):
 
         # Setup the network status windows for logging
         info_box = {}
+        info_box_area = {}
         info_layout = {}
+        info_box_area_layout = {}
         self.previous_count = {}
         self.status_icon = {}
         self.previous_count = {}
@@ -335,14 +315,28 @@ class TU_RP1210(QMainWindow):
         self.message_duration_label = {}
         for key in ["J1939","J1708"]:
             # Create the container widget
-            info_box[key] = QFrame()
-            info_box[key].setFrameShape(QFrame.Panel)
+            info_box_area[key] = QScrollArea()
+            info_box_area[key].setWidgetResizable(True)
+            info_box_area[key].setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+            bar_size = QSize(150,300)
+            info_box_area[key].sizeHint()
+            info_box[key] = QFrame(info_box_area[key])
+            
+            info_box_area[key].setWidget(info_box[key])
+            info_box_area[key].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        
+        
             # create a layout strategy for the container 
             info_layout[key] = QVBoxLayout()
             #set the layout so labels are at the top
             info_layout[key].setAlignment(Qt.AlignTop)
             #assign the layout strategy to the container
             info_box[key].setLayout(info_layout[key])
+
+            info_box_area_layout[key] = QVBoxLayout()
+            info_box_area[key].setLayout(info_box_area_layout[key])
+            info_box_area_layout[key].addWidget(info_box[key])
             
             #Add some labels and content
             self.status_icon[key] = QLabel("<html><img src='icons/icons8_Unavailable_48px.png'><br>Network<br>Unavailable</html>")
@@ -372,11 +366,19 @@ class TU_RP1210(QMainWindow):
             info_layout[key].addWidget(self.message_count_label[key])
             info_layout[key].addWidget(self.message_rate_label[key])
             info_layout[key].addWidget(self.message_duration_label[key])
-            #info_layout[key].addWidget(csv_save_button)
+    
         # GPS
         # Create the container widget
-        gps_box = QFrame()
-        gps_box.setFrameShape(QFrame.Panel)
+        gps_box_area = QScrollArea()
+        gps_box_area.setWidgetResizable(True)
+        gps_box_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        gps_box = QFrame(gps_box_area)
+        gps_box_area.setMinimumWidth(145)
+        #gps_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        
+        gps_box_area.setWidget(gps_box)
+        gps_box_area.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        
         # create a layout strategy for the container 
         gps_layout = QVBoxLayout()
         #set the layout so labels are at the top
@@ -409,6 +411,7 @@ class TU_RP1210(QMainWindow):
         self.tabs.setTabShape(QTabWidget.Triangular)
         self.J1939 = J1939Tab(self, self.tabs)
         self.J1587 = J1587Tab(self, self.tabs)
+        self.Components = ComponentInfoTab(self, self.tabs)
 
         
         self.voltage_graph = GraphDialog(self, title="Vehicle Voltage")
@@ -417,15 +420,15 @@ class TU_RP1210(QMainWindow):
         self.voltage_graph.set_ylabel("Voltage")
         self.voltage_graph.set_title("Battery Voltage Measurements from Vehicle Electronic Control Units")
         
-        self.grid_layout.addWidget(info_box["J1939"],0,0,1,1)
-        self.grid_layout.addWidget(info_box["J1708"],1,0,1,1)
-        self.grid_layout.addWidget(gps_box,2,0,1,1)
+        self.grid_layout.addWidget(info_box_area["J1939"],0,0,1,1)
+        self.grid_layout.addWidget(info_box_area["J1708"],1,0,1,1)
+        self.grid_layout.addWidget(gps_box_area,2,0,1,1)
         self.grid_layout.addWidget(self.tabs,0,1,4,1)
 
         main_widget = QWidget()
         main_widget.setLayout(self.grid_layout)
         self.setCentralWidget(main_widget)
-        self.setWindowTitle('TU_RP1210 2.0')
+        self.setWindowTitle('TU RP1210')
         self.show()
     
     def setup_RP1210_menus(self):
@@ -474,20 +477,7 @@ class TU_RP1210(QMainWindow):
         self.RP1210_toolbar.addAction(disconnect_rp1210)
 
     def create_new(self, new_file=True):
-        self.ok_to_send_j1587_requests = True
-        self.source_addresses = [] #0,3,11,255]
-        
-        self.clear_voltage_graph()
-        self.J1939.clear_j1939_table()
 
-        self.J1939.j1939_unique_ids = OrderedDict()
-        self.J1939.unique_spns = OrderedDict()
-        self.J1939.uds_messages = OrderedDict()
-        self.J1939.active_trouble_codes = {}
-        self.J1939.previous_trouble_codes = {}
-        self.J1939.freeze_frame = {}
-
-        self.Components = ComponentInfoTab(self, self.tabs)
 
         for k,item in self.graph_tabs.items():
             item.deleteLater()
@@ -578,6 +568,12 @@ class TU_RP1210(QMainWindow):
                                                  }
 
         self.request_timeout = 1
+
+        self.J1939.reset_data()
+        self.J1939.clear_j1939_table()
+        self.J1587.clear_J1587_table()
+        self.Components.clear_data()
+
     
     def edit_user_data(self):
         self.user_data.show_dialog() 
@@ -1179,25 +1175,7 @@ class TU_RP1210(QMainWindow):
             return self.J1939.j1939_unique_ids[repr((pgn,sa))]["Bytes"]
         except KeyError:
             return False
-    def show_encrypted(self):
-        """
-        A method to show data in the current data package that was encrypted after download
-        """
-        for key,value in self.data_package.items():
-            if "Encrypted" in key:
-                QMessageBox.information(self,key,json.dumps(value,indent=4,sort_keys=True))
-                return
-        QMessageBox.information(self,"Encrypted Data","No encrypted data found in the current memory.")
-
-    def start_paccar(self):
-        pass
-         
-
-    def start_navistar(self):
-        logger.debug("Started Navistar Extraction")
-
-     
-
+    
     def copy_and_sign_files(self, additional_files=[]):
         
         self.save_file_as()
@@ -1353,27 +1331,8 @@ class TU_RP1210(QMainWindow):
 
     def sign_stream(self, message, private_key_file):
         """
-            PGP key built as follows:
-
-            synercon_private_key = pgpy.PGPKey.new(PubKeyAlgorithm.ECDSA, EllipticCurveOID.NIST_P256)
-            user_id = pgpy.PGPUID.new('Jeremy Daily', 
-                      comment='Synercon Technologies, LLC', 
-                      email='jeremy@synercontechnologies.com')
-            primary_key.add_uid(user_id, 
-                usage={KeyFlags.Sign, 
-                       KeyFlags.EncryptCommunications, 
-                       KeyFlags.EncryptStorage,
-                       KeyFlags.Authentication},
-                ciphers=[SymmetricKeyAlgorithm.AES128],
-                hashes=[HashAlgorithm.SHA256],
-                compression=[CompressionAlgorithm.ZIP,CompressionAlgorithm.Uncompressed],
-                key_expiration=None,
-                key_server="http://pgp.mit.edu/",
-                primary=True)
-
         Returns: a signed PGP message
         """
-    
         # Make a PGP message and sign it.
         try:
             signed_stream = pgpy.PGPMessage.new(message,
@@ -1470,27 +1429,14 @@ class TU_RP1210(QMainWindow):
                 return 
             self.RP1210.send_message(self.client_ids["J1708"], j1587_request)
 
-
-    def start_deep_scan(self):
-        logger.debug("Starting Deep Scan")
-
     def upload_data_package(self):
         pass
     
-    def get_plot_bytes(self, fig):
-        img = BytesIO()
-        fig.figsize=(7.5, 10)
-        fig.savefig(img, format='PDF',)
-        return img
-   
-    
-        
+
     def setup_gps(self, dialog=True):
         
         logger.debug("Setup GPS with file.")
         success = self.GPS.try_GPS()
-        print("Success = ")
-        print(success)
         if not success:
             try: 
                 self.GPS.ser = None
@@ -1651,10 +1597,10 @@ class TU_RP1210(QMainWindow):
         logger.debug("Exiting.")
 
     def start_ddec_J1587(self):
-        pass
+        self.ddec_j1587.start_ddec_J1587()
 
     def plot_decrypted_data(self):
-        pass
+        self.ddec_j1587.plot_decrypted_data()
 
 if __name__ == '__main__':
     current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
