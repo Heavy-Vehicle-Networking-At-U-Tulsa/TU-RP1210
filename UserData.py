@@ -11,9 +11,11 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QPushButton,
                              QGroupBox,
                              QPlainTextEdit,
+                             QFormLayout,
+                             QMessageBox,
                              QLineEdit)
 from PyQt5.QtCore import (Qt, QCoreApplication)
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon, QFont, QColor, QPalette
 #import bcrypt #use this for passwords
 import jwt
 import pgpy
@@ -141,7 +143,7 @@ class UserData(QDialog):
         subscription_status_frame = QGroupBox("Subscription Status")
         pgp_frame = QGroupBox("Pretty Good Privacy (PGP) Setup")
 
-        user_data_frame_layout = QGridLayout()
+        user_data_frame_layout = QFormLayout()
         user_data_frame.setLayout(user_data_frame_layout)
         
         decoding_service_frame_layout = QGridLayout()
@@ -172,44 +174,21 @@ class UserData(QDialog):
         self.accepted.connect(self.save_user_data)
         self.rejected.connect(self.close)
         
-        # Setup grids 
-
-        user_data_frame_layout.addWidget(self.labels["First Name"],       0, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["First Name"],       0, 1, 1, 1)
-            
-        user_data_frame_layout.addWidget(self.labels["Last Name"],        0, 2, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Last Name"],        0, 3, 1, 3)
-            
-        user_data_frame_layout.addWidget(self.labels["Title"],            1, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Title"],            1, 1, 1, 1)
-            
-        user_data_frame_layout.addWidget(self.labels["E-mail"],           1, 2, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["E-mail"],           1, 3, 1, 3)
-              
-        user_data_frame_layout.addWidget(self.labels["Company"],          2, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Company"],          2, 1, 1, 5)
-            
-        user_data_frame_layout.addWidget(self.labels["Address 1"],        3, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Address 1"],        3, 1, 1, 5)
-            
-        user_data_frame_layout.addWidget(self.labels["Address 2"],        4, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Address 2"],        4, 1, 1, 5)
-            
-        user_data_frame_layout.addWidget(self.labels["City"],             5, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["City"],             5, 1, 1, 1)
-            
-        user_data_frame_layout.addWidget(self.labels["State/Province"],   5, 2, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["State/Province"],   5, 3, 1, 1)
-        
-        user_data_frame_layout.addWidget(self.labels["Postal Code"],      5, 4, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Postal Code"],      5, 5, 1, 1)
-            
-        user_data_frame_layout.addWidget(self.labels["Country"],          6, 0, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Country"],          6, 1, 1, 1)
-        
-        user_data_frame_layout.addWidget(self.labels["Phone"],            6, 2, 1, 1)
-        user_data_frame_layout.addWidget(self.inputs["Phone"],            6, 3, 1, 1)
-        
+        # Setup inputs
+        for label in ["First Name",
+                      "Last Name",
+                      "Title",
+                      "Company",
+                      "Address 1",
+                      "Address 2",
+                      "City",
+                      "State/Province",
+                      "Postal Code",
+                      "Country",
+                      "Phone",
+                      "E-mail"]:
+            user_data_frame_layout.addRow("{}:".format(label), self.inputs[label])
+        user_data_frame_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         
         self.inputs["Decoder Web Site Address"] = QComboBox()
         self.inputs["Decoder Web Site Address"].addItems(["https://localhost:7774",
@@ -236,8 +215,9 @@ class UserData(QDialog):
 
         pgp_frame_layout.addWidget(self.labels["Local Private Key File"], 0, 0, 1, 2),
         pgp_frame_layout.addWidget(self.inputs["Local Private Key File"], 1, 0, 1, 2)
+        
         self.inputs["Local Private Key File"].setToolTip("This private key is your secret. This key is used to digitally sign files that are attributed to you. You must never share this key.")
-        self.inputs["Local Private Key"] = QPlainTextEdit(self)
+        self.inputs["Local Private Key"] = QLineEdit(self)
         self.inputs["Local Private Key"].setFont(QFont("Lucida Sans Typewriter"))
         #self.inputs["Local Private Key"].setFixedHeight(150)
         #self.inputs["Local Private Key"].setFixedWidth(480)
@@ -250,16 +230,19 @@ class UserData(QDialog):
         show_private_key_contents_button.clicked.connect(self.show_private_key_details)
         pgp_frame_layout.addWidget(show_private_key_contents_button, 2, 1, 1, 1)
         
-        pgp_frame_layout.addWidget(self.inputs["Local Private Key"], 3, 0, 1, 2)
+        fingerprint_label = QLabel("\nPrivate Key Fingerprint (the actual key is a secret):")
+        pgp_frame_layout.addWidget(fingerprint_label, 3, 0, 1, 2),
+        pgp_frame_layout.addWidget(self.inputs["Local Private Key"], 4, 0, 1, 2)
         generate_private_key_button = QPushButton("Create New Private Key")
         generate_private_key_button.setToolTip("Generate a new Private Key file for PGP based on your User Details")
         generate_private_key_button.clicked.connect(self.generate_private_key)
-        pgp_frame_layout.addWidget(generate_private_key_button, 4, 0, 1, 1)
-        register_key_button = QPushButton("Register PGP Public Key")
+        pgp_frame_layout.addWidget(generate_private_key_button, 5, 0, 1, 1)
+        register_key_button = QPushButton("View/Register Public Key")
         register_key_button.setToolTip("Uploads a PGP public Key to a trusted website to establish trust.")
         register_key_button.clicked.connect(self.register_public_key)
-        pgp_frame_layout.addWidget(register_key_button, 4, 1, 1, 1)
-        
+        pgp_frame_layout.addWidget(register_key_button, 5, 1, 1, 1)
+        pgp_frame_layout.setRowStretch(6,10)
+
         # user_public_key_file_button = QPushButton("Select File")
         # user_public_key_file_button.clicked.connect(self.find_user_public_key)
         # user_data_frame_layout.addWidget(user_public_key_file_button,         14, 5, 1, 1)
@@ -267,12 +250,12 @@ class UserData(QDialog):
         # user_data_frame_layout.addWidget(self.inputs["User Public Key File"], 14, 0, 1, 5)
         # self.inputs["User Public Key File"].setToolTip("TruckCRYPT uses this key to verify digitally signed files that you signed with the private key. Therefore, you should share this key so others can verify your signature.")
 
-        dialog_box_layout.addWidget(user_data_frame,0,0,1,3)
-        dialog_box_layout.addWidget(decoding_service_frame, 1,0,1,1)
+        dialog_box_layout.addWidget(user_data_frame,0,0,4,1)
+        dialog_box_layout.addWidget(decoding_service_frame, 0,1,1,1)
         dialog_box_layout.addWidget(subscription_status_frame, 1,1,1,1)
-        dialog_box_layout.addWidget(pgp_frame, 1,2,1,1)
+        dialog_box_layout.addWidget(pgp_frame, 2,1,1,1)
 
-        dialog_box_layout.addWidget(self.buttons, 2, 2, 1, 1)
+        dialog_box_layout.addWidget(self.buttons, 3, 1, 1, 1)
 
         self.setLayout(dialog_box_layout)
 
@@ -280,46 +263,140 @@ class UserData(QDialog):
         self.setWindowModality(Qt.ApplicationModal) 
     
     def show_private_key_details(self):
-        pass
-    
+        key_details = "PGP Private Key has the following properties:\n"
+        key_details += "  fingerprint:   {}\n".format(self.private_key.fingerprint)
+        key_details += "  created:       {}\n".format(self.private_key.created)
+        key_details += "  expires_at:    {}\n".format(self.private_key.expires_at)
+        key_details += "  is_expired:    {}\n".format(self.private_key.is_expired)
+        key_details += "  is_primary:    {}\n".format(self.private_key.is_primary)
+        key_details += "  is_protected:  {}\n".format(self.private_key.is_protected)
+        key_details += "  is_public:     {}\n".format(self.private_key.is_public)
+        key_details += "  is_unlocked:   {}\n".format(self.private_key.is_unlocked)
+        key_details += "  key_algorithm: {}\n".format(self.private_key.key_algorithm)
+        key_details += "  key_size:      {}\n".format(self.private_key.key_size)
+        key_details += "  pubkey:        {}\n".format(self.private_key.pubkey)
+        key_details += "  signers:       {}\n".format(self.private_key.signers)
+        key_details += "  userid:        {}\n".format(self.private_key.userids[0])
+        logger.info(key_details)
+        QMessageBox.information(self, "Private Key Details", key_details)
+
     def load_private_key_contents(self):
         logger.debug("Trying to open the private key file from {}".format(self.user_data["Local Private Key File"]))
         try:
-            with open(self.user_data["Local Private Key File"],'r') as f:
-                self.inputs["Local Private Key"].setPlainText(f.read())
+            self.private_key, details = pgpy.PGPKey.from_file(self.user_data["Local Private Key File"])   
+            self.public_key = self.private_key.pubkey
+            self.public_key |= self.private_key.certify(self.public_key)
+            
 
-        except FileNotFoundError:
-            logger.debug("Local Private Key File not Found")
-            return
-        try:
-            self.private_key = pgpy.PGPKey.from_file(self.user_data["Local Private Key File"])
+            logger.debug("Successfully loaded private key and signed the public key.")
         except:
             logger.debug("Private key failed to load.")
             logger.debug(traceback.format_exc())
-            self.private_key = None #maybe we can generate the private key here
+            #QMessageBox.warning(self, "Private Key Failed",
+            #    "Failed to load a private key\n{}".format(traceback.format_exc()))
+            self.private_key = None
+            #self.private_key = self.generate_private_key() #maybe we can generate the private key here
+        
+        # self.private_key may be None
+        try:
+            self.inputs["Local Private Key"].setText(str(self.private_key.fingerprint))
+            self.inputs["Local Private Key"].setReadOnly(True)
+            p = self.inputs["Local Private Key"].palette()
+            p.setColor(QPalette.Base, QColor('light green'))
+            self.inputs["Local Private Key"].setPalette(p)
+            return True
+
+        except AttributeError:
+            self.inputs["Local Private Key"].setText("PGP key is not found.")
+            #logger.debug(traceback.format_exc())
+            p = self.inputs["Local Private Key"].palette()
+            p.setColor(QPalette.Base, QColor("red"))
+            self.inputs["Local Private Key"].setPalette(p)
+            self.private_key = None
+            return False
+            
 
     def register_public_key(self):
-        pass
+        message_contents = str(self.public_key)
+        msg = QMessageBox.question(self,
+                                   "User's PGP Public Key",
+                                   str(self.public_key)+ "\n\n Would you like to register the key with {}?".format(self.user_data["Decoder Web Site Address"]),
+                                   )
+        
+        
+        if msg == QMessageBox.Yes:
+            logger.debug("Request to upload public key.")
+
     def generate_private_key(self):
-        pass
+        """
+        Generate a new PGP private key with the instance user data.
+        Saves the file
+        Reloads the dialog box with the new private key fingerprint
+        """
+        fname = QFileDialog.getSaveFileName(self, 
+                                            'Select Private Key File',
+                                            os.getcwd(),
+                                            "Pretty Good Privacy (*.pgp)",
+                                            "Pretty Good Privacy (*.pgp)")
+        if fname[0]:
+            self.user_data["Local Private Key File"] = fname[0]
+            self.inputs["Local Private Key File"].setText(fname[0])
+        else:
+            return
+        #save the data first
+        
+        # Create a new key
+        primary_key = pgpy.PGPKey.new(PubKeyAlgorithm.ECDSA, EllipticCurveOID.NIST_P256)
+        # Setup a PGP ID, but don't use emails, since those can be scraped off the internet and spammed.
+
+        user_id = pgpy.PGPUID.new('{} {}'.format(self.user_data["First Name"],self.user_data["Last Name"]) , 
+                      comment="{}".format(self.user_data["Company"]), 
+                      email="{}, {}".format(self.user_data["City"], self.user_data["State/Province"] ))
+        logger.debug("Created a PGP User ID")
+
+        # Add the user id to the key
+        primary_key.add_uid(user_id, 
+                            usage={KeyFlags.Sign, 
+                                   KeyFlags.EncryptCommunications, 
+                                   KeyFlags.EncryptStorage,
+                                   KeyFlags.Authentication},
+                            ciphers=[SymmetricKeyAlgorithm.AES128],
+                            hashes=[HashAlgorithm.SHA256],
+                            compression=[CompressionAlgorithm.ZIP,CompressionAlgorithm.Uncompressed],
+                            key_expiration=None,
+                            key_server="{}/pgp/".format(self.user_data["Decoder Web Site Address"]),
+                            primary=True)
+        
+        #cert = primary_key.certify(someones_pubkey.userids[0], level=SignatureType.Persona_Cert)
+        #someones_pubkey.userids[0] |= cert
+
+        with open(self.user_data["Local Private Key File"],'w') as f:
+            f.write(str(primary_key))
+        logger.info("Saved PGP key with fingerprint {} to {}".format(primary_key.fingerprint, 
+                                                                    self.user_data["Local Private Key File"]))
+        
+        if self.load_private_key_contents():
+            self.save_user_data()    
 
     def find_user_private_key(self):
         fname = QFileDialog.getOpenFileName(self, 
                                             'Find User Private Key File',
                                             os.getcwd(),
-                                            "PEM Files (*.pem)",
-                                            "PEM Files (*.pem)")
+                                            "Pretty Good Privacy (*.pgp);;All Files (*.*)",
+                                            "Pretty Good Privacy (*.pgp)")
         if fname[0]:
             self.inputs["Local Private Key File"].setText(fname[0])
-            self.load_private_key_contents()
+            self.user_data["Local Private Key File"] = fname[0]
+            if self.load_private_key_contents():
+                self.save_user_data()
 
     def find_user_public_key(self):
 
         fname = QFileDialog.getOpenFileName(self, 
-                                            'Find User Public Key File', 
+                                            'Find User PGP Public Key File', 
                                             os.getcwd(), 
-                                            "PEM Files (*.pem)", 
-                                            "PEM Files (*.pem)")
+                                            "PEM Files (*.pgp)", 
+                                            "PEM Files (*.pgp)")
         if fname[0]:
             self.inputs["User Public Key File"].setText(fname[0])
 
@@ -355,7 +432,6 @@ class UserData(QDialog):
         self.exec_()
 
     def save_user_data(self):
-        logger.debug("Accepted Dialog OK")
         for label in self.required_user_keys:
             try:
                 self.user_data[label] = self.inputs[label].text()
@@ -382,7 +458,7 @@ state_names = {
     'CA': 'California',
     'CO': 'Colorado',
     'CT': 'Connecticut',
-    'DC': 'District of Columbia',
+    'DC': 'Dist. of Columbia',
     'DE': 'Delaware',
     'FL': 'Florida',
     'GA': 'Georgia',
@@ -401,7 +477,6 @@ state_names = {
     'MI': 'Michigan',
     'MN': 'Minnesota',
     'MO': 'Missouri',
-    'MP': 'Northern Mariana Islands',
     'MS': 'Mississippi',
     'MT': 'Montana',
     'NA': 'National',
@@ -435,12 +510,11 @@ state_names = {
     'BC': 'British Columbia',
     'MB': 'Manitoba',
     'NB': 'New Brunswick',
-    'NL': 'Newfoundland and Labrador',
-    'NT': 'Northwest Territories',
+    'NL': 'Newfoundland',
+    'NT': 'Northwest Terr.',
     'NS': 'Nova Scotia',
     'NU': 'Nunavut',
     'ON': 'Ontario',
-    'PE': 'Prince Edward Island',
     'QC': 'Quebec',
     'SK': 'Saskatchewan',
     'YT': 'Yukon'
@@ -475,12 +549,12 @@ country_names = {
     "BJ":"BENIN",
     "BM":"BERMUDA",
     "BT":"BHUTAN",
-    "BO":"BOLIVIA, PLURINATIONAL STATE OF",
-    "BA":"BOSNIA AND HERZEGOVINA",
+    "BO":"BOLIVIA",
+    "BA":"BOSNIA ",
     "BW":"BOTSWANA",
     "BV":"BOUVET ISLAND",
     "BR":"BRAZIL",
-    "IO":"BRITISH INDIAN OCEAN TERRITORY",
+    "IO":"BRITISH ",
     "BN":"BRUNEI DARUSSALAM",
     "BG":"BULGARIA",
     "BF":"BURKINA FASO",
@@ -494,11 +568,11 @@ country_names = {
     "CL":"CHILE",
     "CN":"CHINA",
     "CX":"CHRISTMAS ISLAND",
-    "CC":"COCOS (KEELING) ISLANDS",
+    "CC":"COCOS ISLANDS",
     "CO":"COLOMBIA",
     "KM":"COMOROS",
     "CG":"CONGO",
-    "CD":"CONGO, THE DEMOCRATIC REPUBLIC OF THE",
+    "CD":"CONGO",
     "CK":"COOK ISLANDS",
     "CR":"COSTA RICA",
     "CI":"COTE D'IVOIRE",
@@ -517,14 +591,13 @@ country_names = {
     "ER":"ERITREA",
     "EE":"ESTONIA",
     "ET":"ETHIOPIA",
-    "FK":"FALKLAND ISLANDS (MALVINAS)",
+    "FK":"FALKLAND ISLANDS",
     "FO":"FAROE ISLANDS",
     "FJ":"FIJI",
     "FI":"FINLAND",
     "FR":"FRANCE",
     "GF":"FRENCH GUIANA",
     "PF":"FRENCH POLYNESIA",
-    "TF":"FRENCH SOUTHERN TERRITORIES",
     "GA":"GABON",
     "GM":"GAMBIA",
     "GE":"GEORGIA",
@@ -542,15 +615,15 @@ country_names = {
     "GW":"GUINEA-BISSAU",
     "GY":"GUYANA",
     "HT":"HAITI",
-    "HM":"HEARD ISLAND AND MCDONALD ISLANDS",
-    "VA":"HOLY SEE (VATICAN CITY STATE)",
+    "HM":"HEARD ISLAND",
+    "VA":"VATICAN CITY",
     "HN":"HONDURAS",
     "HK":"HONG KONG",
     "HU":"HUNGARY",
     "IS":"ICELAND",
     "IN":"INDIA",
     "ID":"INDONESIA",
-    "IR":"IRAN, ISLAMIC REPUBLIC OF",
+    "IR":"IRAN",
     "IQ":"IRAQ",
     "IE":"IRELAND",
     "IM":"ISLE OF MAN",
@@ -563,11 +636,11 @@ country_names = {
     "KZ":"KAZAKHSTAN",
     "KE":"KENYA",
     "KI":"KIRIBATI",
-    "KP":"KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF",
-    "KR":"KOREA, REPUBLIC OF",
+    "KP":"NORTH KOREA",
+    "KR":"KOREA",
     "KW":"KUWAIT",
     "KG":"KYRGYZSTAN",
-    "LA":"LAO PEOPLE'S DEMOCRATIC REPUBLIC",
+    "LA":"LAO",
     "LV":"LATVIA",
     "LB":"LEBANON",
     "LS":"LESOTHO",
@@ -577,7 +650,7 @@ country_names = {
     "LT":"LITHUANIA",
     "LU":"LUXEMBOURG",
     "MO":"MACAO",
-    "MK":"MACEDONIA, THE FORMER YUGOSLAV REPUBLIC OF",
+    "MK":"MACEDONIA",
     "MG":"MADAGASCAR",
     "MW":"MALAWI",
     "MY":"MALAYSIA",
@@ -590,8 +663,8 @@ country_names = {
     "MU":"MAURITIUS",
     "YT":"MAYOTTE",
     "MX":"MEXICO",
-    "FM":"MICRONESIA, FEDERATED STATES OF",
-    "MD":"MOLDOVA, REPUBLIC OF",
+    "FM":"MICRONESIA",
+    "MD":"MOLDOVA",
     "MC":"MONACO",
     "MN":"MONGOLIA",
     "ME":"MONTENEGRO",
@@ -616,7 +689,7 @@ country_names = {
     "OM":"OMAN",
     "PK":"PAKISTAN",
     "PW":"PALAU",
-    "PS":"PALESTINIAN TERRITORY, OCCUPIED",
+    "PS":"PALESTINIAN TERRITORY",
     "PA":"PANAMA",
     "PG":"PAPUA NEW GUINEA",
     "PY":"PARAGUAY",
@@ -632,12 +705,12 @@ country_names = {
     "RU":"RUSSIAN FEDERATION",
     "RW":"RWANDA",
     "BL":"SAINT BARTHELEMY",
-    "SH":"SAINT HELENA, ASCENSION AND TRISTAN DA CUNHA",
+    "SH":"SAINT HELENA",
     "KN":"SAINT KITTS AND NEVIS",
     "LC":"SAINT LUCIA",
     "MF":"SAINT MARTIN",
-    "PM":"SAINT PIERRE AND MIQUELON",
-    "VC":"SAINT VINCENT AND THE GRENADINES",
+    "PM":"SAINT PIERRE",
+    "VC":"SAINT VINCENT",
     "WS":"SAMOA",
     "SM":"SAN MARINO",
     "ST":"SAO TOME AND PRINCIPE",
@@ -652,7 +725,7 @@ country_names = {
     "SB":"SOLOMON ISLANDS",
     "SO":"SOMALIA",
     "ZA":"SOUTH AFRICA",
-    "GS":"SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS",
+    "GS":"SOUTH GEORGIA AND TH",
     "ES":"SPAIN",
     "LK":"SRI LANKA",
     "SD":"SUDAN",
@@ -662,9 +735,9 @@ country_names = {
     "SE":"SWEDEN",
     "CH":"SWITZERLAND",
     "SY":"SYRIAN ARAB REPUBLIC",
-    "TW":"TAIWAN, PROVINCE OF CHINA",
+    "TW":"TAIWAN",
     "TJ":"TAJIKISTAN",
-    "TZ":"TANZANIA, UNITED REPUBLIC OF",
+    "TZ":"TANZANIA",
     "TH":"THAILAND",
     "TL":"TIMOR-LESTE",
     "TG":"TOGO",
@@ -680,11 +753,11 @@ country_names = {
     "UA":"UKRAINE",
     "AE":"UNITED ARAB EMIRATES",
     "GB":"UNITED KINGDOM",
-    "UM":"UNITED STATES MINOR OUTLYING ISLANDS",
+    "UM":"UNITED STATE",
     "UY":"URUGUAY",
     "UZ":"UZBEKISTAN",
     "VU":"VANUATU",
-    "VE":"VENEZUELA, BOLIVARIAN REPUBLIC OF",
+    "VE":"VENEZUELA",
     "VN":"VIET NAM",
     "VG":"VIRGIN ISLANDS, BRITISH",
     "VI":"VIRGIN ISLANDS, U.S.",
