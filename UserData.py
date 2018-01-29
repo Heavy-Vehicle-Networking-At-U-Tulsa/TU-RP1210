@@ -205,6 +205,7 @@ class UserData(QDialog):
         web_public_key_file_button.clicked.connect(self.find_web_key)
         decoding_service_frame_layout.addWidget(self.labels["Decoder Public Key"],  2, 0, 1, 1),
         self.inputs["Decoder Public Key"] = QPlainTextEdit(self)
+        self.inputs["Decoder Public Key"].textChanged.connect(self.update_web_key)
         self.inputs["Decoder Public Key"].setFont(QFont("Lucida Sans Typewriter"))
         #self.inputs["Decoder Public Key"].setFixedHeight(150)
         #self.inputs["Decoder Public Key"].setFixedWidth(480)
@@ -274,20 +275,34 @@ class UserData(QDialog):
         Encrypt a message with the public key and send it to the server. 
         Wait for a response to get back the test message.
         Uses the TU_crypt functions.
+        Returns True if the test passes
         """
         logger.info("Testing the TU_crypt envelope encryption.")
-        test_message = b'This is a test.'
-        package = encrypt_bytes(test_message, bytes(self.user_data["Decoder Public Key"],'ascii'))
-        result = json.loads(self.upload_data({"Test Message": package}))
-        logger.debug("Upload data returned: {}".format(result))
+        test_message = b'This is a test: ' + bytes([b for b in range(256)]) #Sent a bytestream with every byte.
+        logger.debug(test_message)
+
         try:
-            logger.debug(bytes(result["Decrypted Bytes"],'ascii'))
-            logger.debug(test_message)
-            if test_message == bytes(result["Decrypted Bytes"],'ascii'):
-                QMessageBox.information(self,"Success","The test messages was successfully encrypted with the local public key and decrypted with the server's private key.")
+            package = encrypt_bytes(test_message, bytes(self.user_data["Decoder Public Key"],'ascii'))
+            result = json.loads(self.upload_data({"Test Message": package}))
+            logger.debug("Upload data returned: {}".format(result))
         except:
             logger.debug(traceback.format_exc())
-            QMessageBox.warning(self,"Failure","The test did not work.")
+            QMessageBox.warning(self,"Failure","The encryption test on the local client did not work.")
+            return False
+
+        try:
+            returned_message = base64.b64decode(result["Decrypted Bytes"].encode('ascii'))
+            logger.debug("\nReturned Message: {}".format(returned_message))
+            if test_message == returned_message:
+                QMessageBox.information(self,"Success","The test message was successfully encrypted with the local public key and decrypted with the server's private key.")
+                return True
+            else:
+                logger.debug("The Returned Message did not match the test message.")
+        except:
+            logger.debug(traceback.format_exc())
+       
+        QMessageBox.warning(self,"Failure","The decryption test on the server did not work.")
+        return False
 
     def upload_data(self, data_package):
         """
@@ -297,7 +312,7 @@ class UserData(QDialog):
         pgp_message = self.make_pgp_message(data_package)
         header_values = {"Content-type": 'application/text', 
                          "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)),
-                         'api_public_key': "Not sure what this is yet.",
+                         'Api-pubkey': base64.b64encode(bytes(self.user_data["Decoder Public Key"],'ascii')),
                          'Authorization' : "This will be a JWT"
                          }
         url = self.user_data["Decoder Web Site Address"] 
@@ -462,15 +477,16 @@ class UserData(QDialog):
             if self.load_private_key_contents():
                 self.save_user_data()
 
-    def find_user_public_key(self):
+    # def find_user_public_key(self):
 
-        fname = QFileDialog.getOpenFileName(self, 
-                                            'Find User PGP Public Key File', 
-                                            os.getcwd(), 
-                                            "PEM Files (*.pgp)", 
-                                            "PEM Files (*.pgp)")
-        if fname[0]:
-            self.inputs["User Public Key File"].setText(fname[0])
+    #     fname = QFileDialog.getOpenFileName(self, 
+    #                                         'Find User PGP Public Key File', 
+    #                                         os.getcwd(), 
+    #                                         "PEM Files (*.pgp)", 
+    #                                         "PEM Files (*.pgp)")
+    #     if fname[0]:
+    #         self.inputs["User Public Key File"].setText(fname[0])
+
 
     def find_web_key(self):
         fname = QFileDialog.getOpenFileName(self, 
@@ -482,6 +498,9 @@ class UserData(QDialog):
             with open(fname[0],'r') as f:
                 self.inputs["Decoder Public Key"].setPlainText(f.read())
             self.inputs["Decoder Public Key"].setReadOnly(True)
+    
+    def update_web_key(self):
+        self.user_data["Decoder Public Key"] = self.inputs["Decoder Public Key"].toPlainText()
 
     def show_dialog(self):
 
