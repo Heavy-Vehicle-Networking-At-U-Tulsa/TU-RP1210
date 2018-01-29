@@ -278,8 +278,16 @@ class UserData(QDialog):
         logger.info("Testing the TU_crypt envelope encryption.")
         test_message = b'This is a test.'
         package = encrypt_bytes(test_message, bytes(self.user_data["Decoder Public Key"],'ascii'))
-        result = self.upload_data({"Test Message": package})
+        result = json.loads(self.upload_data({"Test Message": package}))
         logger.debug("Upload data returned: {}".format(result))
+        try:
+            logger.debug(bytes(result["Decrypted Bytes"],'ascii'))
+            logger.debug(test_message)
+            if test_message == bytes(result["Decrypted Bytes"],'ascii'):
+                QMessageBox.information(self,"Success","The test messages was successfully encrypted with the local public key and decrypted with the server's private key.")
+        except:
+            logger.debug(traceback.format_exc())
+            QMessageBox.warning(self,"Failure","The test did not work.")
 
     def upload_data(self, data_package):
         """

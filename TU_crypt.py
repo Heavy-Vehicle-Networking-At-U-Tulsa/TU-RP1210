@@ -21,15 +21,19 @@ def load_public_key(keyfile):
             keystring = f.read()
     except FileNotFoundError:
         keystring = keyfile
-        
+
     return load_ssh_public_key(keystring, default_backend())
 
 def load_private_key(keyfile, passwd=None):
     """
     Loads a private PEM key from a file. Can also use a password. 
     """
-    with open(keyfile, 'rb') as f:
-        keystring = f.read()
+    try:
+        with open(keyfile, 'rb') as f:
+            keystring = f.read()
+    except FileNotFoundError:
+        keystring = keyfile
+        
     return load_pem_private_key(keystring, password=passwd, backend=default_backend())
 
 def encrypt_bytes(data, keyfile):
