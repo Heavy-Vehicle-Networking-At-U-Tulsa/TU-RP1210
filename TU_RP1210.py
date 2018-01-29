@@ -92,17 +92,9 @@ class TU_RP1210(QMainWindow):
             self.j1587db = json.load(j1587_file)
         logger.info("Done Loading J1587db")
 
-        self.isodriver = None
+        self.user_data = UserData()
 
-        self.user_key_file = "TUPrivatePGPkey.pgp"
-        try:
-            self.load_private_key(self.user_key_file)
-        except FileNotFoundError:
-            self.user_private_key = pgpy.PGPKey.new(PubKeyAlgorithm.ECDSA, EllipticCurveOID.NIST_P256)
-            with open(self.user_key_file,'w') as f:
-                f.write(str(self.user_private_key))
-            logger.info("Created and saved private user key {}".format(self.user_key_file))
-        self.user_public_key = self.user_private_key.pubkey
+        self.isodriver = None
 
         self.source_addresses=[]
         self.long_pgn_timeouts = [65227, ]
@@ -544,7 +536,7 @@ class TU_RP1210(QMainWindow):
                                              "PC Time minus GPS Time": []
                                              }
         
-        self.user_data = UserData()
+        
         self.data_package["User Data"] = self.user_data.get_current_data()
         self.data_package["Warnings"] = []
         self.data_package["J1587 Message and Parameter IDs"] = {}
@@ -565,7 +557,6 @@ class TU_RP1210(QMainWindow):
                                                  "DM02":{},
                                                  "DM04":{}
                                                  }
-
         self.request_timeout = 1
 
         self.J1939.reset_data()
@@ -573,7 +564,9 @@ class TU_RP1210(QMainWindow):
         self.J1587.clear_J1587_table()
         self.Components.clear_data()
 
-    
+    def upload_data_package(self):
+        self.user_data.upload_data(self.data_package)
+
     def edit_user_data(self):
         self.user_data.show_dialog() 
 
@@ -644,7 +637,7 @@ class TU_RP1210(QMainWindow):
             try:
                 if pgp_file_contents.is_signed:
                     logger.debug("File is signed.")
-                    verification = self.verify_stream(pgp_file_contents, self.user_private_key.pubkey)
+                    verification = self.verify_stream(pgp_file_contents, self.user_data.private_key.pubkey)
                 else:
                     verification = False
                     logger.debug("File is not signed.")
@@ -713,22 +706,18 @@ class TU_RP1210(QMainWindow):
             filename = os.path.join(self.export_path, self.filename)
             self.data_package["File Name"] = self.filename
 
-        file_contents = json.dumps(self.data_package, indent=4, sort_keys=True)
-        pgp_message = pgpy.PGPMessage.new(file_contents,
-                                 cleartext=False,
-                                 sensitive=False,
-                                 compression=CompressionAlgorithm.ZIP,
-                                 encoding='ascii')
-        pgp_message |= self.user_private_key.sign(pgp_message)
+        pgp_message = self.user_data.make_pgp_message(self.data_package)
         with open(filename,'w') as file_out:
             file_out.write(str(pgp_message))
 
         if not backup:
             with open(filename[:-3] + 'json', 'w') as outfile:
                 outfile.write(pgp_message.message)
-            logger.info("Saved signed file {} to {}".format(filename, self.export_path))
+            msg = "Saved signed file to {}".format(filename)
+            logger.info(msg)
             self.filename = os.path.basename(self.filename)
             self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            QMessageBox.information(self,"Success", msg)
         return pgp_message
 
     def save_file_as(self):
@@ -1184,7 +1173,7 @@ class TU_RP1210(QMainWindow):
         self.save_file_as()
 
         with open(os.path.join(self.export_path,'PGPpublicKeyFile.txt'), 'w') as outfile:
-            outfile.write(str(self.user_private_key.pubkey))
+            outfile.write(str(self.user_data.private_key.pubkey))
         with open(os.path.join(self.export_path,'README.txt'), 'w') as outfile:
             outfile.write("The files in this directory ending in pgp are signed PGPmessage files that have contain the original data. The files can be verified using the PGP public key.")
         
@@ -1262,7 +1251,7 @@ class TU_RP1210(QMainWindow):
             data_dict["File Name"] = file_to_verify_name
             data_dict["Signature File Name"] = file_to_verify_name + '.pgp' 
             data_dict["Signature"] = 'PGP Signatrure block'
-            data_dict["Public Key"] = str(self.user_private_key.pubkey)
+            data_dict["Public Key"] = str(self.user_data.private_key.pubkey)
             logger.debug("Verification Report inputs:")
             logger.debug(" {}".format(data_dict))
             report = SignatureVerificationReport(fname[0], data_dict)
@@ -1291,7 +1280,7 @@ class TU_RP1210(QMainWindow):
 
         new_file = filename + ".pgp"
         try:
-            signed_stream = self.sign_stream(message, self.user_private_key)
+            signed_stream = self.sign_stream(message, self.user_data.private_key)
             
             with open(new_file, 'w') as signed_file:
                 signed_file.write(str(signed_stream))
@@ -1319,7 +1308,7 @@ class TU_RP1210(QMainWindow):
         try:
             private_key, properties = pgpy.PGPKey.from_file(private_key_file)
             logger.info("Using a PGP private key to sign files with the following fingerprint {}".format(private_key.fingerprint))
-            self.user_private_key = private_key
+            self.user_data.private_key = private_key
             self.user_public_key = private_key.pubkey
         except FileNotFoundError:
             logger.debug(traceback.format_exc())
@@ -1332,7 +1321,7 @@ class TU_RP1210(QMainWindow):
             logger.debug(traceback.format_exc())
 
 
-    def sign_stream(self, message, private_key_file):
+    def sign_stream(self, message):
         """
         Returns: a signed PGP message
         """
@@ -1342,7 +1331,7 @@ class TU_RP1210(QMainWindow):
                                  cleartext=False,
                                  sensitive=False,
                                  compression=CompressionAlgorithm.ZIP)
-            signed_stream |= self.user_private_key.sign(signed_stream)
+            signed_stream |= self.user_data.private_key.sign(signed_stream)
             return signed_stream
         except:
             logger.debug(traceback.format_exc())
@@ -1430,11 +1419,7 @@ class TU_RP1210(QMainWindow):
                 j1587_request = bytes([0x04, tool, 255, 0, pid%256])
             else:
                 return 
-            self.RP1210.send_message(self.client_ids["J1708"], j1587_request)
-
-    def upload_data_package(self):
-        pass
-    
+            self.RP1210.send_message(self.client_ids["J1708"], j1587_request)    
 
     def setup_gps(self, dialog=True):
         

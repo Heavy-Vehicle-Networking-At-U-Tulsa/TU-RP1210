@@ -26,6 +26,8 @@ from pgpy.constants import (PubKeyAlgorithm,
                             CompressionAlgorithm, 
                             EllipticCurveOID, 
                             SignatureType)
+from TU_crypt import *
+import requests
 import traceback
 import sys
 import os
@@ -211,6 +213,11 @@ class UserData(QDialog):
         self.inputs["Decoder Public Key"].setToolTip("This file is needed so you can have encrypted and authenticated communications with the TruckCRYPT Server.")
         decoding_service_frame_layout.addWidget(web_public_key_file_button, 4, 0, 1, 1)
         
+        public_key_test_button = QPushButton("Test Public Key")
+        public_key_test_button.setToolTip("Encrypts and sends the phrase 'Test Message' to the server to get it decoded.")
+        public_key_test_button.clicked.connect(self.send_web_key_test)
+        decoding_service_frame_layout.addWidget(public_key_test_button,  5, 0, 1, 1),
+        
 
 
         pgp_frame_layout.addWidget(self.labels["Local Private Key File"], 0, 0, 1, 2),
@@ -250,18 +257,75 @@ class UserData(QDialog):
         # user_data_frame_layout.addWidget(self.inputs["User Public Key File"], 14, 0, 1, 5)
         # self.inputs["User Public Key File"].setToolTip("TruckCRYPT uses this key to verify digitally signed files that you signed with the private key. Therefore, you should share this key so others can verify your signature.")
 
-        dialog_box_layout.addWidget(user_data_frame,0,0,4,1)
+        dialog_box_layout.addWidget(user_data_frame,0,0,1,1)
         dialog_box_layout.addWidget(decoding_service_frame, 0,1,1,1)
-        dialog_box_layout.addWidget(subscription_status_frame, 1,1,1,1)
-        dialog_box_layout.addWidget(pgp_frame, 2,1,1,1)
+        dialog_box_layout.addWidget(subscription_status_frame, 1,0,1,1)
+        dialog_box_layout.addWidget(pgp_frame, 1,1,1,1)
 
-        dialog_box_layout.addWidget(self.buttons, 3, 1, 1, 1)
+        dialog_box_layout.addWidget(self.buttons, 2, 1, 1, 1)
 
         self.setLayout(dialog_box_layout)
 
         self.setWindowTitle("User and Service Information")
         self.setWindowModality(Qt.ApplicationModal) 
     
+    def send_web_key_test(self):
+        """
+        Encrypt a message with the public key and send it to the server. 
+        Wait for a response to get back the test message.
+        Uses the TU_crypt functions.
+        """
+        logger.info("Testing the TU_crypt envelope encryption.")
+        test_message = b'This is a test.'
+        package = encrypt_bytes(test_message, bytes(self.user_data["Decoder Public Key"],'ascii'))
+        result = self.upload_data({"Test Message": package})
+        logger.debug("Upload data returned: {}".format(result))
+
+    def upload_data(self, data_package):
+        """
+        Take a message dictionary, converts it to json,  signs it and sends it on the way.
+        """
+        logger.debug(data_package)
+        pgp_message = self.make_pgp_message(data_package)
+        header_values = {"Content-type": 'application/text', 
+                         "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)),
+                         'api_public_key': "Not sure what this is yet.",
+                         'Authorization' : "This will be a JWT"
+                         }
+        url = self.user_data["Decoder Web Site Address"] 
+        try:
+            r = requests.post(url, data=str(pgp_message), headers=header_values)
+            logger.debug(r.status_code)
+            for k,v in r.headers.items():
+                logger.debug("{}: {}".format(k,v))
+            logger.debug("Response Contents: {}".format(r.text))
+            try:    
+                pgp_message = pgpy.PGPMessage.from_blob(base64.b64decode(r.text))
+                logger.debug(str(pgp_message))
+                return pgp_message.message
+
+            except:
+                logger.debug(traceback.format_exc())
+            logger.debug("Finished with requests.")
+        except:
+            logger.debug(traceback.format_exc())
+
+
+    def make_pgp_message(self, data_dict):
+        """
+        Convert a python dictionary to a signed pgp message to be sent across the internet or saved.
+        """
+        file_contents = json.dumps(data_dict, indent=4, sort_keys=True)
+        pgp_message = pgpy.PGPMessage.new(file_contents,
+                                 cleartext=False,
+                                 sensitive=False,
+                                 compression=CompressionAlgorithm.ZIP,
+                                 encoding='ascii')
+        pgp_message |= self.private_key.sign(pgp_message)
+        return pgp_message
+
+
+
     def show_private_key_details(self):
         key_details = "PGP Private Key has the following properties:\n"
         key_details += "  fingerprint:   {}\n".format(self.private_key.fingerprint)

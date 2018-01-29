@@ -16,8 +16,12 @@ def load_public_key(keyfile):
     """
     Loads an SSH (PEM) public key from a the path.
     """
-    with open(keyfile, 'rb') as f:
-        keystring = f.read()
+    try:
+        with open(keyfile, 'rb') as f:
+            keystring = f.read()
+    except FileNotFoundError:
+        keystring = keyfile
+        
     return load_ssh_public_key(keystring, default_backend())
 
 def load_private_key(keyfile, passwd=None):
