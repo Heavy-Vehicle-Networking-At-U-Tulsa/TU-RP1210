@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QLabel,
                              QDialog,
                              QDialogButtonBox,
+                             QInputDialog,
                              QGridLayout,
                              QVBoxLayout,
                              QFileDialog,
@@ -26,6 +27,7 @@ from pgpy.constants import (PubKeyAlgorithm,
                             CompressionAlgorithm, 
                             EllipticCurveOID, 
                             SignatureType)
+from passlib.hash import pbkdf2_sha256 as passwd
 from TU_crypt import *
 import requests
 import traceback
@@ -80,56 +82,6 @@ class UserData(QDialog):
         self.setup_dialog()
         self.load_file()
         self.load_private_key_contents()
-        
-    def get_user_data_list(self):
-        return_list = []
-        for k in self.required_user_keys:
-            try:
-                return_list.append(['', k, self.user_data[k]])
-            except KeyError:
-                pass 
-                #return_list=[['', k, self.user_data[k]]]
-        return return_list
-
-    def load_file(self):
-        try:
-            user_file = open(self.path_to_file, 'r')
-        except FileNotFoundError:
-            logger.debug("User data file could not be found.")
-            #self.reset_user_dict()
-            return
-        
-        try:
-            self.user_data = json.load(user_file)
-        except ValueError:
-            logger.warning("User data file could not load.")
-                #self.reset_user_dict()
-
-
-        # Check all entries
-        # if self.check_entries():
-        #     self.reset_user_dict()
-        #     #QCoreApplication.processEvents()
-        
-    def check_entries(self):
-        for key, value in self.user_data.items():
-            if key not in self.required_user_keys or type(value) is not str:
-                logger.warning("User data for {} is not formatted correctly.".format(key))    
-                return True
-        data_keys = [k for k in self.user_data.keys()]
-        for key in self.required_user_keys:
-            if key not in data_keys:
-                return True
-        return False    
-
-    def reset_user_dict(self):
-        self.user_data = {}
-        for key in self.required_user_keys:
-            self.user_data[key] = ""
-        #self.show_dialog()
-    
-    def get_current_data(self):
-        return self.user_data
 
     def setup_dialog(self):
         """
@@ -251,12 +203,11 @@ class UserData(QDialog):
         pgp_frame_layout.addWidget(register_key_button, 5, 1, 1, 1)
         pgp_frame_layout.setRowStretch(6,10)
 
-        # user_public_key_file_button = QPushButton("Select File")
-        # user_public_key_file_button.clicked.connect(self.find_user_public_key)
-        # user_data_frame_layout.addWidget(user_public_key_file_button,         14, 5, 1, 1)
-        # user_data_frame_layout.addWidget(self.labels["User Public Key File"], 13, 0, 1, 3)
-        # user_data_frame_layout.addWidget(self.inputs["User Public Key File"], 14, 0, 1, 5)
-        # self.inputs["User Public Key File"].setToolTip("TruckCRYPT uses this key to verify digitally signed files that you signed with the private key. Therefore, you should share this key so others can verify your signature.")
+        login_button = QPushButton("Login")
+        login_button.setToolTip("Fetches a Web Token to authorize the user application")
+        login_button.clicked.connect(self.get_token)
+        subscription_status_frame_layout.addWidget(login_button, 0, 0, 1, 1)
+        subscription_status_frame_layout.setRowStretch(1,10)
 
         dialog_box_layout.addWidget(user_data_frame,0,0,1,1)
         dialog_box_layout.addWidget(decoding_service_frame, 0,1,1,1)
@@ -269,6 +220,61 @@ class UserData(QDialog):
 
         self.setWindowTitle("User and Service Information")
         self.setWindowModality(Qt.ApplicationModal) 
+    
+    def get_token(self):
+        text, ok = QInputDialog.getText(self, 
+                                        "Attention", 
+                                        "Password:", 
+                                        QLineEdit.Password)
+        if ok and text:
+            try:
+                pass_hash = passwd.hash(text)
+                user = self.user_data["E-mail"]
+                header = {'user':user, "pass":pass_hash}
+                url = self.user_data["Decoder Web Site Address"]
+                r = requests.get(url, headers=header )
+                # Log what we get back
+                logger.debug(r.status_code)
+                for k,v in r.headers.items():
+                    logger.debug("{}: {}".format(k,v))
+                logger.debug("Response Contents: {}".format(r.text))     
+            except:
+                logger.debug(traceback.format_exc())
+
+    def get_user_data_list(self):
+        return_list = []
+        for k in self.required_user_keys:
+            try:
+                return_list.append(['', k, self.user_data[k]])
+            except KeyError:
+                pass 
+                #return_list=[['', k, self.user_data[k]]]
+        return return_list
+
+    def load_file(self):
+        try:
+            user_file = open(self.path_to_file, 'r')
+        except FileNotFoundError:
+            logger.debug("User data file could not be found.")
+            #self.reset_user_dict()
+            return
+        
+        try:
+            self.user_data = json.load(user_file)
+        except ValueError:
+            logger.warning("User data file could not load.")
+
+    def reset_user_dict(self):
+        self.user_data = {}
+        for key in self.required_user_keys:
+            self.user_data[key] = ""
+        self.user_data["Web Token"] = ""
+        #self.show_dialog()
+    
+    def get_current_data(self):
+        return self.user_data
+
+    
     
     def send_web_key_test(self):
         """
@@ -311,17 +317,22 @@ class UserData(QDialog):
         logger.debug(data_package)
         pgp_message = self.make_pgp_message(data_package)
         header_values = {"Content-type": 'application/text', 
-                         "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)),
-                         'Api-pubkey': base64.b64encode(bytes(self.user_data["Decoder Public Key"],'ascii')),
-                         'Authorization' : "This will be a JWT"
+                         "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)), # used to verify data_package
+                         'Api-pubkey': base64.b64encode(bytes(self.user_data["Decoder Public Key"],'ascii')), # shows server what key was used to encrypt data
+                         'Authorization' : self.user_data["Web Token"] #used for user authentication
                          }
         url = self.user_data["Decoder Web Site Address"] 
         try:
             r = requests.post(url, data=str(pgp_message), headers=header_values)
+            # Log what we get back
             logger.debug(r.status_code)
             for k,v in r.headers.items():
                 logger.debug("{}: {}".format(k,v))
             logger.debug("Response Contents: {}".format(r.text))
+            if r.status_code == 401: #Unauthorized
+                logger.debug("Unauthorized. Need to have a valid token.")
+
+                return
             try:    
                 pgp_message = pgpy.PGPMessage.from_blob(base64.b64decode(r.text))
                 logger.debug(str(pgp_message))
