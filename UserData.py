@@ -34,6 +34,7 @@ import traceback
 import sys
 import os
 import json
+import time
 import logging
 import logging.config
 with open("logging.config.json",'r') as f:
@@ -41,7 +42,6 @@ with open("logging.config.json",'r') as f:
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
-
 
 
 class UserData(QDialog):
@@ -67,7 +67,7 @@ class UserData(QDialog):
         left_align = ["Decoder Web Site Address",
                       "Decoder Public Key",
                       "Local Private Key File"]
-        
+        self.subscription_status = {"Token Expiration":None}
         self.labels = {}
         self.inputs = {}
         self.reset_user_dict()
@@ -78,10 +78,19 @@ class UserData(QDialog):
             else:
                 self.labels[label].setAlignment(Qt.AlignRight)
             self.inputs[label] = QLineEdit()
-
+        
         self.setup_dialog()
         self.load_file()
         self.load_private_key_contents()
+        
+        # After everything gets built and loaded. Connect the updater
+        for label in self.required_user_keys:
+            try:
+                self.inputs[label].textChanged.connect(self.update_user_data)
+            except AttributeError: #QComboBox is different
+                self.inputs[label].currentTextChanged.connect(self.update_user_data)
+        
+        self.process_web_token()
 
     def setup_dialog(self):
         """
@@ -110,13 +119,7 @@ class UserData(QDialog):
         pgp_frame.setLayout(pgp_frame_layout)
                
 
-        self.inputs["State/Province"] = QComboBox()
-        self.inputs["State/Province"].addItems(state_names.values())
-        self.inputs["State/Province"].setEditable(True)
-        #self.inputs["State/Province"].setSizeAdjustPolicy(QComboBox.AdjustToContents)
         
-        self.inputs["Country"] = QComboBox()
-        self.inputs["Country"].addItems(country_names.values())
         #self.inputs["Country"].setSizeAdjustPolicy(QComboBox.AdjustToContents)
              
         self.buttons = QDialogButtonBox(
@@ -145,19 +148,22 @@ class UserData(QDialog):
         user_data_frame_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         
         self.inputs["Decoder Web Site Address"] = QComboBox()
-        self.inputs["Decoder Web Site Address"].addItems(["https://localhost:7774",
-                                                          "https://truckcrypt.synercontechnologies.com"])
+        sites = ["http://localhost:7774", "https://truckcrypt.synercontechnologies.com"]
+        if self.user_data["Decoder Web Site Address"] in sites:
+            sites.remove(self.user_data["Decoder Web Site Address"])
+        sites.append(self.user_data["Decoder Web Site Address"])
+        self.inputs["Decoder Web Site Address"].addItems(reversed(sites))
         self.inputs["Decoder Web Site Address"].setEditable(True)
-        self.inputs["Decoder Web Site Address"].setToolTip("Enter the URL for the URL pointing to the portal to decrypt, decode, store, and verify your data package files.")
+        self.inputs["Decoder Web Site Address"].setToolTip("Enter the URL pointing to the portal to decrypt, decode, store, and verify your data package files.")
         decoding_service_frame_layout.addWidget(self.labels["Decoder Web Site Address"], 0, 0, 1, 1),
         decoding_service_frame_layout.addWidget(self.inputs["Decoder Web Site Address"], 1, 0, 1, 1)
+        
 
         web_public_key_file_button = QPushButton("Load from File")
         web_public_key_file_button.setToolTip("Browse to the file that was sent to you when you activated your account.")
         web_public_key_file_button.clicked.connect(self.find_web_key)
         decoding_service_frame_layout.addWidget(self.labels["Decoder Public Key"],  2, 0, 1, 1),
         self.inputs["Decoder Public Key"] = QPlainTextEdit(self)
-        self.inputs["Decoder Public Key"].textChanged.connect(self.update_web_key)
         self.inputs["Decoder Public Key"].setFont(QFont("Lucida Sans Typewriter"))
         #self.inputs["Decoder Public Key"].setFixedHeight(150)
         #self.inputs["Decoder Public Key"].setFixedWidth(480)
@@ -221,24 +227,61 @@ class UserData(QDialog):
         self.setWindowTitle("User and Service Information")
         self.setWindowModality(Qt.ApplicationModal) 
     
+    def process_web_token(self):
+        """
+        tokens are created as follows
+        token = {
+                "iss":"utulsa.edu",
+                "exp": time.time()+30*24*60*60,
+                "iat": time.time(),
+                "sub": user,
+                "auth_time": time.time(),
+                "email": user,
+                "scope": scope}
+        """
+        logger.debug("Processing Web Token: {}".format(self.user_data["Web Token"]))
+        try: 
+            token_bytes = bytes(self.user_data["Web Token"],'ascii')
+            # We don't have the secret on this client. Let's just look at the contents.
+            token = jwt.decode(token_bytes, 'secret', verify=False, algorithms=['HS256'])
+            logger.debug("token: {}".format(token))
+            self.subscription_status["Token Expiration"] = time.asctime(time.localtime(token['exp']))
+            self.subscription_status["Token Issued At"] = time.asctime(time.localtime(token['iat']))
+            self.subscription_status["User Permissions"] = token['scope']
+            self.subscription_status["Subscription Expiration"] = time.asctime(time.localtime(token['sub_exp']))
+            logger.debug(self.subscription_status)
+
+        except ValueError:
+            logger.debug("Not a full token.")
+        except:
+            logger.debug(traceback.format_exc())
+
     def get_token(self):
-        text, ok = QInputDialog.getText(self, 
+        password, ok = QInputDialog.getText(self, 
                                         "Attention", 
-                                        "Password:", 
+                                        "User Name:\n{}\nPassword:".format(self.user_data["E-mail"]), 
                                         QLineEdit.Password)
-        if ok and text:
+        if ok and password:
             try:
-                pass_hash = passwd.hash(text)
                 user = self.user_data["E-mail"]
-                header = {'user':user, "pass":pass_hash}
                 url = self.user_data["Decoder Web Site Address"]
-                r = requests.get(url, headers=header )
+                r = requests.get(url, auth=(user, password) )
                 # Log what we get back
                 logger.debug(r.status_code)
                 for k,v in r.headers.items():
                     logger.debug("{}: {}".format(k,v))
-                logger.debug("Response Contents: {}".format(r.text))     
+                logger.debug("Response Contents: {}".format(r.text))
+
             except:
+                logger.debug(traceback.format_exc())
+                return
+            try:
+                self.user_data["Web Token"] = r.headers['new-token']
+                self.process_web_token()
+                self.save_user_data()
+                QMessageBox.information(self,"Updated Web Token",
+                    "Successfully updated the user's web token. You do not have to login with a password again until {}".format(self.subscription_status["Token Expiration"]))
+            except KeyError:
                 logger.debug(traceback.format_exc())
 
     def get_user_data_list(self):
@@ -263,19 +306,33 @@ class UserData(QDialog):
             self.user_data = json.load(user_file)
         except ValueError:
             logger.warning("User data file could not load.")
+            return
+
+        for label in self.required_user_keys:
+            try:
+                self.inputs[label].setText(self.user_data[label])
+                logger.debug("Setting {} to {}".format(label,self.user_data[label]))
+            except AttributeError: #Then it is a QCombobox or QPlainTextEdit
+                try:
+                    self.inputs[label].setPlainText(self.user_data[label])
+                    logger.debug("Setting {} to {}".format(label,self.user_data[label]))
+                except AttributeError: #Then it is a QCombobox
+                    try:
+                        idx = self.inputs[label].findText(self.user_data[label])
+                    except:
+                        idx = 0
+                    self.inputs[label].setCurrentIndex(idx)
+                    logger.debug("Setting {} to {}".format(label, self.inputs[label].currentText()))
 
     def reset_user_dict(self):
         self.user_data = {}
         for key in self.required_user_keys:
             self.user_data[key] = ""
-        self.user_data["Web Token"] = ""
-        #self.show_dialog()
+        #self.user_data["Web Token"] = "" 
     
     def get_current_data(self):
         return self.user_data
 
-    
-    
     def send_web_key_test(self):
         """
         Encrypt a message with the public key and send it to the server. 
@@ -515,25 +572,15 @@ class UserData(QDialog):
 
     def show_dialog(self):
 
-        for label in self.required_user_keys:
-            try:
-                self.inputs[label].setText(self.user_data[label])
-                logger.debug("Setting {} to {}".format(label,self.user_data[label]))
-            except AttributeError: #Then it is a QCombobox or QPlainTextEdit
-                try:
-                    self.inputs[label].setPlainText(self.user_data[label])
-                    logger.debug("Setting {} to {}".format(label,self.user_data[label]))
-                except AttributeError: #Then it is a QCombobox
-                    try:
-                        idx = self.inputs[label].findText(self.user_data[label])
-                        logger.debug("Setting {} to {}".format(label,self.user_data[label]))
-                    except:
-                        idx = 0
-                    self.inputs[label].setCurrentIndex(idx)
+        
                  
         self.exec_()
 
-    def save_user_data(self):
+    def update_user_data(self):
+        """
+        Iterate through the dialog box inputs and update the user data dictionary.
+        This should be connected to signals that are emitted when the values change. 
+        """
         for label in self.required_user_keys:
             try:
                 self.user_data[label] = self.inputs[label].text()
@@ -542,6 +589,9 @@ class UserData(QDialog):
                     self.user_data[label] = self.inputs[label].currentText()
                 except AttributeError:
                     self.user_data[label] = self.inputs[label].toPlainText()
+
+    def save_user_data(self):
+        self.update_user_data()
         try:
             with open(self.path_to_file,'w') as out_file:
                 json.dump(self.user_data, out_file, sort_keys=True, indent=4)
