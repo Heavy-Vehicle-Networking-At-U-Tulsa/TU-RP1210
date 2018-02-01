@@ -49,6 +49,7 @@ class UserData(QDialog):
         super(UserData, self).__init__()
         self.path_to_file = path_to_file
         self.token = None
+        self.attempts = 1
         self.required_user_keys = ["Last Name",
                                   "First Name",
                                   "Title",
@@ -258,8 +259,9 @@ class UserData(QDialog):
 
     def get_token(self):
         password, ok = QInputDialog.getText(self, 
-                                        "Attention", 
-                                        "User Name:\n{}\nPassword:".format(self.user_data["E-mail"]), 
+                                        "Enter Password", 
+
+                                        "Attempt {}\n\nUser Name:\n{}\n\nPassword:".format(self.attempts,self.user_data["E-mail"]), 
                                         QLineEdit.Password)
         if ok and password:
             try:
@@ -271,11 +273,15 @@ class UserData(QDialog):
                 for k,v in r.headers.items():
                     logger.debug("{}: {}".format(k,v))
                 logger.debug("Response Contents: {}".format(r.text))
+                if r.status_code == 401: #
+                    self.attempts += 1
+                    self.get_token()
 
             except:
                 logger.debug(traceback.format_exc())
                 return
             try:
+                self.attempts = 1
                 self.user_data["Web Token"] = r.headers['new-token']
                 self.process_web_token()
                 self.save_user_data()
@@ -390,7 +396,11 @@ class UserData(QDialog):
                 logger.debug("Unauthorized. Need to have a valid token.")
 
                 return
-            try:    
+            try:
+                #update the token
+                self.user_data["Web Token"] = r.headers['new-token']
+                self.process_web_token()
+                # process the message    
                 pgp_message = pgpy.PGPMessage.from_blob(base64.b64decode(r.text))
                 logger.debug(str(pgp_message))
                 return pgp_message.message
