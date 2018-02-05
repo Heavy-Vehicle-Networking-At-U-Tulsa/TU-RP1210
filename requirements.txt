@@ -1,8 +1,12 @@
+requests==2.18.4
+reportlab==3.4.0
 PGPy==0.4.3
 matplotlib==2.0.2
-humanize==0.5.1
-requests==2.18.4
+passlib==1.7.1
 pdfrw==0.4
-reportlab==3.4.0
+setuptools==38.4.0
+humanize==0.5.1
+cryptography==2.1.4
 PyQt5==5.10
+PyJWT==1.5.3
 pyserial==3.4

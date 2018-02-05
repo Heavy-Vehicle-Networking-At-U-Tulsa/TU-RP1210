@@ -1,0 +1,3 @@
+[console_scripts]
+TUPR1210 = TUPR1210:main
+
