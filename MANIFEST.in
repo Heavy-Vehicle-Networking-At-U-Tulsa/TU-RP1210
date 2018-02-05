@@ -1,1 +1,11 @@
-MANIFEST.in
+# Include the license file
+include LICENSE.txt
+include TURP1210/J1587db.json
+include TURP1210/J1939db.json
+include TURP1210/logging.config.json
+include TURP1210/SCELogo.pdf
+include TURP1210/ExamplePrivatePGPkey.pgp
+include TURP1210/UserData.json
+
+# Include the data files
+recursive-include TURP1210/icons *

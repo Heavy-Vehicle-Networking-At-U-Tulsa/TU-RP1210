@@ -40,7 +40,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.0',  # Required
+    version='1.0.1',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -117,9 +117,18 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['PyQt5',
-                      'requests'
-                     ]  # Optional
+    install_requires=['requests>=2.18.4',
+                      'reportlab>=3.4.0',
+                      'PGPy>=0.4.3',
+                      'matplotlib>=2.0.2',
+                      'passlib>=1.7.1',
+                      'pdfrw>=0.4',
+                      'setuptools>=38.4.0',
+                      'humanize>=0.5.1',
+                      'cryptography>=2.1.4',
+                      'PyQt5>=5.10',
+                      'PyJWT>=1.5.3',
+                      'pyserial>=3.4'], # Optional
 
     
 
@@ -128,12 +137,14 @@ setup(
     #
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
-    package_data={  # Optional
-        'TUPR1210': ['J1587.json',
-                     'J1939.json'
-                    ]
-    },
-
+    package_data = {'TUPR1210': ['TURP1210/J1587db.json',
+                                 'TURP1210/J1939db.json',
+                                 'TURP1210/icons/*',
+                                 'TURP1210/logging.config.json',
+                                 'TURP1210/SCELogo.pdf',
+                                 'TURP1210/UserData.json',
+                                 'TURP1210/ExamplePrivatePGPkey.pgp']},
+                                 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files

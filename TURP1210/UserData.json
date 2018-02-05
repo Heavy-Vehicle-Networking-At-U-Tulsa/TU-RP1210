@@ -1,0 +1,18 @@
+{
+    "Address 1": "800 S. Tucker Dr.",
+    "Address 2": "Mechanical Engineering",
+    "City": "Tulsa",
+    "Company": "University of Tulsa",
+    "Country": "UNITED STATES",
+    "Decoder Public Key": "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEA1H7RjA3ZBvKOBtR51LsC+m1bp3tLr7zusI6ivrX9SbD0VzhrsKIfFiC1/BcFohdD5keOuqFd5oNfx2fM4zFUCnzz3dfq/IEE/IIj4ZFodSGxhL0P+xfVMers5paTPnFZMPippwOlK+ba7IjbIscn0ZakWpCgQiaZkvJ/aABNrJXHWhGtvHNhvSRryAqevklV2oL9AURASBBvM2fr2j5ZsYmGH6ysSU8745JwbI9ZqcMK8fm9iqAMGd9q16ofAwxSM/JRWN9/RglZriFt6XOPVQXZbN+spd/Vbt3nA5MoGFp3KwdnAIVrsqnAIJOs2g/G6dGPf46ONExbUol+Cp2K3Q== TruckCRYPT Test Key",
+    "Decoder Web Site Address": "http://localhost:7774",
+    "E-mail": "jeremy-daily@utulsa.edu",
+    "First Name": "Jeremy",
+    "Last Name": "Daily",
+    "Local Private Key File": "C:/Users/dailyadmin/Documents/GitHub/TURP1210/TURP1210/ExamplePrivatePGPkey.pgp",
+    "Phone": "918-631-3056",
+    "Postal Code": "74104",
+    "State/Province": "Oklahoma",
+    "Title": "Associate Professor",
+    "Web Token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbGhvc3QiLCJleHAiOjE1MjAzNjc2MjEuNjk2NjQwNSwiaWF0IjoxNTE3Nzc1NjIxLjY5NjY0MDUsInN1YiI6ImplcmVteS1kYWlseUB1dHVsc2EuZWR1Iiwic3ViX2V4cCI6NDI5NDk2NzI5NSwiYXV0aF90aW1lIjoxNTE3Nzc1NjIxLjY5NjY0MDUsImVtYWlsIjoiamVyZW15LWRhaWx5QHV0dWxzYS5lZHUiLCJzY29wZSI6WyJhZG1pbiJdfQ.EaETCHCv5XmX5_2QFTP6wS5ysTOxc1jL4seGjgHgDv8"
+}
