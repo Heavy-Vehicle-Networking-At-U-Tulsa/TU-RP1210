@@ -17,7 +17,6 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QLineEdit)
 from PyQt5.QtCore import (Qt, QCoreApplication)
 from PyQt5.QtGui import QIcon, QFont, QColor, QPalette
-#import bcrypt #use this for passwords
 import jwt
 import pgpy
 from pgpy.constants import (PubKeyAlgorithm, 
@@ -28,7 +27,8 @@ from pgpy.constants import (PubKeyAlgorithm,
                             EllipticCurveOID, 
                             SignatureType)
 from passlib.hash import pbkdf2_sha256 as passwd
-from TU_crypt import *
+from RP1210Functions import *
+from TU_crypt_public import *
 import requests
 import traceback
 import sys
@@ -210,11 +210,38 @@ class UserData(QDialog):
         pgp_frame_layout.addWidget(register_key_button, 5, 1, 1, 1)
         pgp_frame_layout.setRowStretch(6,10)
 
-        login_button = QPushButton("Login")
+        login_button = QPushButton("Login with Password")
         login_button.setToolTip("Fetches a Web Token to authorize the user application")
         login_button.clicked.connect(self.get_token)
         subscription_status_frame_layout.addWidget(login_button, 0, 0, 1, 1)
-        subscription_status_frame_layout.setRowStretch(1,10)
+
+        refresh_button = QPushButton("Refresh User Token")
+        refresh_button.setToolTip("Refreshes the user token expriration.")
+        refresh_button.clicked.connect(self.refresh_token)
+        subscription_status_frame_layout.addWidget(refresh_button, 0, 1, 1, 1)
+
+        create_button = QPushButton("Create/Update Account")
+        create_button.setToolTip("Requests to create or update an account based on the information entered in this dialog. If the e-mail exists, the information will be updated and the password will be reset.")
+        create_button.clicked.connect(self.create_account)
+        subscription_status_frame_layout.addWidget(create_button, 1, 0, 1, 1)
+        
+        reset_pwd_button = QPushButton("Reset Password")
+        reset_pwd_button.setToolTip("Send a request to have a password reset link sent to the account on file.")
+        reset_pwd_button.clicked.connect(self.create_account)
+        subscription_status_frame_layout.addWidget(reset_pwd_button, 1, 1, 1, 1)
+        
+
+        subscription_frame = QGroupBox("Subscription Status")
+        subscription_status_frame_layout.addWidget(subscription_frame, 2, 0, 1, 2)
+        sub_frame_layout = QVBoxLayout()
+        subscription_frame.setLayout(sub_frame_layout)
+
+        self.subscription_status_text = QPlainTextEdit()
+        self.subscription_status_text.setFixedHeight(60)
+        self.subscription_status_text.setReadOnly(True)
+        sub_frame_layout.addWidget(self.subscription_status_text)
+
+        subscription_status_frame_layout.setRowStretch(2,10)
 
         dialog_box_layout.addWidget(user_data_frame,0,0,1,1)
         dialog_box_layout.addWidget(decoding_service_frame, 0,1,1,1)
@@ -228,6 +255,70 @@ class UserData(QDialog):
         self.setWindowTitle("User and Service Information")
         self.setWindowModality(Qt.ApplicationModal) 
     
+    def refresh_token(self):
+        """
+        Send  arequest to refresh the token
+        """
+        self.attempts = 1
+        header_values = {'Authorization' : self.user_data["Web Token"],
+                         'Requested-scope':'user' }
+        url = self.user_data["Decoder Web Site Address"] 
+        try:
+            r = requests.get(url, headers=header_values)
+            if r.status_code == 401: #
+                self.get_token()
+            else:
+                self.user_data["Web Token"] = r.headers['new-token']
+                self.process_web_token()
+                disp_text = ""  
+                for k,v in self.subscription_status.items():
+                    disp_text += "{}: {}\n".format(k,v)
+                QMessageBox.information(self,
+                                        "Updated Token",
+                                        "The token was updated with the following information:\n\n{}".format(disp_text)
+                                        )
+        except:
+            logger.debug(traceback.format_exc())
+            QMessageBox.warning(self,
+                                "Token Failed",
+                                "There was an issue refreshing the token. The server may be down. Please try again later."
+                                )
+
+    def create_account(self):
+        """
+        Sends a request to create an account or
+        """
+        if "localhost" in self.user_data["Decoder Web Site Address"]:
+            try:
+                with open("User Data.json",'r') as f:
+                    account_data = json.load(f)
+            except (FileNotFoundError,):
+                account_data={}
+            password, ok = QInputDialog.getText(self, 
+                                        "Create Account", 
+                                        "User Name:\n{}\n\nPassword:".format(self.user_data["E-mail"]), 
+                                        QLineEdit.Password)
+
+            if password and ok:
+                url = self.user_data["Decoder Web Site Address"] + "/create"
+                data = {"user":base64.b64encode(bytes(self.user_data["E-mail"],'utf-8')),
+                        "pass":base64.b64encode(bytes(passwd.hash(password),'utf-8'))}
+                try:
+                    r = requests.get(url, params=data )
+                    logger.debug(r.text)
+                    if r.status_code == 200:
+                        QMessageBox.information(self,
+                                            "Success",
+                                        "Stored Username, password, and expiration date to Server".format(os.getcwd())
+                                       )
+                except:
+                    logger.debug(traceback.format_exc())
+        else:
+            QMessageBox.warning(self,
+                                "Not Implemented",
+                                "Creating accounts for external servers is not supported at this time."
+                                )  
+    
     def process_web_token(self):
         """
         tokens are created as follows
@@ -240,24 +331,50 @@ class UserData(QDialog):
                 "email": user,
                 "scope": scope}
         """
-        logger.debug("Processing Web Token: {}".format(self.user_data["Web Token"]))
+        
+        p = self.subscription_status_text.palette()
         try: 
+            logger.debug("Processing Web Token: {}".format(self.user_data["Web Token"]))
             token_bytes = bytes(self.user_data["Web Token"],'ascii')
             # We don't have the secret on this client. Let's just look at the contents.
             token = jwt.decode(token_bytes, 'secret', verify=False, algorithms=['HS256'])
             logger.debug("token: {}".format(token))
-            self.subscription_status["Token Expiration"] = time.asctime(time.localtime(token['exp']))
-            self.subscription_status["Token Issued At"] = time.asctime(time.localtime(token['iat']))
-            self.subscription_status["User Permissions"] = token['scope']
-            self.subscription_status["Subscription Expiration"] = time.asctime(time.localtime(token['sub_exp']))
+            self.subscription_status["Token Expiration"] = time.strftime("%d %b %Y at %H:%M:%S", time.localtime(token['exp']))
+            self.subscription_status["Token Issued At"] = time.strftime("%d %b %Y at %H:%M:%S", time.localtime(token['iat']))
+            self.subscription_status["Account Expiration"] = time.strftime("%d %b %Y at %H:%M:%S", time.localtime(token['sub_exp']))
+            self.subscription_status["User Permissions"] = ", ".join(token['scope'])
             logger.debug(self.subscription_status)
 
+            disp_text = ""
+            for k,v in self.subscription_status.items():
+                disp_text += "{}: {}\n".format(k,v)
+
+            self.subscription_status_text.setPlainText(disp_text)
+            
+            if token['exp'] > time.time() and  token['iat'] < time.time():
+                #Valid timeframe (user can't get a valid token by resetting the clock.)
+                p.setColor(QPalette.Base, QColor('light green'))
+                self.subscription_status_text.setPalette(p)
+            else:
+                p.setColor(QPalette.Base, QColor('yellow'))
+                self.subscription_status_text.setPalette(p)
         except ValueError:
             logger.debug("Not a full token.")
+            p.setColor(QPalette.Base, QColor('red'))
+            self.subscription_status_text.setPalette(p)
+            self.subscription_status_text.setPlainText("There was an error reading the exisiting token.")
         except:
             logger.debug(traceback.format_exc())
+            self.subscription_status_text.setPlainText("There was an error reading the exisiting token.")
+            p.setColor(QPalette.Base, QColor('orange'))
+            self.subscription_status_text.setPalette(p)
 
     def get_token(self):
+        """
+        Refresh a token.
+
+        """
+
         password, ok = QInputDialog.getText(self, 
                                         "Enter Password", 
 
@@ -267,7 +384,8 @@ class UserData(QDialog):
             try:
                 user = self.user_data["E-mail"]
                 url = self.user_data["Decoder Web Site Address"]
-                r = requests.get(url, auth=(user, password) )
+                header = {"Requested-scope":'user'}
+                r = requests.get(url, auth=(user, password), headers=header )
                 # Log what we get back
                 logger.debug(r.status_code)
                 for k,v in r.headers.items():
@@ -339,7 +457,7 @@ class UserData(QDialog):
     def get_current_data(self):
         return self.user_data
 
-    def send_web_key_test(self):
+    def send_web_key_test(self,display_dialog=True):
         """
         Encrypt a message with the public key and send it to the server. 
         Wait for a response to get back the test message.
@@ -363,7 +481,8 @@ class UserData(QDialog):
             returned_message = base64.b64decode(result["Decrypted Bytes"].encode('ascii'))
             logger.debug("\nReturned Message: {}".format(returned_message))
             if test_message == returned_message:
-                QMessageBox.information(self,"Success","The test message was successfully encrypted with the local public key and decrypted with the server's private key.")
+                if display_dialog:
+                    QMessageBox.information(self,"Success","The test message was successfully encrypted with the local public key and decrypted with the server's private key.")
                 return True
             else:
                 logger.debug("The Returned Message did not match the test message.")
@@ -394,7 +513,11 @@ class UserData(QDialog):
             logger.debug("Response Contents: {}".format(r.text))
             if r.status_code == 401: #Unauthorized
                 logger.debug("Unauthorized. Need to have a valid token.")
-
+                QMessageBox.warning(self,"Token Invalid", r.text)
+                return
+            elif r.status_code == 501: #Not Implemented
+                logger.debug("Request contents not implemented.")
+                QMessageBox.warning(self,"Not Implemented", r.text)
                 return
             try:
                 #update the token
@@ -491,6 +614,13 @@ class UserData(QDialog):
         
         if msg == QMessageBox.Yes:
             logger.debug("Request to upload public key.")
+
+            #used this if yoou want to manually update
+            #r = requests.put(url+'/user/provision', headers={})
+            #or
+            #import swagger client to keep automatic
+            # Exepct to get a signed user public key for PGP signing so we don't have to store keys 
+            # and confirm that the key should be used for data signing.
 
     def generate_private_key(self):
         """

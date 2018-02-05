@@ -2,8 +2,9 @@ from PyQt5.QtWidgets import QMessageBox, QInputDialog, QProgressDialog, QTableWi
 from PyQt5.QtCore import Qt, QCoreApplication
 
 from graphing import *
-from TU_crypt import *
+from TU_crypt_public import *
 
+import json
 import base64
 import time
 import struct
@@ -15,6 +16,7 @@ class DDEC_J1587(QWidget):
     def __init__(self, parent):
         super(DDEC_J1587, self).__init__()
         self.root = parent
+        self.graph_tabs = {}
 
     def plot_decrypted_data(self):
         try:    
@@ -47,8 +49,8 @@ class DDEC_J1587(QWidget):
                             data_dict['Valid Incident Sample Count'],
                             data_dict["Data OT"]["values"],
                             title)
-        self.pdf_engine.add_event_chart(title + " Graph", self.get_plot_bytes(self.graph_tabs[title].figure))
-        self.pdf_engine.add_event_table(title + " Table", self.graph_tabs[title].data_list)
+        self.root.pdf_engine.add_event_chart(title + " Graph", self.root.get_plot_bytes(self.graph_tabs[title].figure))
+        self.root.pdf_engine.add_event_table(title + " Table", self.graph_tabs[title].data_list)
         
     def plot_ddec_last_stop_data(self, data_dict):
         logger.debug("Plotting Last Stop Data")
@@ -60,8 +62,8 @@ class DDEC_J1587(QWidget):
                             data_dict['Valid Incident Sample Count'],
                             data_dict["Incident values"]["values"],
                             title)
-        self.pdf_engine.add_event_chart(title + " Graph", self.get_plot_bytes(self.graph_tabs[title].figure))
-        self.pdf_engine.add_event_table(title + " Table", self.graph_tabs[title].data_list)
+        self.root.pdf_engine.add_event_chart(title + " Graph", self.root.get_plot_bytes(self.graph_tabs[title].figure))
+        self.root.pdf_engine.add_event_table(title + " Table", self.graph_tabs[title].data_list)
 
     def plot_ddec_data(self, hours, odometer, oldest_time, incident_time, valid_count, data_dict, title):
         """
@@ -514,12 +516,13 @@ class DDEC_J1587(QWidget):
                     return
                     
         self.ddec_progress.setValue(prog_count)         
-        
+
         # Look at the data before to see the result.
         self.ddec_preview_graph = GraphDialog(self, title="DDEC Preview Data")
         self.ddec_preview_graph.set_xlabel("Event Time (sec)")
         self.ddec_preview_graph.set_ylabel("Speed (mph)")
         self.ddec_preview_graph.set_title("Preview of DDEC Hard Brake and Last Stop Data")
+        
         
         i = 0
         for hb_data in self.generate_ddec_preview(raw_pages["Hard Brake Data"]):
@@ -538,4 +541,16 @@ class DDEC_J1587(QWidget):
                         )
         self.ddec_preview_graph.plot_xy()
         self.root.ok_to_send_j1587_requests = True
+
+
+
+        # Encrypt the data
+        raw_report = json.dumps(encoded_pages)
+        encryption_file = self.root.user_data.user_data["Decoder Public Key"]
+        logger.debug("Decoder Public Key: {}".format(encryption_file))
+        self.root.data_package["DDEC J1587 Encrypted"] = encrypt_bytes(raw_report.encode(), encryption_file)
+
+
+        
+
         

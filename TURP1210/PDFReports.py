@@ -87,7 +87,7 @@ signature_description = '''The file contents are signed and verified.'''
 
 class FLAReportTemplate(SimpleDocTemplate):
     '''
-    Root class for FLA ReportLab report. Gathers sections and renders them into a pdf file.
+    Root class for Forensic Link Adapter ReportLab report. Gathers sections and renders them into a pdf file.
     '''
 
     def __init__(self, **kwargs):
@@ -198,7 +198,7 @@ class FLAReportTemplate(SimpleDocTemplate):
             except:   
                 self.serial = "Not Provided"
         try: 
-            self.download_date = time_string(self.data_package["Time Records"]["PC Start Time"])
+            self.download_date = time_string(self.data_package["Time Records"]["Permission Time"])
         except:
             print(traceback.format_exc())
             self.download_date = "Not Provided"
@@ -273,8 +273,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         for p in time_records_description:
             self.story.append(Paragraph(p, self.styles["Normal"]))
             self.story.append(Spacer(0.2,0.2*inch))
-        pc_time_keys = ["PC Start Time",
-                        "Permission Time", 
+        pc_time_keys = ["Permission Time", 
                         "Last GPS Time",  
                         "PC Time at Last GPS Reading", 
                         "Last PC Time"]
@@ -318,7 +317,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         except TypeError:
             diff = "GPS Time Data Not Available."
         duration = int(self.data_package["Time Records"]["Last PC Time"] - 
-                        self.data_package["Time Records"]["PC Start Time"])
+                        self.data_package["Time Records"]["Permission Time"])
         time_data.append(["Download Duration",
                           "{:d}".format(duration),
                           hours_min_sec(duration)

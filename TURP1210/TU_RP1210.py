@@ -58,6 +58,7 @@ import json
 import humanize
 import random
 import os
+import threading
 
 #Import all the submodules in the
 from RP1210 import *
@@ -80,6 +81,28 @@ with open("logging.config.json",'r') as f:
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
+
+current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
+current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
+
+def main():
+    
+    start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
+    logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
+                                                                TU_RP1210_version['major'],
+                                                                start_time))
+
+    #os.system("TASKKILL /F /IM DGServer2.exe")
+    #os.system("TASKKILL /F /IM DGServer1.exe")  
+
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        app.close()
+    execute1 = TU_RP1210()
+    sys.exit(app.exec_())
+    
 
 class TU_RP1210(QMainWindow):
     def __init__(self):
@@ -134,9 +157,9 @@ class TU_RP1210(QMainWindow):
         read_timer.timeout.connect(self.read_rp1210)
         read_timer.start(80) #milliseconds
         
-        backup_timer = QTimer(self)
-        backup_timer.timeout.connect(self.save_backup_file)
-        backup_timer.start(30000)
+        # backup_timer = QTimer(self)
+        # backup_timer.timeout.connect(self.save_backup_file)
+        # backup_timer.start(30000)
         
 
     def init_ui(self):
@@ -423,6 +446,12 @@ class TU_RP1210(QMainWindow):
         self.setWindowTitle('TU RP1210')
         self.show()
     
+    def get_plot_bytes(self, fig):
+        img = BytesIO()
+        fig.figsize=(7.5, 10)
+        fig.savefig(img, format='PDF',)
+        return img
+
     def setup_RP1210_menus(self):
         connect_rp1210 = QAction(QIcon(r'icons/icons8_Connected_48px.png'), '&Client Connect', self)
         connect_rp1210.setShortcut('Ctrl+Shift+C')
@@ -565,7 +594,14 @@ class TU_RP1210(QMainWindow):
         self.Components.clear_data()
 
     def upload_data_package(self):
-        self.user_data.upload_data(self.data_package)
+        returned_message = self.user_data.upload_data(self.data_package)
+        logger.debug("returned_message:")
+        logger.debug(returned_message)
+        try:
+            self.data_package["Decrypted Data"] = json.loads(returned_message)
+            self.ddec_j1587.plot_decrypted_data()
+        except TypeError:
+            pass
 
     def edit_user_data(self):
         self.user_data.show_dialog() 
@@ -593,7 +629,7 @@ class TU_RP1210(QMainWindow):
         logger.debug("New File Selected.")
         self.create_new(True)
 
-    def open_file(self, reload=True): 
+    def open_file(self): #, reload=True): 
         """
 
         Returns: a tuple as (filename, data_dictionary)
@@ -657,12 +693,14 @@ class TU_RP1210(QMainWindow):
                 logger.info(err_msg)
                 if warn == QMessageBox.No:
                     return
-            if reload:    
-                self.data_package = new_data_package
-                self.export_path, self.filename = os.path.split(fname[0])
-                self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
-                self.data_package["File Name"] = self.filename 
-                self.reload_data()
+            #if reload:    
+            self.data_package = new_data_package
+            self.export_path, self.filename = os.path.split(fname[0])
+            self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            self.data_package["File Name"] = self.filename 
+            self.reload_data()
+            logger.info("Opened File: {}".format(self.filename))
+            logger.info("Export Path: {}".format(self.export_path))
             return (fname[0], new_data_package)   
         
     def reload_data(self):
@@ -717,7 +755,7 @@ class TU_RP1210(QMainWindow):
             logger.info(msg)
             self.filename = os.path.basename(self.filename)
             self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
-            QMessageBox.information(self,"Success", msg)
+            self.statusBar().showMessage(msg)
         return pgp_message
 
     def save_file_as(self):
@@ -751,7 +789,8 @@ class TU_RP1210(QMainWindow):
         progress.setValue(1)
         QCoreApplication.processEvents()
         try:
-            ret = self.pdf_engine.go(data_message, self.filename[:-3]+'pdf')
+
+            ret = self.pdf_engine.go(data_message, fname[:-3]+'pdf')
         except:
             logger.warning(traceback.format_exc())
             ret = "Error"
@@ -1584,24 +1623,10 @@ class TU_RP1210(QMainWindow):
 
     def start_ddec_J1587(self):
         self.ddec_j1587.start_ddec_J1587()
+        self.upload_data_package()
 
     def plot_decrypted_data(self):
         self.ddec_j1587.plot_decrypted_data()
 
 if __name__ == '__main__':
-    current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
-    current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
-
-    start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-    logger.info("Starting TU_RP1210 Version {} at {}".format(TU_RP1210_version, start_time))
-
-    #os.system("TASKKILL /F /IM DGServer2.exe")
-    #os.system("TASKKILL /F /IM DGServer1.exe")  
-
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        app.close()
-    execute = TU_RP1210()
-    sys.exit(app.exec_())
+    main()

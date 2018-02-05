@@ -1,0 +1,3 @@
+The software written in the TRRP1210 module is released under the MIT license.
+
+Dependencies:
