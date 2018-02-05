@@ -1,11 +1,14 @@
-RXdata.txt
 *.pyc
 *.log
 *.log
 *.bin
-J1708NetworkTraffic.bin
-CANNetworkTraffic.bin
-TU_RP1210_Log.json
-*.bin
 TU_RP1210_Log.json
 User Data.json
+build/
+dist/
+TURP1210.egg-info/
+*__pycache__*
+TURP1210/TU_RP1210.build/
+TURP1210/TU_RP1210.dist/
+
+
