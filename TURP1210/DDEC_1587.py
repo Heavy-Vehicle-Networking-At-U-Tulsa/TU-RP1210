@@ -336,19 +336,22 @@ class DDEC_J1587(QWidget):
                 # Check to see if anything has come into the queue
                 while self.root.extra_queues["J1708"].qsize():
                     message = self.root.extra_queues["J1708"].get()
-                    MID = message[0]
-                    PID = message[1]
-                    if MID == 0x80 and PID == 197:
-                        LEN = message[2] # Message Length
-                        DST = message[3] # Desitnation MID
-                        CTL = message[4] # PID 197 Control code
-                        if CTL == 2: # CTS (Clear to Send)
-                            segments_cleared_for = message[5]
-                            start_segment = message[6]
-                            if segments_cleared_for > 0: # Only proceed if the ECU says it's ok
-                                CTS = True
-                            logger.debug('Engine says it is cleared to send {} segments.'.format(segments_cleared_for))
-                            break
+                    try:
+                        MID = message[0]
+                        PID = message[1]
+                        if MID == 0x80 and PID == 197:
+                            LEN = message[2] # Message Length
+                            DST = message[3] # Desitnation MID
+                            CTL = message[4] # PID 197 Control code
+                            if CTL == 2: # CTS (Clear to Send)
+                                segments_cleared_for = message[5]
+                                start_segment = message[6]
+                                if segments_cleared_for > 0: # Only proceed if the ECU says it's ok
+                                    CTS = True
+                                logger.debug('Engine says it is cleared to send {} segments.'.format(segments_cleared_for))
+                                break
+                    except IndexError:
+                        pass
                 if time.time() - start_time > 5:
                     err_msg = "Operation timed out in J1708 when looking for Clear To Send messsage from the Engine."
                     QMessageBox.warning(self, "DDEC Extration Error", err_msg)
@@ -375,15 +378,18 @@ class DDEC_J1587(QWidget):
                     # Check to see if anything has come into the queue
                     while self.root.extra_queues["J1708"].qsize():
                         message = self.root.extra_queues["J1708"].get()
-                        MID = message[0]
-                        PID = message[1]
-                        if MID == 0x80 and PID == 197:
-                            #LEN = message[2]
-                            #DST = message[3]
-                            CTL = message[4]
-                            if CTL == 3: # EOM
-                                ACK = True
-                                break
+                        try:
+                            MID = message[0]
+                            PID = message[1]
+                            if MID == 0x80 and PID == 197:
+                                #LEN = message[2]
+                                #DST = message[3]
+                                CTL = message[4]
+                                if CTL == 3: # EOM
+                                    ACK = True
+                                    break
+                        except IndexError:
+                            pass
                     if time.time() - start_time > 5:
                         err_msg = "Operation timed out when looking for an Acknowledgment Messsage from the Engine."
                         QMessageBox.warning(self, "DDEC Extration Error", err_msg)
@@ -407,23 +413,25 @@ class DDEC_J1587(QWidget):
                     QCoreApplication.processEvents()
                     while self.root.extra_queues["J1708"].qsize():
                         message = self.root.extra_queues["J1708"].get()
-                        MID = message[0]
-                        PID = message[1]
-                        if MID == 0x80 and PID == 197:
-                            LEN = message[2]
-                            DST = message[3]
-                            CTL = message[4]
-                            if CTL == 1: # RTS
-                                # Once a Request to send message is found, then we can send a clear to send
-                                # message from the tool to let the ECU know we are ready.
-                                looking_for_rts = False
-                                segments_to_get = message[5]
-                                total_bytes_to_get = struct.unpack("<H", message[6:8])[0]
-                                send_buffer = b'\x05\xb6\xc5\x04\x80\x02' # Start a CTS message
-                                send_buffer += segments_to_get.to_bytes(1,'little') # Message size
-                                send_buffer += b'\x01' # Starting with the first segment
-                                self.root.RP1210.send_message(self.root.client_ids["J1708"], send_buffer)
-
+                        try:
+                            MID = message[0]
+                            PID = message[1]
+                            if MID == 0x80 and PID == 197:
+                                LEN = message[2]
+                                DST = message[3]
+                                CTL = message[4]
+                                if CTL == 1: # RTS
+                                    # Once a Request to send message is found, then we can send a clear to send
+                                    # message from the tool to let the ECU know we are ready.
+                                    looking_for_rts = False
+                                    segments_to_get = message[5]
+                                    total_bytes_to_get = struct.unpack("<H", message[6:8])[0]
+                                    send_buffer = b'\x05\xb6\xc5\x04\x80\x02' # Start a CTS message
+                                    send_buffer += segments_to_get.to_bytes(1,'little') # Message size
+                                    send_buffer += b'\x01' # Starting with the first segment
+                                    self.root.RP1210.send_message(self.root.client_ids["J1708"], send_buffer)
+                        except IndexError:
+                            pass
                     if time.time() - start_time > 5:
                         err_msg = "Operation timed out when looking for a Request to Send Messsage from the Engine."
                         QMessageBox.warning(self, "DDEC Extration Error", err_msg)
@@ -442,17 +450,20 @@ class DDEC_J1587(QWidget):
                     QCoreApplication.processEvents()
                     while self.root.extra_queues["J1708"].qsize():
                         message = self.root.extra_queues["J1708"].get()
-                        MID = message[0]
-                        PID = message[1]
-                        if MID == 0x80 and PID == 198: # Data Transfer message
+                        try:
+                            MID = message[0]
+                            PID = message[1]
+                            if MID == 0x80 and PID == 198: # Data Transfer message
                             # LEN = message[2]
                             # DST = message[3]
-                            segment = message[4]
-                            data = message[5:]
-                            RXSegments[segment] = data
-                            bytes_received += len(data)
-                            self.ddec_progress_label.setText("Getting Data Page {} - {}: {}".format(prog_count, data_page_name, bytes_to_hex_string(message[4:])))
+                                segment = message[4]
+                                data = message[5:]
+                                RXSegments[segment] = data
+                                bytes_received += len(data)
+                                self.ddec_progress_label.setText("Getting Data Page {} - {}: {}".format(prog_count, data_page_name, bytes_to_hex_string(message[4:])))
                             #logger.debug('Received Segment %d of %d bytes' %(segment, len(data)))
+                        except IndexError:
+                            pass
                     if time.time() - start_time > 30:
                         err_msg = "Operation timed out when looking for DDEC Data Pages segments."
                         QMessageBox.warning(self, "DDEC Extration Error", err_msg)

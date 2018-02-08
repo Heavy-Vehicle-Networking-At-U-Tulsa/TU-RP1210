@@ -127,7 +127,7 @@ class J1587Tab(QWidget):
             if msg[1] not in [0xc0, 0xc2, 0xc4]:
                 return msg
         except IndexError:
-            logger.debug(traceback.format_exc()) 
+            #logger.debug(traceback.format_exc()) 
             return msg
 
         msg_mid = msg[0]
@@ -281,7 +281,11 @@ class J1587Tab(QWidget):
 
         buffer_length = len(msg)
         #return
-        mid = msg[0]
+        try:
+            mid = msg[0]
+        except IndexError:
+            return
+
         buffer_index = 1
         pid_list = []
         #logger.debug(bytes_to_hex_string(msg))
