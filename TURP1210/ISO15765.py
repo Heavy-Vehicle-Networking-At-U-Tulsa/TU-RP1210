@@ -192,15 +192,17 @@ class ISO15765Driver():
                     done = True
 
                     source_key = "{} on J1939".format(self.root.J1939.get_sa_name(src_addr))
-                    if data[0:3] == bytes([0x62, 0xF1, 0x90]):    
-                        self.root.data_package["Component Information"][source_key].update({"VIN from ISO": get_printable_chars(data[3:])})
-                    elif data[0:3] == bytes([0x62, 0xF1, 0x8C]):    
-                        self.root.data_package["Component Information"][source_key].update({"ECU Serial Number from ISO": get_printable_chars(data[3:])})
-                    elif data[0:3] == bytes([0x62, 0xF1, 0x95]):    
-                        self.root.data_package["Component Information"][source_key].update({"ECU Software Version from ISO": ' '.join(['{}'.format(b) for b in data[3:]])})
-                    elif data[0:3] == bytes([0x62, 0xF1, 0x93]):    
-                        self.root.data_package["Component Information"][source_key].update({"ECU Hardware Version from ISO": ' '.join(['{}'.format(b) for b in data[3:]])})
-                    
+                    try:
+                        if data[0:3] == bytes([0x62, 0xF1, 0x90]):    
+                            self.root.data_package["Component Information"][source_key].update({"VIN from ISO": get_printable_chars(data[3:])})
+                        elif data[0:3] == bytes([0x62, 0xF1, 0x8C]):    
+                            self.root.data_package["Component Information"][source_key].update({"ECU Serial Number from ISO": get_printable_chars(data[3:])})
+                        elif data[0:3] == bytes([0x62, 0xF1, 0x95]):    
+                            self.root.data_package["Component Information"][source_key].update({"ECU Software Version from ISO": ' '.join(['{}'.format(b) for b in data[3:]])})
+                        elif data[0:3] == bytes([0x62, 0xF1, 0x93]):    
+                            self.root.data_package["Component Information"][source_key].update({"ECU Hardware Version from ISO": ' '.join(['{}'.format(b) for b in data[3:]])})
+                    except KeyError:
+                        pass
                 QCoreApplication.processEvents()
             if done:
                 break
