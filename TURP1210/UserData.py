@@ -27,14 +27,8 @@ from pgpy.constants import (PubKeyAlgorithm,
                             EllipticCurveOID, 
                             SignatureType)
 from passlib.hash import pbkdf2_sha256 as passwd
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
-try:
-    from .TU_crypt_public import *
-except:
-    from TU_crypt_public import *
+
+from TURP1210.TU_crypt.TU_crypt_public import *
     
 import requests
 import traceback

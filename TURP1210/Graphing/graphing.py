@@ -20,10 +20,9 @@ import matplotlib.dates as md
 import datetime as dt
 import os
 import csv
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
+
+from TURP1210.RP1210.RP1210Functions import *
+
 import logging
 logger = logging.getLogger(__name__)
 

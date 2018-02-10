@@ -38,10 +38,10 @@ import struct
 import json
 import math
 import traceback
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
+from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.TableModel.TableModel import *
+from TURP1210.Graphing.graphing import *
+
 import logging
 logger = logging.getLogger(__name__)
 

@@ -45,7 +45,6 @@ from pgpy.constants import (PubKeyAlgorithm,
                             EllipticCurveOID, 
                             SignatureType)
 
-#from ctypes import *
 import subprocess 
 import requests
 import queue
@@ -61,58 +60,41 @@ import os
 import threading
 
 #Import all the submodules in the
-try:
-    from .RP1210 import *
-    from .RP1210Functions import *
-    from .RP1210Select import *
-    from .GPSInterface import *
-    from .J1939Tab import *
-    from .J1587Tab import *
-    from .ComponentInfoTab import *
-    from .UserData import *
-    from .PDFReports import *
-    from .ISO15765 import *
-    from .graphing import * 
-    from .DDEC_1587 import * 
 
-except ModuleNotFoundError:
-    from RP1210 import *
-    from RP1210Functions import *
-    from RP1210Select import *
-    from GPSInterface import *
-    from J1939Tab import *
-    from J1587Tab import *
-    from ComponentInfoTab import *
-    from UserData import *
-    from PDFReports import *
-    from ISO15765 import *
-    from graphing import * 
-    from DDEC_1587 import *
-try:
-    import RP1210Functions
-    module_directory = os.path.split(RP1210Functions.__file__)[0]
-except ModuleNotFoundError:
-    import TURP1210.RP1210Functions
-    module_directory = os.path.split(TURP1210.RP1210Functions.__file__)[0]
 
+#import RP1210
+from TURP1210.RP1210.RP1210 import *
+from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.RP1210.RP1210Select import *
+from TURP1210.GPSInterface import *
+from TURP1210.J1939Tab import *
+from TURP1210.J1587Tab import *
+from TURP1210.ComponentInfoTab import *
+from TURP1210.UserData import *
+from TURP1210.PDFReports import *
+from TURP1210.ISO15765 import *
+from TURP1210.Graphing.graphing import * 
+from TURP1210.DDEC_1587 import *
+
+module_directory = os.path.split(__file__)[0]
 import logging
 import logging.config
-
 with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
     logging_dictionary = json.load(f)
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
+start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
+logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
+                                                            TU_RP1210_version['major'],
+                                                            start_time))
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
 def main():
     
-    start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-    logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
-                                                                TU_RP1210_version['major'],
-                                                                start_time))
+    
 
     #os.system("TASKKILL /F /IM DGServer2.exe")
     #os.system("TASKKILL /F /IM DGServer1.exe")  
@@ -124,7 +106,8 @@ def main():
         app.close()
     execute1 = TU_RP1210()
     sys.exit(app.exec_())
-    
+
+
 
 class TU_RP1210(QMainWindow):
     def __init__(self):
@@ -166,7 +149,7 @@ class TU_RP1210(QMainWindow):
         
 
         self.GPS = GPSDialog()
-        self.setup_gps(dialog = False)
+        #self.setup_gps(dialog = False)
 
         self.pdf_engine = FLAReportTemplate()
 
@@ -877,32 +860,17 @@ class TU_RP1210(QMainWindow):
 
     def selectRP1210(self, automatic=False):
         logger.debug("Select RP1210 function called.")
-        if automatic:
-            try:
-                # The json file holding the last connection of the RP1210 device is
-                # a dictionary of dictionaries where the main keys are the client ids
-                # and the entries are a dictionary needed for the connections.
-                # This enables us to connect 2 or more clients at once and remember.
-                with open("Last_RP1210_Connection.json","r") as rp1210_file:
-                    file_contents = json.load(rp1210_file)
-                for clientID,select_dialog in file_contents.items():
-                    dll_name = select_dialog["dll_name"]
-                    protocol = select_dialog["protocol"]
-                    deviceID = select_dialog["deviceID"]
-            except Exception as e:
-                logger.debug(traceback.format_exc())
-                logger.warning(e)
-                selection = SelectRP1210()
-                dll_name = selection.dll_name
-                protocol = selection.protocol
-                deviceID = selection.deviceID
-        else:
-            #Pull up a dialog box to select the RP1210
-            selection = SelectRP1210()
-            dll_name = selection.dll_name
-            protocol = selection.protocol
-            deviceID = selection.deviceID
+        selection = SelectRP1210()
         
+        if not automatic:
+            selection.run_dialog()
+        elif not selection.dll_name:
+            selection.run_dialog()
+        
+        dll_name = selection.dll_name
+        protocol = selection.protocol
+        deviceID = selection.deviceID
+
         if dll_name is None: #this is what happens when you hit cancel
             return
         #Close things down
@@ -925,6 +893,9 @@ class TU_RP1210(QMainWindow):
       
         # Once an RP1210 DLL is selected, we can connect to it using the RP1210 helper file.
         self.RP1210 = RP1210Class(dll_name)
+        
+        with open(selection.connections_file,"w") as rp1210_file:
+                json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
         
         if self.RP1210_toolbar is None:
             self.setup_RP1210_menus()

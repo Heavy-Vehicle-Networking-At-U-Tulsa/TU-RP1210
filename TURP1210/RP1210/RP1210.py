@@ -8,7 +8,7 @@ import threading
 import time
 import struct
 import traceback
-from RP1210Functions import *
+from TURP1210.RP1210.RP1210Functions import *
 import logging
 logger = logging.getLogger(__name__)
 
@@ -253,9 +253,8 @@ class RP1210Class():
                                              "deviceID":deviceID,
                                              "speed":speed}
                                             }
-            with open("Last_RP1210_Connection.json","w") as rp1210_file:
-                json.dump(file_contents, rp1210_file, sort_keys=True, indent = 4)
-            return nClientID
+            
+            return nClientID, file_contents
         else:
             return None
 
