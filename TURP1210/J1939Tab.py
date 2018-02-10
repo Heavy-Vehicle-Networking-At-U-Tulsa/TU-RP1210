@@ -91,7 +91,21 @@ class J1939Tab(QWidget):
                                     0xEC00, # Transport
                                     0xDA00, #ISO 15765
                                     65247, # EEC3 at 20 ms
+                                    65265, # Cruise COntrol Vehicle SPeed
+                                    0xF001,
+                                    0xF002,
+                                    0xF003,
+                                    0xF004,
+                                    57344, #CM1 message
                                     ]
+    def get_pgn_label(self, pgn):
+
+        try:
+            return self.j1939db["J1939PGNdb"]["{}".format(pgn)]["Name"]
+        except KeyError:
+            
+            return "Not Provided"
+
     def reset_data(self):
         self.j1939_count = 0  # successful 1939 messages
         self.ecm_time = {}
@@ -390,7 +404,9 @@ class J1939Tab(QWidget):
         pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
         da = rx_buffer[8] #Destination Address
         sa = rx_buffer[9] #Source Address
-        
+        # if pgn == 0xDA00: #ISO
+            # self.root.isodriver.read_message()
+
         if pgn in self.pgns_to_not_decode:
             # Return when we aren't interested in the data.
             return

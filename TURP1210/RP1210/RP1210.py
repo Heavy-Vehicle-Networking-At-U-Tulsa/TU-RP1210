@@ -4,11 +4,13 @@ from PyQt5.QtCore import Qt, QCoreApplication
 from ctypes import *
 from ctypes.wintypes import HWND
 import json
+import os
 import threading
 import time
 import struct
 import traceback
 from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.UserData import get_storage_path
 import logging
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class RP1210ReadMessageThread(threading.Thread):
         self.message_count = 0
         self.start_time = time.time()
         self.duration = 0
-        self.filename = protocol + filename + ".bin"
+        self.filename = os.path.join(get_storage_path(), protocol + filename + ".bin")
         self.protocol = protocol
         self.pgns_to_block=[61444, 61443, 65134, 65215]
         self.sources_to_block=[0, 11]
@@ -246,15 +248,8 @@ class RP1210Class():
         if nClientID is None:
             logger.debug("An RP1210 device is not connected properly.")
             return None
-        elif nClientID < 128:
-            # Save the settings for next time.
-            file_contents = {nClientID:{"dll_name":self.dll_name,
-                                             "protocol":protocol,
-                                             "deviceID":deviceID,
-                                             "speed":speed}
-                                            }
-            
-            return nClientID, file_contents
+        elif nClientID < 128:           
+            return nClientID
         else:
             return None
 

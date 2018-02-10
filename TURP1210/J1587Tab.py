@@ -531,7 +531,7 @@ class J1587Tab(QWidget):
                         self.root.data_package["Time Records"][source_key]["Last ECM Time"] = None
                         self.root.data_package["Time Records"][source_key]["PC Time minus ECM Time"] = None
                     
-                    self.root.data_package["Time Records"]["PC Time at Last ECM Time"] = time.time()
+                    self.root.data_package["Time Records"][source_key]["PC Time at Last ECM Time"] = time.time()
         
 
                 

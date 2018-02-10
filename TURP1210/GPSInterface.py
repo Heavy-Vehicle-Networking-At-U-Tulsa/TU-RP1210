@@ -31,7 +31,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication
 from PyQt5.QtGui import QIcon
-
+import os
 import serial
 import serial.tools.list_ports
 import time
@@ -39,11 +39,8 @@ import calendar
 import logging
 import threading
 import traceback
-try:
-    from .micropyGPS import MicropyGPS
-except ImportError:
-    from micropyGPS import MicropyGPS
-
+from TURP1210.micropyGPS import MicropyGPS
+from TURP1210.UserData import get_storage_path
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +60,7 @@ class GPSThread(threading.Thread):
         self.gpslon = None
         self.gpslat = None
         self.gpsalt = None
+
     def run(self):
         while self.runSignal:
             try:
@@ -108,6 +106,8 @@ class GPSDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.connected = False
         self.ser = None
+        self.gps_settings_file = os.path.join(get_storage_path(), "GPS_setting.txt")
+
 
     def setup_dialog(self):
 
@@ -166,7 +166,7 @@ class GPSDialog(QDialog):
         test_sentence = self.ser.readline().decode('ascii','ignore')
         if len(test_sentence) > 0:
             logger.info("Successful GPS connection on {}".format(self.comport))
-            with open("GPS_setting.txt","w") as out_file:
+            with open(self.gps_settings_file,"w") as out_file:
                 out_file.write("{},{}\n".format(self.comport, self.baud))
             self.connected = True
             return True
@@ -178,7 +178,7 @@ class GPSDialog(QDialog):
     
     def try_GPS(self):
         try:
-            with open("GPS_setting.txt", "r") as in_file:
+            with open(self.gps_settings_file, "r") as in_file:
                 lines = in_file.readlines()
             line_list = lines[0].split(",")
             self.comport = line_list[0]

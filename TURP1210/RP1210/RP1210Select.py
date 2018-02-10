@@ -16,6 +16,7 @@ import json
 import configparser
 import traceback
 import logging
+from TURP1210.UserData import get_storage_path
 logger = logging.getLogger(__name__)
 
 class SelectRP1210(QDialog):
@@ -34,26 +35,30 @@ class SelectRP1210(QDialog):
         self.apis = sorted(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
         self.current_api_index = 0
         logger.debug("Current RP1210 APIs installed are: " + ", ".join(self.apis))
-        self.selection_filename = os.path.join(os.environ["ALLUSERSPROFILE"],"RP1210_selection.txt")
-        self.connections_file = os.path.join(os.environ["ALLUSERSPROFILE"],"Last_RP1210_Connection.json")
+        storage = get_storage_path()
+        self.selection_filename = os.path.join(storage,"RP1210_selection.txt")
+        self.connections_file = os.path.join(storage,"Last_RP1210_Connection.json")
         
         self.setup_dialog()
         self.setWindowTitle("Select RP1210")
         self.setWindowModality(Qt.ApplicationModal)
+        logger.debug("Looking for RP1210 Settings in {}".format(self.connections_file))
         try:
             with open(self.connections_file,"r") as rp1210_file:
                 file_contents = json.load(rp1210_file)
-            for clientID,select_dialog in file_contents.items():
-                self.dll_name = select_dialog["dll_name"]
-                self.protocol = select_dialog["protocol"]
-                self.deviceID = select_dialog["deviceID"]
+            self.dll_name = file_contents["dll_name"]
+            self.protocol = file_contents["protocol"]
+            self.deviceID = file_contents["deviceID"]
+            self.speed    = file_contents["speed"]
         except:
+            logger.warning(traceback.format_exc())
             self.dll_name = False
             self.protocol = False
             self.deviceID = False
+            self.speed = False
         
     
-    def run_dialog(self):
+    def show_dialog(self):
         self.exec_()
 
     def setup_dialog(self):
@@ -125,8 +130,7 @@ class SelectRP1210(QDialog):
                 #logger.debug("The api ini file has the following sections:")
                 #logger.debug(vendor_config.sections())
                 vendor_name = self.vendor_configs[api_string]['VendorInformation']['name']
-                logger.debug(vendor_name)
-                print(vendor_name)
+                #logger.debug(vendor_name)
                 if vendor_name is not None:
                     vendor_combo_box_entry = "{:8} - {}".format(api_string,vendor_name)
                     if len(vendor_combo_box_entry) > 0:
@@ -261,9 +265,6 @@ class SelectRP1210(QDialog):
         self.deviceID = int(self.device_combo_box.itemText(device_index).split(":")[0].strip())
         self.speed = self.speed_combo_box.itemText(speed_index)
         self.protocol = self.protocol_combo_box.itemText(protocol_index).split(":")[0].strip()
-        file_contents={"dll_name":self.dll_name,"protocol":self.deviceID,"deviceID":self.protocol,"speed":self.speed}
-        with open(self.connections_file,"w") as rp1210_file:
-                 json.dump(file_contents,rp1210_file)
 
     def reject_RP1210(self):
         self.dll_name = None
@@ -274,25 +275,22 @@ class SelectRP1210(QDialog):
 class Standalone(QMainWindow):
     def __init__(self):
         super(Standalone, self).__init__()
-        SelectRP1210()
-        #dialog.show_dialog()  
-    
-    def init_ui(self):
-        self.statusBar().showMessage("Testing UserData Module")
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        self.setWindowTitle('Select RP1210 Test')
-        self.show()
+        
+
 
 if __name__ == '__main__':
     """
     Use this function to test the basic functionality.
     """
+    with open("..\logging.config.json",'r') as f:
+        logging_dictionary = json.load(f)
+        logging.config.dictConfig(logging_dictionary)
     app = QCoreApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
     else:
         app.close()
-    execute = Standalone()
+    dialog = SelectRP1210()
+    dialog.show_dialog()  
     sys.exit(app.exec_())
         

@@ -18,6 +18,7 @@ from pdfrw import PdfReader, PdfDict
 from pdfrw.buildxobj import pagexobj
 from pdfrw.toreportlab import makerl
 import string
+import os
 import traceback
 import sys
 import time
@@ -30,6 +31,7 @@ from pgpy.constants import (PubKeyAlgorithm,
                             CompressionAlgorithm, 
                             EllipticCurveOID, 
                             SignatureType)
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -85,16 +87,20 @@ network_log_description = '''Network logs are files that containing all of the v
 
 signature_description = '''The file contents are signed and verified.'''
 
+module_directory = os.path.split(__file__)[0]
+
 class FLAReportTemplate(SimpleDocTemplate):
     '''
     Root class for Forensic Link Adapter ReportLab report. Gathers sections and renders them into a pdf file.
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(self, parent, icon_file="SCELogo.pdf", **kwargs):
         if kwargs.get('pagesize', None) is not None:
             self.pagesize = kwargs.pop('pagesize')
         else:
             self.pagesize = letter
+
+        self.root = parent
 
         self.descriptor = "Heavy Vehicle"
         self.author = "Student CyberTruck Experience {}".format(time.strftime("%Y"))
@@ -102,8 +108,8 @@ class FLAReportTemplate(SimpleDocTemplate):
         
         self.total_pages = 0
 
-        self.logo_file = "SCELogo.pdf"
-
+        self.logo_file = os.path.join(module_directory, icon_file)
+        logger.debug("Using logo file in PDF: {}".format(self.logo_file))
 
         # Set Up styles for the Document
         self.styles = getSampleStyleSheet()
@@ -199,8 +205,8 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.serial = "Not Provided"
         try: 
             self.download_date = time_string(self.data_package["Time Records"]["Permission Time"])
-        except:
-            print(traceback.format_exc())
+        except KeyError:
+            #print(traceback.format_exc())
             self.download_date = "Not Provided"
         
         # Build the story 
@@ -284,7 +290,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         for key in pc_time_keys:
             try:
                 timestamp = int(self.data_package["Time Records"][key])
-            except TypeError:
+            except (TypeError, KeyError):
                 timestamp = "Data Not Obtained."
             if 'minus' in key:
                 time_data.append([key,
@@ -314,10 +320,14 @@ class FLAReportTemplate(SimpleDocTemplate):
                           "{}".format(diff),
                           hours_min_sec(diff)
                           ])
-        except TypeError:
+        except (TypeError, KeyError):
             diff = "GPS Time Data Not Available."
-        duration = int(self.data_package["Time Records"]["Last PC Time"] - 
+        try:
+            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
                         self.data_package["Time Records"]["Permission Time"])
+        except (TypeError, KeyError):
+            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
+                        self.data_package["Time Records"]["PC Start Time"])  
         time_data.append(["Download Duration",
                           "{:d}".format(duration),
                           hours_min_sec(duration)
@@ -360,7 +370,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                 try:
                     timestamp = int(value)
                     value_string = "{:d} seconds from the epoch, or {}".format(timestamp,time_string(timestamp))
-                except TypeError:
+                except (TypeError, KeyError):
                     value_string = "Not Available"
                 self.story.append(Paragraph("<para leftIndent=20><b>{}:</b> {}</para>".format(key,value_string), self.styles["Normal"]))
             else:
@@ -389,6 +399,8 @@ class FLAReportTemplate(SimpleDocTemplate):
             raw = Paragraph(value["Raw Hexadecimal"], self.styles["Normal"])
             j1939pgn_data.append([pgn,acronym,name,sa,Source,raw])
         
+
+
         table_style = TableStyle(self.table_options)
         
 
@@ -396,13 +408,27 @@ class FLAReportTemplate(SimpleDocTemplate):
         j1939pgn_table.setStyle(table_style)
         self.story.append(j1939pgn_table)
 
+        self.story.append(Paragraph("Parameter Group Numbers Not Included", self.styles["Heading3"]))
+        self.story.append(Spacer(0.1,0.1*inch))
+        page_width = 6.5 * inch
+        col_widths = [.1*page_width,.90*page_width]
+        j1939pgn_exclude=[[Paragraph("<b>PGN</b>", self.styles["Normal"]),
+                           Paragraph("<b>Parameter Group Name</b>", self.styles["Normal"])]]
+        for pgn in sorted(self.root.J1939.pgns_to_not_decode):
+            pgn_entry = Paragraph(str(pgn), self.styles["Normal"])
+            name_entry = Paragraph(self.root.J1939.get_pgn_label(pgn), self.styles["Normal"])
+            j1939pgn_exclude.append([pgn_entry, name_entry])
+        j1939exclude_table = Table(j1939pgn_exclude, repeatRows=1, colWidths=col_widths)
+        j1939exclude_table.setStyle(table_style)
+        self.story.append(j1939exclude_table)
+
         # SPNs
         #self.story.append(Spacer(0.2,0.2*inch))       
         self.story.append(PageBreak())
         self.story.append(Paragraph("J1939 Suspect Parameter Number Values", self.styles["Heading1"]))
         self.story.append(Paragraph(spn_records_description, self.styles["Normal"]))
         self.story.append(Spacer(0.2,0.2*inch))       
-        
+        page_width = 7.5 * inch
         col_widths = [.065*page_width,.26*page_width, .075*page_width, .20*page_width, .15*page_width, .1*page_width, .15*page_width]
         j1939spn_data=[[Paragraph("<b>SPN</b>", self.styles["Normal"]),
                         Paragraph("<b>SPN Name</b>", self.styles["Normal"]),

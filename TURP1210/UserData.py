@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import (QMainWindow,
-                             QApplication,
+from PyQt5.QtWidgets import (QApplication,
                              QWidget,
                              QComboBox,
                              QLabel,
@@ -38,16 +37,20 @@ import json
 import time
 import logging
 import logging.config
-# with open("logging.config.json",'r') as f:
-#     logging_dictionary = json.load(f)
-#logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
+def get_storage_path(progname = 'TURP1210'):
+    storage = os.path.join(os.getenv('LOCALAPPDATA'), progname )
+    if not os.path.isdir(storage):
+        os.makedirs(storage)
+    return storage
 
 class UserData(QDialog):
     def __init__(self, path_to_file = "UserData.json"):
         super(UserData, self).__init__()
-        self.path_to_file = path_to_file
+        storage = get_storage_path()
+        self.path_to_file = os.path.join(storage, path_to_file)
+
         self.token = None
         self.attempts = 1
         self.required_user_keys = ["Last Name",
@@ -197,17 +200,25 @@ class UserData(QDialog):
         show_private_key_contents_button.clicked.connect(self.show_private_key_details)
         pgp_frame_layout.addWidget(show_private_key_contents_button, 2, 1, 1, 1)
         
-        fingerprint_label = QLabel("\nPrivate Key Fingerprint (the actual key is a secret):")
+        fingerprint_label = QLabel("Private Key Fingerprint (the actual key is a secret):")
         pgp_frame_layout.addWidget(fingerprint_label, 3, 0, 1, 2),
+        
         pgp_frame_layout.addWidget(self.inputs["Local Private Key"], 4, 0, 1, 2)
         generate_private_key_button = QPushButton("Create New Private Key")
         generate_private_key_button.setToolTip("Generate a new Private Key file for PGP based on your User Details")
         generate_private_key_button.clicked.connect(self.generate_private_key)
         pgp_frame_layout.addWidget(generate_private_key_button, 5, 0, 1, 1)
+
         register_key_button = QPushButton("View/Register Public Key")
         register_key_button.setToolTip("Uploads a PGP public Key to a trusted website to establish trust.")
         register_key_button.clicked.connect(self.register_public_key)
         pgp_frame_layout.addWidget(register_key_button, 5, 1, 1, 1)
+        
+        revoke_key_button = QPushButton("Revoke Private Key")
+        revoke_key_button.setToolTip("If a Private Key gets lost, stolen or shared, a revocation certificate needs to be issued to let everyone know not to trust it anymore.")
+        revoke_key_button.clicked.connect(self.revoke_key)
+        pgp_frame_layout.addWidget(revoke_key_button, 6, 0, 1, 2)
+
         pgp_frame_layout.setRowStretch(6,10)
 
         login_button = QPushButton("Login with Password")
@@ -237,7 +248,7 @@ class UserData(QDialog):
         subscription_frame.setLayout(sub_frame_layout)
 
         self.subscription_status_text = QPlainTextEdit()
-        self.subscription_status_text.setFixedHeight(60)
+        self.subscription_status_text.setFixedHeight(80)
         self.subscription_status_text.setReadOnly(True)
         sub_frame_layout.addWidget(self.subscription_status_text)
 
@@ -255,6 +266,28 @@ class UserData(QDialog):
         self.setWindowTitle("User and Service Information")
         self.setWindowModality(Qt.ApplicationModal) 
     
+    def revoke_key(self):
+        """
+        After asking for the Private key file, a revocation certificate is issued and registered with the host.
+        """
+        fname = QFileDialog.getOpenFileName(self, 
+                                            'Select Private Key File',
+                                            os.path.expanduser('~'),
+                                            "Pretty Good Privacy (*.pgp)",
+                                            "Pretty Good Privacy (*.pgp)")
+        if fname[0]:
+            private_key_filename = fname[0]
+        else:
+            return #Do nothing if the user presses cancel.
+
+        try:
+            primary_key = pgpy.PGPKey.from_file(private_key_filename)
+        except:
+            QMessageBox.warning(self,"Not a PGP Key","The file {} was not a valid PGP private key.".format(private_key_filename))
+            return
+        #TODO Need to implement a revocation process
+        logger.debug("Revocation not implemented.")
+
     def refresh_token(self):
         """
         Send  arequest to refresh the token
@@ -1060,33 +1093,18 @@ country_names = {
     "ZW ":"ZIMBABWE"
 }
 
-def user_data_standalone():
+if __name__ == '__main__':
     """
     Use this function to test the basic functionality.
     """
-    print(os.terminal_size.lines)
-    print(os.terminal_size.columns)
+    with open("logging.config.json",'r') as f:
+        logging_dictionary = json.load(f)
+        logging.config.dictConfig(logging_dictionary)
     app = QCoreApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
     else:
         app.close()
-    execute = Standalone()
+    user_data = UserData()
+    user_data.show_dialog()
     sys.exit(app.exec_())
-
-class Standalone(QMainWindow):
-    def __init__(self):
-        super(Standalone, self).__init__()
-        self.init_ui()
-        user_data = UserData()
-        user_data.show_dialog()  
-    
-    def init_ui(self):
-        self.statusBar().showMessage("Testing UserData Module")
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        self.setWindowTitle('UserData Test')
-        self.show()
-
-if __name__ == '__main__':
-    user_data_standalone()
