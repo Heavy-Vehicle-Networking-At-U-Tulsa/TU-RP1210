@@ -5,6 +5,8 @@ This is a PyQt5 project, which means it inherits the GPLv3 license with exceptio
 
 The program makes use of the ctypes library in Python to connect to the RP1210 DLL driver files. 
 
+The icons used in the program are from https://icons8.com/.
+
 ## Installation
 Install Python 3.6. It may work with other versions, but hasn't been tested yet.
 

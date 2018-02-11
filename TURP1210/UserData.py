@@ -529,7 +529,7 @@ class UserData(QDialog):
         """
         Take a message dictionary, converts it to json,  signs it and sends it on the way.
         """
-        logger.debug(data_package)
+        #logger.debug(data_package)
         pgp_message = self.make_pgp_message(data_package)
         header_values = {"Content-type": 'application/text', 
                          "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)), # used to verify data_package
@@ -564,6 +564,8 @@ class UserData(QDialog):
             except:
                 logger.debug(traceback.format_exc())
             logger.debug("Finished with requests.")
+        except ConnectionRefusedError:
+            logger.debug("Decoding Engine is not online.")
         except:
             logger.debug(traceback.format_exc())
 

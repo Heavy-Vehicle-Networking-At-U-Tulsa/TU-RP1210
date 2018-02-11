@@ -2,12 +2,10 @@ reportlab==3.4.0
 requests==2.18.4
 PGPy==0.4.3
 passlib==1.7.1
-setuptools==38.4.0
 humanize==0.5.1
 winshell==0.6
 cryptography==2.1.4
 matplotlib==2.0.2
 pdfrw==0.4
-cx_Freeze==6.0b1
 PyJWT==1.5.3
 pyserial==3.4

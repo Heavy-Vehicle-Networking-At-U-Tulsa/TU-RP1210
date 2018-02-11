@@ -25,8 +25,6 @@ default license is as follows:
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-TU_RP1210_version={"major":2,"minor":0}
-
 from PyQt5.QtWidgets import (QMainWindow,
                              QWidget,
                              QTreeView,
@@ -113,6 +111,9 @@ with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
+
+with open(os.path.join(module_directory,'version.json')) as f:
+    TU_RP1210_version = json.load(f)
 
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
 logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
@@ -663,8 +664,8 @@ class TU_RP1210(QMainWindow):
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
-        logger.debug("returned_message:")
-        logger.debug(returned_message)
+        #logger.debug("returned_message:")
+        #logger.debug(returned_message)
         try:
             self.data_package["Decrypted Data"] = json.loads(returned_message)
             self.ddec_j1587.plot_decrypted_data()
@@ -685,12 +686,9 @@ class TU_RP1210(QMainWindow):
     def show_graphs(self):
         self.voltage_graph.show()
         try:
-            self.ddec_preview_graph.show()
+            self.ddec_j1587.ddec_preview_graph.show()
         except AttributeError:
-            pass
-        try:
-            self.cat_preview_graph.show()
-        except AttributeError:
+            logger.debug(traceback.format_exc())
             pass
 
     def new_file(self):

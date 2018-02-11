@@ -56,6 +56,11 @@ def time_string(timestamp):
     except TypeError:
         return "time not given"
 
+def clean_string(value):
+    try:
+        return ''.join(s for s in value if s in string.printable)
+    except:
+        return repr(value)
 
 def hours_min_sec(seconds):
     m, s = divmod(seconds, 60)
@@ -169,7 +174,7 @@ class FLAReportTemplate(SimpleDocTemplate):
 
          #Extract header and footer data for each page.
         try:
-            self.VIN = self.data_package["Component Information"]["Engine #1 from J1587"]["VIN"].strip('*')
+            self.VIN = self.data_package["Component Information"]["Engine #1 on J1587"]["VIN"].strip('*')
         except:
             self.VIN = "Not Provided"
             try:
@@ -178,7 +183,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.VIN = "Not Provided"
 
         try:
-            self.make = self.data_package["Component Information"]["Engine #1 from J1587"]["Make"].strip('*')
+            self.make = self.data_package["Component Information"]["Engine #1 on J1587"]["Make"].strip('*')
         except:
             self.make = "Not Provided"
             try:
@@ -187,7 +192,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.make = "Not Provided"
 
         try:
-            self.model = self.data_package["Component Information"]["Engine #1 from J1587"]["Model"].strip('*')
+            self.model = self.data_package["Component Information"]["Engine #1 on J1587"]["Model"].strip('*')
         except:
             self.model = "Not Provided"
             try:
@@ -196,7 +201,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                 self.model = "Not Provided"
         
         try:
-            self.serial = self.data_package["Component Information"]["Engine #1 from J1587"]["Serial"].strip('*')
+            self.serial = self.data_package["Component Information"]["Engine #1 on J1587"]["Serial"].strip('*')
         except:
             self.serial = "Not Provided"
             try:
@@ -414,14 +419,16 @@ class FLAReportTemplate(SimpleDocTemplate):
         col_widths = [.1*page_width,.90*page_width]
         j1939pgn_exclude=[[Paragraph("<b>PGN</b>", self.styles["Normal"]),
                            Paragraph("<b>Parameter Group Name</b>", self.styles["Normal"])]]
-        for pgn in sorted(self.root.J1939.pgns_to_not_decode):
-            pgn_entry = Paragraph(str(pgn), self.styles["Normal"])
-            name_entry = Paragraph(self.root.J1939.get_pgn_label(pgn), self.styles["Normal"])
-            j1939pgn_exclude.append([pgn_entry, name_entry])
-        j1939exclude_table = Table(j1939pgn_exclude, repeatRows=1, colWidths=col_widths)
-        j1939exclude_table.setStyle(table_style)
-        self.story.append(j1939exclude_table)
-
+        try:
+            for pgn in sorted(self.root.J1939.pgns_to_not_decode):
+                pgn_entry = Paragraph(str(pgn), self.styles["Normal"])
+                name_entry = Paragraph(self.root.J1939.get_pgn_label(pgn), self.styles["Normal"])
+                j1939pgn_exclude.append([pgn_entry, name_entry])
+            j1939exclude_table = Table(j1939pgn_exclude, repeatRows=1, colWidths=col_widths)
+            j1939exclude_table.setStyle(table_style)
+            self.story.append(j1939exclude_table)
+        except AttributeError:
+            logger.debug(traceback.format_exc())
         # SPNs
         #self.story.append(Spacer(0.2,0.2*inch))       
         self.story.append(PageBreak())
@@ -471,7 +478,6 @@ class FLAReportTemplate(SimpleDocTemplate):
         diag_code = {}
         row_count = 1
         for value in sorted(dict1.values(), key=lambda x: x["Parameter Identification"]):
-            print(value)
             mids[value["MID"]] = value["Message Identification"]
             mid = Paragraph(value["MID"], self.styles["Normal"])
             pid = Paragraph(value["PID"], self.styles["Normal"])
@@ -578,18 +584,21 @@ class FLAReportTemplate(SimpleDocTemplate):
             return "Success"
         except PermissionError:
             return "Permission Error"
-    def chopLine(self, line, maxline):
-
-        cant = len(line) // maxline #Floor division
-        cant += 1
-        strline = ""
-        index = maxline
-        for i in range(1,cant):
-            index = maxline * i
-            strline += "%s\n" %(line[(index-maxline):index])
-        strline += "%s\n" %(line[index:])
-        return strline  
-
+    
+    def chopLine(self, old_line, maxline):
+        """
+        Make sure lines don't go too long
+        """
+        try:
+            new_line = old_line[0]
+            for i in range(1,len(old_line)):
+                new_line += old_line[i]
+                if (i % maxline) == 0:
+                    new_line+='\n'
+            return new_line  
+        except IndexError:
+            return old_line
+            
     def add_information_section(self, main_key, section_title, description):
         '''
         When the data_package dictionary has a section of dictionaries from different sources, we can
@@ -604,17 +613,20 @@ class FLAReportTemplate(SimpleDocTemplate):
         self.story.append(PageBreak())
         self.story.append(Paragraph(main_key, self.styles["Heading1"]))
         self.story.append(Paragraph(description, self.styles["Normal"]))
+
         for key, value in sorted(self.data_package[main_key].items()):
+            logger.debug("{}: {}".format(key,value))
             if len(value) > 0:
                 self.story.append(Paragraph(key, self.styles["Heading2"]))
                 for key1, value1 in sorted(value.items()):
-                    if value1 is not None:
-                        try:
-                            clean_value =  ''.join(s for s in value1 if s in string.printable)
-                        except:
-                            print(traceback.format_exc())
-                            clean_value = repr(value1)
-                        self.story.append(Paragraph(self.chopLine("<para leftIndent=20><b>{}:</b> {}</para>".format(key1,clean_value),80), self.styles["Normal"]))
+                    try:
+                        if len(value1) > 0:
+                            #logger.debug("{}: {}".format(key1,value1))
+                            safe_val = self.chopLine("<para leftIndent=20><b>{}:</b> {}</para>".format(key1,clean_string(value1)),180)
+                            #logger.debug("safe_val = {}".format(safe_val))
+                            self.story.append(Paragraph(safe_val, self.styles["Normal"]))
+                    except TypeError:
+                        pass #none type doesn't need printed.
 
     def _on_first_page(self, canvas, doc):
         scale = 2
@@ -647,7 +659,9 @@ class FLAReportTemplate(SimpleDocTemplate):
                           )
         canvas.drawString(0.5 * inch, 
                           10.1 * inch, 
-                          "Make: {}, Model: {}, S/N: {}".format(self.make, self.model, self.serial)
+                          "Make: {}, Model: {}, S/N: {}".format(clean_string(self.make),
+                                                                clean_string(self.model), 
+                                                                clean_string(self.serial))
                           )
         self._on_page(canvas, doc)            
 
@@ -670,12 +684,13 @@ class FLAReportTemplate(SimpleDocTemplate):
                             0.25 * inch, 
                             "Download Date: {}".format(self.download_date)
                             )
+
     def add_event_table(self, title, table_list):
         """
         A utility to acumulate chart data for events. Often these charts will be in chunks.
         """
         logger.debug("Adding Table Data for {} to PDF.".format(title))
-        logger.debug(table_list)
+        #logger.debug(table_list)
         table_object = Table(table_list, repeatRows=2, repeatCols=1)
         table_object.setStyle(TableStyle(self.table_options))
         self.event_groups[title] = table_object
@@ -712,7 +727,6 @@ class PdfImage(Flowable):
         # If using StringIO buffer, set pointer to begining
         if hasattr(filename_or_object, 'read'):
             filename_or_object.seek(0)
-            #print("read")
         self.page = PdfReader(filename_or_object, decompress=False).pages[0]
         self.xobj = pagexobj(self.page)
 
@@ -893,15 +907,8 @@ class SignatureVerificationReport(SimpleDocTemplate):
 
 if __name__ == '__main__':
     logger.debug("Running tests for generating PDFs for TruckCRYPT.")
-    output = FLAReportTemplate()
-    
-    #with open("SynerconLogo.pdf",'rb') as f:
-    #    img_bytes = f.read()
-    #img = BytesIO(img_bytes)
-    #output.add_event_chart("Test Logo", img)
-    
+    output = FLAReportTemplate(None)
     pgp_file_contents = pgpy.PGPMessage.from_file("Example Data.cpt")
     code = output.go(pgp_file_contents, "TestReport.pdf")
     print(code)
         
-
