@@ -1,18 +1,32 @@
 # TU-RP1210
 A repository with sample source code for the American Trucking Association's Technology and Maintenance Council (TMC) RP1210 Windows Communication API
 
-This is a PyQt5 project. 
+This is a PyQt5 project, which means it inherits the GPLv3 license with exceptions. 
 
 The program makes use of the ctypes library in Python to connect to the RP1210 DLL driver files. 
 
 ## Installation
-Install Python 3.6.
+Install Python 3.6. It may work with other versions, but hasn't been tested yet.
 
-The Python package is available on pip. 
+The Python package for this repository is available on pip. 
 
 ```pip install TURP1210```
 
-The example.py program will enable you to import and run the module.
+The example.py program will enable you to import and run the module. Running a program base on the TURP1210 module is as simple as: 
+
+```
+import TURP1210 
+from TURP1210.TU_RP1210 import *
+from PyQt5.QtCore import QCoreApplication
+
+class ExampleGUI(TURP1210.TU_RP1210.TU_RP1210):
+    def __init__(self):
+        super(ExampleGUI,self).__init__()
+
+app = QApplication(sys.argv)
+execute = ExampleGUI()
+sys.exit(app.exec_())
+```
 
 ### Packaging
 open a command prompt (cmd) that has the python path ready to go. In the `GitHub\TURP1210` directory (or wherever you saved the file) we will perform the following actions.

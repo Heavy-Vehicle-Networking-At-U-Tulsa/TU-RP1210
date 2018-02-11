@@ -1,25 +1,31 @@
-# !/bin/env/python
-# An introduction sample source code that provides RP1210 capabilities
-# Import
+"""
+TU RP1210 is a 32-bit Python 3 program that uses the RP1210 API from the 
+American Trucking Association's Technology and Maintenance Council (TMC). This 
+framework provides an introduction sample source code with RP1210 capabilities.
+To get the full utility from this program, the user should have an RP1210 compliant
+device installed. To make use of the device, you should also have access to a vehicle
+network with either J1939 or J1708.
+
+The program is release under one of two licenses.  See LICENSE.TXT for details. The 
+default license is as follows:
+
+    Copyright (C) 2018  Jeremy Daily, The University of Tulsa
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 TU_RP1210_version={"major":2,"minor":0}
-
-import winshell
-
-print('Desktop =>', winshell.desktop ())
-print('Common Desktop =>', winshell.desktop (1))
-print('Application Data =>', winshell.application_data ())
-print('Common Application Data =>', winshell.application_data (1))
-print('Bookmarks =>', winshell.bookmarks ())
-print('Common Bookmarks =>', winshell.bookmarks (1))
-print('Start Menu =>', winshell.start_menu ())
-print('Common Start Menu =>', winshell.start_menu (1))
-print('Programs =>', winshell.programs ())
-print('Common Programs =>', winshell.programs (1))
-print('Startup =>', winshell.startup ())
-print('Common Startup =>', winshell.startup (1))
-print('My Documents =>', winshell.my_documents ())
-print('Recent =>', winshell.recent ())
-print('SendTo =>', winshell.sendto ())
 
 from PyQt5.QtWidgets import (QMainWindow,
                              QWidget,
@@ -53,7 +59,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QSize
 from PyQt5.QtGui import QIcon
-
+import winshell
 import cryptography
 import pgpy
 from pgpy.constants import (PubKeyAlgorithm, 
@@ -78,10 +84,6 @@ import random
 import os
 import threading
 
-#Import all the submodules in the
-
-
-#import RP1210
 from TURP1210.RP1210.RP1210 import *
 from TURP1210.RP1210.RP1210Functions import *
 from TURP1210.RP1210.RP1210Select import *
@@ -98,6 +100,7 @@ from TURP1210.DDEC_1587 import *
 
 import logging
 import logging.config
+
 if getattr(sys, 'frozen', False):
     # frozen
     module_directory = os.path.dirname(sys.executable)
@@ -118,11 +121,6 @@ logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['m
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
-
-  
-    
-
-
 class TU_RP1210(QMainWindow):
     def __init__(self, connect_gps=False, backup_interval=False):
         super(TU_RP1210,self).__init__()
@@ -133,19 +131,24 @@ class TU_RP1210(QMainWindow):
         progress.setMinimumDuration(0)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMaximum(10)
-
+        progress_label = QLabel("Loading the J1939 Database")
         #load the J1939 Database
+        progress.setLabel(progress_label)
         with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
             self.j1939db = json.load(j1939_file) #should verify these file
         logger.info("Done Loading J1939db")
         progress.setValue(1)
         QCoreApplication.processEvents()
+
+        progress_label.setText("Loading the J1587 Database")
         with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
             self.j1587db = json.load(j1587_file)
         logger.info("Done Loading J1587db")
         progress.setValue(2)
         QCoreApplication.processEvents()
         
+
+        progress_label.setText("Initializing System Variables")
         #os.system("TASKKILL /F /IM DGServer2.exe")
         #os.system("TASKKILL /F /IM DGServer1.exe")  
         
@@ -173,40 +176,44 @@ class TU_RP1210(QMainWindow):
         progress.setValue(3)
         QCoreApplication.processEvents()
 
+        progress_label.setText("Setting Up the Graphical Interface")
         self.init_ui()
         self.graph_tabs = {}
+        logger.debug("Done Setting Up User Interface.")
         progress.setValue(4)
         QCoreApplication.processEvents()
 
+        progress_label.setText("Setting up the RP1210 Interface")
         self.selectRP1210(automatic=True)
         logger.debug("Done selecting RP1210.")
         progress.setValue(5)
         QCoreApplication.processEvents()
 
+        progress_label.setText("Initializing a New Document")
         self.create_new(False)
-        logger.debug("Done Setting Up User Interface.")
         progress.setValue(6)
         QCoreApplication.processEvents()
 
-        
-
+        progress_label.setText("Setting up the GPS System")
         self.GPS = GPSDialog()
         if connect_gps:
             self.setup_gps(dialog = False)
         progress.setValue(7)
         QCoreApplication.processEvents()
-
         
+        progress_label.setText("Loading the PDF Report Generator")
         self.pdf_engine = FLAReportTemplate(self)
         progress.setValue(8)
         QCoreApplication.processEvents()
-
         
         #Load the ddec module
+        progress_label.setText("Loading the DDEC J1587 Engine")
         self.ddec_j1587 = DDEC_J1587(self)
         progress.setValue(9)
         QCoreApplication.processEvents()
 
+
+        progress_label.setText("Starting Loop Timers")
         connections_timer = QTimer(self)
         connections_timer.timeout.connect(self.check_connections)
         connections_timer.start(1500) #milliseconds
