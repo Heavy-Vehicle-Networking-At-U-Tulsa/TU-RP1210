@@ -54,6 +54,7 @@ from PyQt5.QtWidgets import (QMainWindow,
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QSize
 from PyQt5.QtGui import QIcon
 
+import cryptography
 import pgpy
 from pgpy.constants import (PubKeyAlgorithm, 
                             KeyFlags, 
@@ -97,7 +98,13 @@ from TURP1210.DDEC_1587 import *
 
 import logging
 import logging.config
-module_directory = os.path.split(__file__)[0]
+if getattr(sys, 'frozen', False):
+    # frozen
+    module_directory = os.path.dirname(sys.executable)
+else:
+    # unfrozen
+    module_directory = os.path.dirname(os.path.realpath(__file__))
+
 with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
     logging_dictionary = json.load(f)
 

@@ -12,10 +12,11 @@ from PyQt5.QtWidgets import (QMessageBox,
                              QAbstractItemView,
                              QCheckBox,
                              QVBoxLayout)
-from matplotlib.backends import qt_compat
+#from matplotlib.backends import qt_compat
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+import matplotlib.figure as mpl
 import matplotlib.dates as md
 import datetime as dt
 import os
@@ -43,7 +44,7 @@ class GraphDialog(QDialog):
     def __init__(self, parent=None, title="Graph"):
         super(GraphDialog, self).__init__(parent)
         self.setWindowTitle(title)
-        self.figure = plt.figure()
+        self.figure = mpl.Figure()
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.data = {}
@@ -171,7 +172,7 @@ class GraphTab(QWidget):
         self.csv_button.clicked.connect(self.export_csv)
         logger.debug("Finished with CSV")
 
-        self.figure = plt.figure(figsize=(7,9))
+        self.figure = mpl.Figure(figsize=(7,9))
         self.canvas = FigureCanvas(self.figure)
         self.top_axis = self.figure.add_subplot(3,1,1)
         self.top_axis.set_ylabel("Road Speed (mph)")
