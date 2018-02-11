@@ -1,15 +1,10 @@
 from PyQt5.QtWidgets import QMessageBox, QInputDialog, QProgressDialog, QTableWidgetItem,  QLabel, QWidget
 from PyQt5.QtCore import Qt, QCoreApplication
 
-try:
-    from .graphing import *
-except ImportError:
-    from graphing import *
-
-try:
-    from .TU_crypt_public import *
-except ImportError:
-    from TU_crypt_public import *
+from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.TableModel.TableModel import *
+from TURP1210.Graphing.graphing import *
+from TURP1210.TU_crypt.TU_crypt_public import *
 
 import json
 import base64

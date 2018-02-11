@@ -3,6 +3,24 @@
 # Import
 TU_RP1210_version={"major":2,"minor":0}
 
+import winshell
+
+print('Desktop =>', winshell.desktop ())
+print('Common Desktop =>', winshell.desktop (1))
+print('Application Data =>', winshell.application_data ())
+print('Common Application Data =>', winshell.application_data (1))
+print('Bookmarks =>', winshell.bookmarks ())
+print('Common Bookmarks =>', winshell.bookmarks (1))
+print('Start Menu =>', winshell.start_menu ())
+print('Common Start Menu =>', winshell.start_menu (1))
+print('Programs =>', winshell.programs ())
+print('Common Programs =>', winshell.programs (1))
+print('Startup =>', winshell.startup ())
+print('Common Startup =>', winshell.startup (1))
+print('My Documents =>', winshell.my_documents ())
+print('Recent =>', winshell.recent ())
+print('SendTo =>', winshell.sendto ())
+
 from PyQt5.QtWidgets import (QMainWindow,
                              QWidget,
                              QTreeView,
@@ -36,6 +54,7 @@ from PyQt5.QtWidgets import (QMainWindow,
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QSize
 from PyQt5.QtGui import QIcon
 
+import cryptography
 import pgpy
 from pgpy.constants import (PubKeyAlgorithm, 
                             KeyFlags, 
@@ -45,7 +64,6 @@ from pgpy.constants import (PubKeyAlgorithm,
                             EllipticCurveOID, 
                             SignatureType)
 
-#from ctypes import *
 import subprocess 
 import requests
 import queue
@@ -61,42 +79,31 @@ import os
 import threading
 
 #Import all the submodules in the
-try:
-    from .RP1210 import *
-    from .RP1210Functions import *
-    from .RP1210Select import *
-    from .GPSInterface import *
-    from .J1939Tab import *
-    from .J1587Tab import *
-    from .ComponentInfoTab import *
-    from .UserData import *
-    from .PDFReports import *
-    from .ISO15765 import *
-    from .graphing import * 
-    from .DDEC_1587 import * 
 
-except ModuleNotFoundError:
-    from RP1210 import *
-    from RP1210Functions import *
-    from RP1210Select import *
-    from GPSInterface import *
-    from J1939Tab import *
-    from J1587Tab import *
-    from ComponentInfoTab import *
-    from UserData import *
-    from PDFReports import *
-    from ISO15765 import *
-    from graphing import * 
-    from DDEC_1587 import *
-try:
-    import RP1210Functions
-    module_directory = os.path.split(RP1210Functions.__file__)[0]
-except ModuleNotFoundError:
-    import TURP1210.RP1210Functions
-    module_directory = os.path.split(TURP1210.RP1210Functions.__file__)[0]
+
+#import RP1210
+from TURP1210.RP1210.RP1210 import *
+from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.RP1210.RP1210Select import *
+from TURP1210.GPSInterface import *
+from TURP1210.J1939Tab import *
+from TURP1210.J1587Tab import *
+from TURP1210.ComponentInfoTab import *
+from TURP1210.UserData import *
+from TURP1210.PDFReports import *
+from TURP1210.ISO15765 import *
+from TURP1210.Graphing.graphing import * 
+from TURP1210.DDEC_1587 import *
+
 
 import logging
 import logging.config
+if getattr(sys, 'frozen', False):
+    # frozen
+    module_directory = os.path.dirname(sys.executable)
+else:
+    # unfrozen
+    module_directory = os.path.dirname(os.path.realpath(__file__))
 
 with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
     logging_dictionary = json.load(f)
@@ -104,42 +111,49 @@ with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
+start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
+logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
+                                                            TU_RP1210_version['major'],
+                                                            start_time))
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
-def main():
-    
-    start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-    logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
-                                                                TU_RP1210_version['major'],
-                                                                start_time))
 
-    #os.system("TASKKILL /F /IM DGServer2.exe")
-    #os.system("TASKKILL /F /IM DGServer1.exe")  
-
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        app.close()
-    execute1 = TU_RP1210()
-    sys.exit(app.exec_())
+  
     
+
 
 class TU_RP1210(QMainWindow):
-    def __init__(self):
+    def __init__(self, connect_gps=False, backup_interval=False):
         super(TU_RP1210,self).__init__()
+        
+        progress = QProgressDialog(self)
+        progress.setMinimumWidth(600)
+        progress.setWindowTitle("Starting Application")
+        progress.setMinimumDuration(0)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMaximum(10)
+
         #load the J1939 Database
         with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
             self.j1939db = json.load(j1939_file) #should verify these file
         logger.info("Done Loading J1939db")
+        progress.setValue(1)
+        QCoreApplication.processEvents()
         with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
             self.j1587db = json.load(j1587_file)
         logger.info("Done Loading J1587db")
+        progress.setValue(2)
+        QCoreApplication.processEvents()
+        
+        #os.system("TASKKILL /F /IM DGServer2.exe")
+        #os.system("TASKKILL /F /IM DGServer1.exe")  
+        
+        self.update_rate = 200
 
         self.module_directory = module_directory
         
-        self.user_data = UserData(os.path.join(module_directory,"UserData.json"))
+        self.user_data = UserData()
 
         self.isodriver = None
 
@@ -148,30 +162,50 @@ class TU_RP1210(QMainWindow):
         self.long_pgn_timeout_value = 2
         self.short_pgn_timeout_value = .1
 
-        self.export_path = os.getcwd()
+        self.export_path =  os.path.join(winshell.my_documents(), __name__)
+        if not os.path.isdir(self.export_path):
+            os.makedirs(self.export_path)
+
         self.setGeometry(0,50,1600,850)
         self.RP1210 = None
         self.network_connected = {"J1939": False, "J1708": False}
         self.RP1210_toolbar = None
-        
+        progress.setValue(3)
+        QCoreApplication.processEvents()
 
         self.init_ui()
         self.graph_tabs = {}
-        
+        progress.setValue(4)
+        QCoreApplication.processEvents()
+
         self.selectRP1210(automatic=True)
         logger.debug("Done selecting RP1210.")
+        progress.setValue(5)
+        QCoreApplication.processEvents()
 
         self.create_new(False)
         logger.debug("Done Setting Up User Interface.")
+        progress.setValue(6)
+        QCoreApplication.processEvents()
+
         
 
         self.GPS = GPSDialog()
-        self.setup_gps(dialog = False)
+        if connect_gps:
+            self.setup_gps(dialog = False)
+        progress.setValue(7)
+        QCoreApplication.processEvents()
 
-        self.pdf_engine = FLAReportTemplate()
+        
+        self.pdf_engine = FLAReportTemplate(self)
+        progress.setValue(8)
+        QCoreApplication.processEvents()
 
+        
         #Load the ddec module
         self.ddec_j1587 = DDEC_J1587(self)
+        progress.setValue(9)
+        QCoreApplication.processEvents()
 
         connections_timer = QTimer(self)
         connections_timer.timeout.connect(self.check_connections)
@@ -179,12 +213,15 @@ class TU_RP1210(QMainWindow):
 
         read_timer = QTimer(self)
         read_timer.timeout.connect(self.read_rp1210)
-        read_timer.start(80) #milliseconds
+        read_timer.start(self.update_rate) #milliseconds
         
-        # backup_timer = QTimer(self)
-        # backup_timer.timeout.connect(self.save_backup_file)
-        # backup_timer.start(30000)
-        
+        if backup_interval > 1000:
+            backup_timer = QTimer(self)
+            backup_timer.timeout.connect(self.save_backup_file)
+            backup_timer.start(backup_interval)
+        progress.setValue(10)
+        QCoreApplication.processEvents()
+
 
     def init_ui(self):
         # Builds GUI
@@ -821,10 +858,16 @@ class TU_RP1210(QMainWindow):
         logger.info("PDF Export returned {}".format(ret))
         progress.setValue(2)
         if ret == "Success":
-            QMessageBox.information(self,"PDF Generation","Successfully exported PDF file to {} in\n{}".format(self.filename[:-3]+'pdf', self.export_path))
+            try:
+                os.startfile(os.path.join(self.export_path, self.filename[:-3]+'pdf'), 'open')
+            except:
+                logger.debug(traceback.format_exc())
+                QMessageBox.information(self,"PDF Generation","Successfully exported PDF file to {} in\n{}".format(self.filename[:-3]+'pdf', self.export_path))
         else:
             QMessageBox.warning(self,"PDF Generation","There was an issue generating the PDF: {}".format(ret))
-            
+        
+        del self.pdf_engine    
+        self.pdf_engine = FLAReportTemplate(self)
         
     def export_to_json(self):
         logger.debug("Export to JSON Selected.") 
@@ -877,32 +920,18 @@ class TU_RP1210(QMainWindow):
 
     def selectRP1210(self, automatic=False):
         logger.debug("Select RP1210 function called.")
-        if automatic:
-            try:
-                # The json file holding the last connection of the RP1210 device is
-                # a dictionary of dictionaries where the main keys are the client ids
-                # and the entries are a dictionary needed for the connections.
-                # This enables us to connect 2 or more clients at once and remember.
-                with open("Last_RP1210_Connection.json","r") as rp1210_file:
-                    file_contents = json.load(rp1210_file)
-                for clientID,select_dialog in file_contents.items():
-                    dll_name = select_dialog["dll_name"]
-                    protocol = select_dialog["protocol"]
-                    deviceID = select_dialog["deviceID"]
-            except Exception as e:
-                logger.debug(traceback.format_exc())
-                logger.warning(e)
-                selection = SelectRP1210()
-                dll_name = selection.dll_name
-                protocol = selection.protocol
-                deviceID = selection.deviceID
-        else:
-            #Pull up a dialog box to select the RP1210
-            selection = SelectRP1210()
-            dll_name = selection.dll_name
-            protocol = selection.protocol
-            deviceID = selection.deviceID
+        selection = SelectRP1210()
+        logger.debug(selection.dll_name)
+        if not automatic:
+            selection.show_dialog()
+        elif not selection.dll_name:
+            selection.show_dialog()
         
+        dll_name = selection.dll_name
+        protocol = selection.protocol
+        deviceID = selection.deviceID
+        speed    = selection.speed
+
         if dll_name is None: #this is what happens when you hit cancel
             return
         #Close things down
@@ -925,7 +954,7 @@ class TU_RP1210(QMainWindow):
       
         # Once an RP1210 DLL is selected, we can connect to it using the RP1210 helper file.
         self.RP1210 = RP1210Class(dll_name)
-        
+    
         if self.RP1210_toolbar is None:
             self.setup_RP1210_menus()
         
@@ -938,6 +967,17 @@ class TU_RP1210(QMainWindow):
         self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
         progress.setValue(3)
         
+        logger.debug('Client IDs: {}'.format(self.client_ids))
+
+        # If there is a successful connection, save it.
+        file_contents={ "dll_name":dll_name,
+                        "protocol":protocol,
+                        "deviceID":deviceID,
+                        "speed":speed
+                       }
+        with open(selection.connections_file,"w") as rp1210_file:
+            json.dump(file_contents, rp1210_file)
+
         self.rx_queues={}
         self.read_message_threads={}
         self.extra_queues = {}
@@ -976,6 +1016,7 @@ class TU_RP1210(QMainWindow):
                     self.statusBar().showMessage("{} connected using {}".format(protocol,dll_name))
                     if protocol == "J1939":
                         self.isodriver = ISO15765Driver(self, self.extra_queues[protocol])
+                    
                 else :
                     logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
             else:
@@ -1579,8 +1620,8 @@ class TU_RP1210(QMainWindow):
         else:
             return False
 
-    def start_cat(self):
-        pass
+    # def start_cat(self):
+    #     pass
     
     def read_rp1210(self):
         # This needs to run often to keep the queues from filling
@@ -1588,7 +1629,7 @@ class TU_RP1210(QMainWindow):
             for protocol, client in self.client_ids.items():
                 try:
                     start_time = time.time()
-                    while self.rx_queues[protocol].qsize() and (time.time() - start_time < 0.200):
+                    while self.rx_queues[protocol].qsize():
                         #Get a message from the queue. These are raw bytes
                         #if not protocol == "J1708":
                         rxmessage = self.rx_queues[protocol].get()
@@ -1596,6 +1637,10 @@ class TU_RP1210(QMainWindow):
                             self.J1939.fill_j1939_table(rxmessage)
                         elif protocol == "J1708":
                             self.J1587.fill_j1587_table(rxmessage)
+                        
+                        if time.time() - start_time + 50 > self.update_rate: #give some time to process events
+                            logger.debug("Can't keep up with messages.")
+                            return
                 except KeyError:
                     #logger.debug(traceback.format_exc())
                     pass # nothing is connected.
@@ -1653,4 +1698,10 @@ class TU_RP1210(QMainWindow):
         self.ddec_j1587.plot_decrypted_data()
 
 if __name__ == '__main__':
-    main()
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        app.close()
+    execute = TU_RP1210()
+    sys.exit(app.exec_())

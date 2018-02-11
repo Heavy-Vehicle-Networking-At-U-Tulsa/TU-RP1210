@@ -39,20 +39,9 @@ import time
 import random
 import traceback
 from collections import OrderedDict
-
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
-try:
-    from .TableModel import *
-except:
-    from TableModel import *
-    
-try:
-    from .graphing import *
-except:
-    from graphing import *
+from TURP1210.RP1210.RP1210Functions import *
+from TURP1210.TableModel.TableModel import *
+from TURP1210.Graphing.graphing import *
 
 import logging
 logger = logging.getLogger(__name__)
@@ -120,7 +109,6 @@ class ComponentInfoTab(QWidget):
         self.root.data_package["Component Information"] = {}
         self.root.data_package["Distance Information"] = {}
         self.root.data_package["ECU Time Information"] = {}
-        self.root.data_package["Time Records"] = {}
         self.rebuild_trees()
 
     def fill_item(self, item, value):
@@ -140,16 +128,23 @@ class ComponentInfoTab(QWidget):
         """
         Format the time stamp to be human readable, but still have the UNIX timestamp.
         """
-        if "PC Time minus" in key:
-            display_val = "{:0.3f} seconds".format(val)
-        elif "PC Time" in key:
-            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
-        elif "GPS Time" in key:
-            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
-        elif "ECM Time" in key:
-            display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
-        else: 
-            display_val = str(val)
+        try:
+            if "PC Time minus" in key:
+                display_val = "{:0.3f} seconds".format(val)
+            elif "PC Start Time" in key:
+                display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+            elif "Permission Time" in key:
+                display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+            elif "PC Time" in key:
+                display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+            elif "GPS Time" in key:
+                display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+            elif "ECM Time" in key:
+                display_val = get_local_time_string(int(val)) + ",\n         which is {:d} seconds from epoch".format(int(val))
+            else: 
+                display_val = str(val)
+        except TypeError:
+            display_val = "None"
         return display_val
 
     def rebuild_trees(self): 

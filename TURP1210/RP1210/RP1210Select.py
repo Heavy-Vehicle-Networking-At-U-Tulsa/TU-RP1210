@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import (QMainWindow,
+from PyQt5.QtWidgets import (QApplication,
+                             QMainWindow,
+                             QMessageBox,
                              QWidget,
                              QComboBox,
                              QLabel,
@@ -7,38 +9,56 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QVBoxLayout,
                              QErrorMessage
                              )
-from PyQt5.QtCore import Qt
-
+from PyQt5.QtCore import Qt, QCoreApplication
+import sys
+import os
 import json
 import configparser
-import logging
 import traceback
-
+import logging
+from TURP1210.UserData import get_storage_path
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s, %(levelname)s, in %(funcName)s, %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.')
-#file_handler = logging.FileHandler('RP1210 ' + start_time + '.log',mode='w')
-file_handler = logging.FileHandler('TruckCRYPT.log', mode='a')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-stream_handler = logging.StreamHandler()
-logger.addHandler(stream_handler)
 
 class SelectRP1210(QDialog):
+    """
+    A Qt dialog box that parses the RP1210 ini files to enable a user to select the RP1210 device. 
+    """
     def __init__(self):
         super(SelectRP1210,self).__init__()
         RP1210_config = configparser.ConfigParser()
-        RP1210_config.read("c:/Windows/RP121032.ini")
+        try:
+            RP1210_config.read(os.path.join(os.environ["WINDIR"],"RP121032.ini"))
+        except:
+            logger.warning(traceback.format_exc())
+            QMessageBox.warning(self,"No RP1210 Device","The RP121032.ini file was not found. Please install an RP1210 compliant Vehicle Diagnostics adatper.")
+            return
         self.apis = sorted(RP1210_config["RP1210Support"]["apiimplementations"].split(","))
         self.current_api_index = 0
         logger.debug("Current RP1210 APIs installed are: " + ", ".join(self.apis))
-        self.dll_name = None
+        storage = get_storage_path()
+        self.selection_filename = os.path.join(storage,"RP1210_selection.txt")
+        self.connections_file = os.path.join(storage,"Last_RP1210_Connection.json")
+        
         self.setup_dialog()
         self.setWindowTitle("Select RP1210")
         self.setWindowModality(Qt.ApplicationModal)
+        logger.debug("Looking for RP1210 Settings in {}".format(self.connections_file))
+        try:
+            with open(self.connections_file,"r") as rp1210_file:
+                file_contents = json.load(rp1210_file)
+            self.dll_name = file_contents["dll_name"]
+            self.protocol = file_contents["protocol"]
+            self.deviceID = file_contents["deviceID"]
+            self.speed    = file_contents["speed"]
+        except:
+            logger.warning(traceback.format_exc())
+            self.dll_name = False
+            self.protocol = False
+            self.deviceID = False
+            self.speed = False
+        
+    
+    def show_dialog(self):
         self.exec_()
 
     def setup_dialog(self):
@@ -77,10 +97,10 @@ class SelectRP1210(QDialog):
         self.rejected.connect(self.reject_RP1210)
 
         try:
-            with open("RP1210_selection.txt","r") as selection_file:
+            with open(self.selection_filename,"r") as selection_file:
                 previous_selections = selection_file.read()
         except FileNotFoundError:
-            logger.debug("RP1210_selection.txt not Found!")
+            logger.debug("{} not Found!".format(self.selection_filename))
             previous_selections = "0,0,0"
         self.selection_index = previous_selections.split(',')
 
@@ -105,7 +125,7 @@ class SelectRP1210(QDialog):
         for api_string in self.apis:
             self.vendor_configs[api_string] = configparser.ConfigParser()
             try:
-                self.vendor_configs[api_string].read("c:/Windows/" + api_string + ".ini")
+                self.vendor_configs[api_string].read(os.path.join(os.environ["WINDIR"],api_string + ".ini"))
                 #logger.debug("api_string = {}".format(api_string))
                 #logger.debug("The api ini file has the following sections:")
                 #logger.debug(vendor_config.sections())
@@ -117,8 +137,10 @@ class SelectRP1210(QDialog):
                         self.vendor_combo_box.addItem(vendor_combo_box_entry)
                 else:
                     self.apis.remove(api_string) #remove faulty/corrupt api_string
-            except Exception as e:
-                logger.warning(e)
+            except configparser.ParsingError:
+                pass
+            except:
+                logger.warning(traceback.format_exc())
                 self.apis.remove(api_string) #remove faulty/corrupt api_string
         try:
             self.vendor_combo_box.setCurrentIndex(int(self.selection_index[0]))
@@ -237,19 +259,38 @@ class SelectRP1210(QDialog):
         protocol_index = self.protocol_combo_box.currentIndex()
         speed_index = self.speed_combo_box.currentIndex()
 
-        with open("RP1210_selection.txt","w") as selection_file:
+        with open(self.selection_filename,"w") as selection_file:
             selection_file.write("{},{},{}".format(vendor_index,device_index,protocol_index,speed_index))
         self.dll_name = self.vendor_combo_box.itemText(vendor_index).split("-")[0].strip()
         self.deviceID = int(self.device_combo_box.itemText(device_index).split(":")[0].strip())
         self.speed = self.speed_combo_box.itemText(speed_index)
         self.protocol = self.protocol_combo_box.itemText(protocol_index).split(":")[0].strip()
-        file_contents={"dll_name":self.dll_name,"protocol":self.deviceID,"deviceID":self.protocol,"speed":self.speed}
-        with open("Last_RP1210_Connection.json","w") as rp1210_file:
-                 json.dump(file_contents,rp1210_file)
 
     def reject_RP1210(self):
         self.dll_name = None
         self.protocol = None
         self.deviceID = None
         self.speed = None
-     
+
+class Standalone(QMainWindow):
+    def __init__(self):
+        super(Standalone, self).__init__()
+        
+
+
+if __name__ == '__main__':
+    """
+    Use this function to test the basic functionality.
+    """
+    with open("..\logging.config.json",'r') as f:
+        logging_dictionary = json.load(f)
+        logging.config.dictConfig(logging_dictionary)
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    else:
+        app.close()
+    dialog = SelectRP1210()
+    dialog.show_dialog()  
+    sys.exit(app.exec_())
+        

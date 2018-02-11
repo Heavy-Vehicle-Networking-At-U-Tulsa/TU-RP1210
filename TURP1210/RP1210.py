@@ -1,17 +1,13 @@
 from PyQt5.QtWidgets import QMessageBox, QInputDialog
 from PyQt5.QtCore import Qt, QCoreApplication
-# Use ctypes to import the RP1210 DLL
-from ctypes import *
+from ctypes import *  # Use ctypes to import the RP1210 DLL
 from ctypes.wintypes import HWND
 import json
 import threading
 import time
 import struct
 import traceback
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
+from RP1210Functions import *
 import logging
 logger = logging.getLogger(__name__)
 

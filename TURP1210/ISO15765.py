@@ -4,11 +4,9 @@ import time
 import sys
 import struct
 import base64
+from TURP1210.RP1210.RP1210Functions import *
 
-try:
-    from .RP1210Functions import *
-except ImportError:
-    from RP1210Functions import *
+
     
 import logging
 logger = logging.getLogger(__name__)
