@@ -55,6 +55,7 @@ class J1939Tab(QWidget):
         self.iso_queue = queue.Queue()
         self.iso_recorder = ISO15765Driver(self.root, self.iso_queue)
 
+        self.previous_spn_length = 0
         self.previous_uds_length = 0
         self.reset_data()
 
@@ -153,11 +154,13 @@ class J1939Tab(QWidget):
         self.pgn_table_proxy = Proxy()
         self.pgn_data_model.setDataDict(self.j1939_unique_ids)
         self.j1939_id_table_columns = ["PGN","Acronym","Parameter Group Label","SA","Source","Message Count","Period (ms)","Raw Hexadecimal"]
+        self.pgn_resizable_rows = [0,1,2,3,4]
         self.pgn_data_model.setDataHeader(self.j1939_id_table_columns)
         self.pgn_table_proxy.setSourceModel(self.pgn_data_model)
         self.j1939_id_table.setModel(self.pgn_table_proxy)
         self.j1939_id_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.j1939_id_table.setSortingEnabled(True)
+        self.j1939_id_table.setWordWrap(False)
         
         #Create a layout for that box using a grid
         j1939_id_box_layout = QGridLayout()
@@ -185,12 +188,13 @@ class J1939Tab(QWidget):
         self.uds_table_proxy = Proxy()
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_resizable_rows = [0,2,3,4,6,7,8]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
         self.uds_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.uds_table.setSortingEnabled(False)
-        self.uds_table.setWordWrap(True)
+        self.uds_table.setWordWrap(False)
         
         #Create a layout for that box using a grid
         uds_box_layout = QGridLayout()
@@ -304,11 +308,13 @@ class J1939Tab(QWidget):
         self.spn_table_proxy = Proxy()
         self.spn_data_model.setDataDict(self.unique_spns)
         self.spn_table_columns = ["Acronym","PGN","SA","Source","SPN","Suspect Parameter Number Label","Value","Units","Meaning"]
+        self.spn_resizable_rows = [0,1,2,4,5,6,7,8]
         self.spn_data_model.setDataHeader(self.spn_table_columns)
         self.spn_table_proxy.setSourceModel(self.spn_data_model)
         self.spn_table.setModel(self.spn_table_proxy)
         self.spn_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.spn_table.setSortingEnabled(True)
+        self.spn_table.setWordWrap(False)
 
         #Create a layout for that box using the vertical
         spn_box_layout = QGridLayout()
@@ -339,9 +345,11 @@ class J1939Tab(QWidget):
                 self.uds_data_model.aboutToUpdate()
                 self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
                 self.uds_data_model.signalUpdate()
-                self.uds_table.resizeColumnsToContents()
                 self.uds_table.resizeRowsToContents()
-        
+                for r in self.uds_resizable_rows:
+                    self.uds_table.resizeColumnToContents(r)
+                self.uds_table.scrollToBottom()
+
     def fill_dm01_table(self):
         #if self.tabs.currentIndex() == self.tabs.indexOf(self.j1939_dtc_tab):
         self.dm01_data_model.aboutToUpdate()
@@ -371,10 +379,13 @@ class J1939Tab(QWidget):
 
     def fill_spn_table(self):
         if self.tabs.currentIndex() == self.tabs.indexOf(self.j1939_spn_tab):
-            self.spn_data_model.aboutToUpdate()
-            self.spn_data_model.signalUpdate()
-            self.spn_table.resizeColumnsToContents()
-            self.spn_table.resizeRowsToContents()
+            if len(self.unique_spns) > self.previous_spn_length:
+                self.previous_spn_length = len(self.unique_spns)
+                self.spn_data_model.aboutToUpdate()
+                self.spn_data_model.signalUpdate()
+                self.spn_table.resizeRowsToContents()
+                for r in self.spn_resizable_rows:
+                    self.spn_table.resizeColumnToContents(r)
         #self.spn_table.scrollToBottom()
 
     def clear_j1939_table(self):
@@ -488,16 +499,17 @@ class J1939Tab(QWidget):
         self.j1939_unique_ids[pgn_key]["Period (ms)"] = "{:10.2f}".format(1000 * (current_time - self.j1939_unique_ids[pgn_key]["Start Time"])/self.j1939_unique_ids[pgn_key]["Num"])
         
         if self.j1939_unique_ids[pgn_key]["Num"] == 1:
-            logger.debug("Adding Row to PGN Table:")
-            logger.debug(self.j1939_unique_ids[pgn_key])
+            #logger.debug("Adding Row to PGN Table:")
+            #logger.debug(self.j1939_unique_ids[pgn_key])
             self.pgn_data_model.aboutToUpdate()
             self.pgn_data_model.setDataDict(self.j1939_unique_ids)
             self.pgn_data_model.signalUpdate()
-            self.j1939_id_table.resizeColumnsToContents()
             self.j1939_id_table.resizeRowsToContents()     
             self.j1939_id_table.scrollToBottom()
+            for r in self.pgn_resizable_rows:
+                self.j1939_id_table.resizeColumnToContents(r)
 
-            #QCoreApplication.processEvents()
+            QCoreApplication.processEvents()
 
         elif self.add_message_button.isChecked():
            

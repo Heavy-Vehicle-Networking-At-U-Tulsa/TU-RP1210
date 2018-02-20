@@ -20,12 +20,13 @@ service_identifier = { 0x7F: "Negative Response",
                        0x10: "Diagnostic Session Control",
                        0x11: "ECU Reset",
                        0x27: "Security Access",
-                       0x22: "Read Data By identifier",
+                       0x22: "Read Data By Identifier",
                        0x28: "Communication Control",
                        0x3E: "Tester Present",
                        0x83: "Access Timing Parameter",
                        0x84: "Secure Data Transmission",
-                       0x85: "Control DTC Setting"
+                       0x85: "Control DTC Setting",
+                       0x31: "Routine Control"
 
     }
 
@@ -245,6 +246,14 @@ class ISO15765Driver():
                 units = "ASCII"
             elif code == 0xF180:
                 meaning = "Boot Software Identfication"
+            elif code == 0xF181:
+                meaning = "Application Software Identfication"
+            elif code == 0xF186:
+                meaning = "Active Diagnostic Session"
+            elif code == 0xF192:
+                meaning = "System Supplier ECU Hardware Number"
+            elif code == 0xF197:
+                meaning = "System Name or Engine Type"
 
         elif sid == 0x7F: #NACK
             nrc_code = data[1] #negative response code
