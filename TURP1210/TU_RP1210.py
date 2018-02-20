@@ -317,37 +317,38 @@ class TU_RP1210(QMainWindow):
         # RP1210 Menu Items
         self.rp1210_menu = menubar.addMenu('&RP1210')
         
-        run_menu = menubar.addMenu("&Download")
+        self.run_menu = menubar.addMenu("&Download")
         run_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Go_48px.png')), 'Get All &Known Data', self)
         run_action.setShortcut('Ctrl+Shift+K')
         run_action.setStatusTip('Scan for all data using standard data and known EDR recovery routines.')
         run_action.triggered.connect(self.start_scan)
-        run_menu.addAction(run_action)
+        self.run_menu.addAction(run_action)
         
         ddec1587_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_D_52px.png')), 'Start &DDEC J1708 Download', self)
         ddec1587_action.setShortcut('Ctrl+Shift+D')
         ddec1587_action.setStatusTip('Send requests to download DDEC Reports Data Pages.')
         ddec1587_action.triggered.connect(self.start_ddec_J1587)
-        run_menu.addAction(ddec1587_action)
+        self.run_menu.addAction(ddec1587_action)
         
         
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
         setup_gps_action.setStatusTip('Adjust settings for integrating GPS data into the report.')
         setup_gps_action.triggered.connect(self.setup_gps)
-        run_menu.addAction(setup_gps_action)
+        self.run_menu.addAction(setup_gps_action)
         
         upload_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Upload_to_Cloud_48px.png')), 'Upload to EDR Data', self)
         upload_action.setShortcut('Ctrl+Shift+U')
         upload_action.setStatusTip('Upload the data package to the central server to be decoded.')
         upload_action.triggered.connect(self.upload_data_package)
-        run_menu.addAction(upload_action)
+        self.run_menu.addAction(upload_action)
 
 
-        run_toolbar = self.addToolBar("&Download")
-        run_toolbar.addAction(run_action)
-        run_toolbar.addAction(ddec1587_action)
-        run_toolbar.addAction(upload_action)
+        self.run_toolbar = self.addToolBar("&Download")
+        self.run_toolbar.addAction(run_action)
+        self.run_toolbar.addAction(ddec1587_action)
+        self.run_toolbar.addAction(setup_gps_action)
+        self.run_toolbar.addAction(upload_action)
         
         graph_menu = menubar.addMenu("&Graph")
         graph_data_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), '&Plot Incident Graphs', self)
@@ -801,6 +802,14 @@ class TU_RP1210(QMainWindow):
 
 
     def save_file(self, backup=False):
+        """
+        Save the file as a CPT (short for TruckCRYPT) file to the
+        current path. 
+        """
+
+        #update the data package
+        self.data_package["UDS Messages"] = self.J1939.iso_recorder.uds_messages
+
         if backup:
             temp_name = os.path.basename(self.filename)
             temp_name.strip("Backup_")
@@ -875,20 +884,12 @@ class TU_RP1210(QMainWindow):
         self.pdf_engine = FLAReportTemplate(self)
         
     def export_to_json(self):
-        logger.debug("Export to JSON Selected.") 
-        
+        logger.debug("Export to JSON Selected.")
+        self.save_file() 
         try:
-            filename, json_contents = self.open_file(reload=False)
-        except TypeError:
-            return #no decent file was selected.
-        except:
-            logger.debug("Failed to Export JSON. json_contents may be None.")
-            logger.debug(traceback.format_exc())
-            return
-
-        try:
+            filename = os.path.join(self.export_path,self.filename)
             with open(filename[:-3] + 'json', 'w') as outfile:
-                json.dump(json_contents, outfile, indent=4, sort_keys=True)
+                json.dump(self.data_package, outfile, indent=4, sort_keys=True)
             info = "Successfully exported JSON file from {}".format(filename)
             QMessageBox.information(self,"Export Successful",info)
             logger.info(info)
@@ -1647,11 +1648,11 @@ class TU_RP1210(QMainWindow):
                             logger.debug("Can't keep up with messages.")
                             return
                 except KeyError:
-                    #logger.debug(traceback.format_exc())
-                    pass # nothing is connected.
+                    logger.debug(traceback.format_exc())
+                    #pass # nothing is connected.
         except AttributeError:
-            #logger.debug(traceback.format_exc())
-            pass # nothing is connected.        
+            logger.debug(traceback.format_exc())
+            #pass # nothing is connected.        
 
     def register_software(self):
         logging.debug("Register Software Request")                      

@@ -31,17 +31,17 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QVariant, QAbstractItemModel, QSortFilterProxyModel
 from PyQt5.QtGui import QIcon
-
+import queue
 import time
 import calendar
 import struct
 import base64
 import traceback
 from collections import OrderedDict
-#import TURP1210.RP1210 as RP1210
 from TURP1210.RP1210.RP1210Functions import *
 from TURP1210.TableModel.TableModel import *
 from TURP1210.Graphing.graphing import *
+from TURP1210.ISO15765 import *
 
 import logging
 logger = logging.getLogger(__name__)
@@ -51,10 +51,17 @@ class J1939Tab(QWidget):
         super(J1939Tab,self).__init__()
         self.root = parent
         self.tabs = tabs
+        
+        self.iso_queue = queue.Queue()
+        self.iso_recorder = ISO15765Driver(self.root, self.iso_queue)
+
+        self.previous_uds_length = 0
         self.reset_data()
+
         self.spn_needs_updating = True
         self.dm01_needs_updating = True
         self.dm02_needs_updating = True
+
         self.init_pgn()
         self.init_spn()
         self.init_dtc()
@@ -68,6 +75,10 @@ class J1939Tab(QWidget):
         stop_broadcast_timer = QTimer(self)
         stop_broadcast_timer.timeout.connect(self.stop_broadcast)
         stop_broadcast_timer.start(5000) #milliseconds
+
+        uds_fill_timer = QTimer(self)
+        uds_fill_timer.timeout.connect(self.fill_uds_table)
+        uds_fill_timer.start(500)
 
         # spn_table_timer = QTimer(self)
         # spn_table_timer.timeout.connect(self.fill_spn_table)
@@ -116,7 +127,8 @@ class J1939Tab(QWidget):
         self.active_trouble_codes = {}
         self.previous_trouble_codes = {}
         self.freeze_frame = {}
-        self.uds_messages = OrderedDict()
+        self.iso_recorder.uds_messages = OrderedDict()
+        #self.root.data_package["UDS Messages"] = self.iso_recorder.uds_messages
         
 
     def init_pgn(self):
@@ -171,8 +183,8 @@ class J1939Tab(QWidget):
         self.uds_table = QTableView()
         self.uds_data_model = J1939TableModel()
         self.uds_table_proxy = Proxy()
-        self.uds_data_model.setDataDict(self.uds_messages)
-        self.uds_table_columns = ["SA","DA","Raw Hexadecimal"]
+        self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
+        self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
@@ -320,13 +332,16 @@ class J1939Tab(QWidget):
         logger.info("User initiated request for DM02.")
     
     def fill_uds_table(self):
-        self.uds_data_model.aboutToUpdate()
-        self.uds_data_model.setDataDict(self.uds_messages)
-        self.uds_data_model.signalUpdate()
-        self.uds_table.resizeColumnsToContents()
-        self.uds_table.resizeRowsToContents()
-        self.root.data_package["UDS Messages"].update(self.uds_messages)
-
+        #self.root.data_package["UDS Messages"].update(self.iso_recorder.uds_messages)
+        if self.tabs.currentIndex() == self.tabs.indexOf(self.uds_tab):
+            if len(self.iso_recorder.uds_messages) > self.previous_uds_length:
+                self.previous_uds_length = len(self.iso_recorder.uds_messages)
+                self.uds_data_model.aboutToUpdate()
+                self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
+                self.uds_data_model.signalUpdate()
+                self.uds_table.resizeColumnsToContents()
+                self.uds_table.resizeRowsToContents()
+        
     def fill_dm01_table(self):
         #if self.tabs.currentIndex() == self.tabs.indexOf(self.j1939_dtc_tab):
         self.dm01_data_model.aboutToUpdate()
@@ -390,22 +405,28 @@ class J1939Tab(QWidget):
         self.dm04_data_model.endResetModel()
 
         self.uds_data_model.beginResetModel()
-        self.uds_messages = OrderedDict()
-        self.uds_data_model.setDataDict(self.uds_messages)
+        self.iso_recorder.uds_messages = OrderedDict()
+        self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_data_model.endResetModel()
         
     def fill_j1939_table(self, rx_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
+        
+        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
+        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
+        pri = rx_buffer[8] # how/priority
+        sa = rx_buffer[9] #Source Address
+        da = rx_buffer[10] #Destination Address
+        
+        if pgn == 0xDA00: #ISO
+            self.iso_queue.put((pgn, pri, sa, da, rx_buffer[11:]))
+            self.iso_recorder.read_message(True)
+            return
+        
         if rx_buffer[4] == 1: #Echo message
             # Return when the VDA is the one that sent the message. 
             # The message gets logged, but not displayed in the table
             return 
-        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
-        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
-        da = rx_buffer[8] #Destination Address
-        sa = rx_buffer[9] #Source Address
-        # if pgn == 0xDA00: #ISO
-            # self.root.isodriver.read_message()
 
         if pgn in self.pgns_to_not_decode:
             # Return when we aren't interested in the data.
