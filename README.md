@@ -7,6 +7,8 @@ The program makes use of the ctypes library in Python to connect to the RP1210 D
 
 The icons used in the program are from https://icons8.com/.
 
+![ExampleScreenshot.PNG](ExampleScreenshot.PNG)
+
 ## Installation
 Install Python 3.6. It may work with other versions, but hasn't been tested yet.
 
