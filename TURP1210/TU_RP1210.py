@@ -106,19 +106,24 @@ else:
     # unfrozen
     module_directory = os.path.dirname(os.path.realpath(__file__))
 
-with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
-    logging_dictionary = json.load(f)
+try:
+    with open("logging.config.json",'r') as f:
+        logging_dictionary = json.load(f)
+except FileNotFoundError:
+    try:
+        with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
+            logging_dictionary = json.load(f)
+    except FileNotFoundError:
+        print("No logging.config.json file found.")
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
-with open(os.path.join(module_directory,'version.json')) as f:
+with open('version.json') as f:
     TU_RP1210_version = json.load(f)
 
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
-                                                            TU_RP1210_version['major'],
-                                                            start_time))
+
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
@@ -135,15 +140,77 @@ class TU_RP1210(QMainWindow):
         progress_label = QLabel("Loading the J1939 Database")
         #load the J1939 Database
         progress.setLabel(progress_label)
-        with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
-            self.j1939db = json.load(j1939_file) #should verify these file
+        try:
+            with open("J1939db.json",'r') as j1939_file:
+                self.j1939db = json.load(j1939_file) 
+        except FileNotFoundError:
+            try:
+                with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
+                    self.j1939db = json.load(j1939_file) 
+            except FileNotFoundError: 
+                # Make a data structure to do something anyways
+                logger.debug("J1939db.json file was not found.")
+                self.j1939db = {"J1939BitDecodings":{},
+                                "J1939FMITabledb": {},
+                            "J1939LampFlashTabledb": {},
+                            "J1939OBDTabledb": {},
+                            "J1939PGNdb": {},
+                            "J1939SAHWTabledb": {},
+                            "J1939SATabledb": {},
+                            "J1939SPNdb": {} }
         logger.info("Done Loading J1939db")
         progress.setValue(1)
         QCoreApplication.processEvents()
 
         progress_label.setText("Loading the J1587 Database")
-        with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
-            self.j1587db = json.load(j1587_file)
+        try:
+            with open("J1587db.json",'r') as j1587_file:
+                self.j1587db = json.load(j1587_file)
+        except FileNotFoundError:
+            logger.debug("J1587db.json file was not found.")
+            self.j1587db = { "FMI": {},
+                             "MID": {},
+                             "MIDAlias": {},
+                             "PID": {"168":{"BitResolution" : 0.05,
+                                            "Category" : "live",
+                                            "DataForm" : "a a",
+                                            "DataLength" : 2,
+                                            "DataType" : "Unsigned Integer",
+                                            "FormatStr" : "%0.2f",
+                                            "Maximum" : 3276.75,
+                                            "Minimum" : 0.0,
+                                            "Name" : "Battery Potential (Voltage)",
+                                            "Period" : "1",
+                                            "Priority" : 5,
+                                            "Unit" : "volts"},
+                                    "245" : { "BitResolution" : 0.1,
+                                              "Category" : "hist",
+                                              "DataForm" : "n a a a a",
+                                              "DataLength" : 4,
+                                              "DataType" : "Unsigned Long Integer",
+                                              "FormatStr" : "%0.1f",
+                                              "Maximum" : 429496729.5,
+                                              "Minimum" : 0.0,
+                                              "Name" : "Total Vehicle Distance",
+                                              "Period" : "10",
+                                              "Priority" : 7,
+                                              "Unit" : "miles"},
+                                    "247" : {
+                                        "BitResolution" : 0.05,
+                                        "Category" : "hist",
+                                        "DataForm" : "n a a a a",
+                                        "DataLength" : 4,
+                                        "DataType" : "Unsigned Long Integer",
+                                        "FormatStr" : "%0.2f",
+                                        "Maximum" : 214748364.8,
+                                        "Minimum" : 0.0,
+                                        "Name" : "Total Engine Hours",
+                                        "Period" : "On request",
+                                        "Priority" : 8,
+                                        "Unit" : "hours"}
+                                    },
+                             "PIDNames": {},
+                             "SID": {} }
         logger.info("Done Loading J1587db")
         progress.setValue(2)
         QCoreApplication.processEvents()
@@ -1702,12 +1769,3 @@ class TU_RP1210(QMainWindow):
 
     def plot_decrypted_data(self):
         self.ddec_j1587.plot_decrypted_data()
-
-if __name__ == '__main__':
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        app.close()
-    execute = TU_RP1210()
-    sys.exit(app.exec_())

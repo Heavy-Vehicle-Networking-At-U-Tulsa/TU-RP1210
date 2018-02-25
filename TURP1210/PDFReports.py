@@ -99,7 +99,7 @@ class FLAReportTemplate(SimpleDocTemplate):
     Root class for Forensic Link Adapter ReportLab report. Gathers sections and renders them into a pdf file.
     '''
 
-    def __init__(self, parent, icon_file="SCELogo.pdf", **kwargs):
+    def __init__(self, parent, icon_file="logo.pdf", **kwargs):
         if kwargs.get('pagesize', None) is not None:
             self.pagesize = kwargs.pop('pagesize')
         else:
@@ -113,7 +113,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         
         self.total_pages = 0
 
-        self.logo_file = os.path.join(module_directory, icon_file)
+        self.logo_file = icon_file
         logger.debug("Using logo file in PDF: {}".format(self.logo_file))
 
         # Set Up styles for the Document

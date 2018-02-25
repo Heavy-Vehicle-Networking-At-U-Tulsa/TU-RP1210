@@ -17,12 +17,7 @@
             "VIN from ISO": "00000000000000000"
         },
         "Instrument Cluster #1 on J1939": {},
-        "Off Board Diagnostic-Service Tool #2 on J1939": {
-            "Make": "SYNER",
-            "Model": "SSS2-R03",
-            "Serial": "0019",
-            "Unit": "UNIVERSAL"
-        },
+        "Off Board Diagnostic-Service Tool #2 on J1939": {},
         "Passenger-Operator Climate Control #1 on J1939": {},
         "Retarder - Engine on J1939": {
             "Software": "004*003*000*000*R**a*018*000*08*11*10*12*00*0<.0053.00176*",
@@ -4033,6 +4028,138 @@
                 "SPN": "  630",
                 "Source": "Engine #1",
                 "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 0)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "2B 03 02 7F",
+                "SA": " 11",
+                "SPN": "  811",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 12)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 5",
+                "FMI Meaning": "Current Below Normal Or Open Circuit",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "1E 03 05 7F",
+                "SA": " 11",
+                "SPN": "  798",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 16)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 5",
+                "FMI Meaning": "Current Below Normal Or Open Circuit",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "1C 03 05 7F",
+                "SA": " 11",
+                "SPN": "  796",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 20)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 5",
+                "FMI Meaning": "Current Below Normal Or Open Circuit",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "1B 03 05 7F",
+                "SA": " 11",
+                "SPN": "  795",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 24)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "15 03 02 7F",
+                "SA": " 11",
+                "SPN": "  789",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 28)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "16 03 02 7F",
+                "SA": " 11",
+                "SPN": "  790",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 32)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "18 03 02 7F",
+                "SA": " 11",
+                "SPN": "  792",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 36)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "17 03 02 7F",
+                "SA": " 11",
+                "SPN": "  791",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 4)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 5",
+                "FMI Meaning": "Current Below Normal Or Open Circuit",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "26 03 05 7F",
+                "SA": " 11",
+                "SPN": "  806",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
+            },
+            "(11, 40)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 2",
+                "FMI Meaning": "Data Erratic, Intermittent Or Incorrect",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "7F 02 02 7F",
+                "SA": " 11",
+                "SPN": "  639",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "J1939 Network #1, Primary Vehicle Network ( previously SAE J1939 Data Link)"
+            },
+            "(11, 8)": {
+                "CM": 0,
+                "Count": "127",
+                "FMI": " 5",
+                "FMI Meaning": "Current Below Normal Or Open Circuit",
+                "FMI Severity": "N/A",
+                "Raw Hexadecimal": "1D 03 05 7F",
+                "SA": " 11",
+                "SPN": "  797",
+                "Source": "Brakes - System Controller",
+                "Suspect Parameter Number Label": "Unknown Suspect Parameter Number"
             }
         },
         "DM02": {
@@ -4175,232 +4302,232 @@
     "File Name": "Example Data.cpt",
     "GPS Data": {
         "Address": "Not Available",
-        "Altitude": 212.1,
-        "GPS Time": 1517803975,
-        "Latitude": 36.054875,
-        "Longitude": -95.84539333333333,
-        "System Time": 1517803974.7737489
+        "Altitude": 211.7,
+        "GPS Time": 1517805578,
+        "Latitude": 36.05487333333333,
+        "Longitude": -95.84542666666667,
+        "System Time": 1517805577.3126225
     },
     "Harddrive UUID": "170342420521",
     "J1587 Message and Parameter IDs": {
         "(128, 111)": {
-            "Last Time": 1517803970.562037,
+            "Last Time": 1518293800.2769687,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           4",
+            "Message Count": "           6",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0195541,
+                    1518293754.5660086,
                     "yA=="
                 ]
             ],
-            "Num": 4,
+            "Num": 6,
             "PID": " 111",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "   6885.62",
+            "Period (ms)": "   7618.49",
             "Raw Hexadecimal": "C8",
-            "Start Time": 1517803943.0195541,
+            "Start Time": 1518293754.5660086,
             "Table Key": "(128, 111)",
-            "Time": 1517803970.562037,
+            "Time": 1518293800.2769687,
             "Units": "",
-            "VDATime": 2212306501,
+            "VDATime": 1549809376,
             "Value": "b'\\xc8'"
         },
         "(128, 121)": {
-            "Last Time": 1517803975.2074692,
+            "Last Time": 1518293803.990994,
             "MID": "128",
             "Meaning": "Engine Retarder -  On / Active\n2 Cylinder - Not Active\n3 Cylinder - Not Active\n4 Cylinder - Not Active\n6 Cylinder - Not Active\n8 Cylinder - Not Active",
-            "Message Count": "         190",
+            "Message Count": "         277",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.908554,
+                    1518293754.0500107,
                     "gA=="
                 ]
             ],
-            "Num": 190,
+            "Num": 277,
             "PID": " 121",
             "Parameter Identification": "Engine Retarder Status",
-            "Period (ms)": "    169.99",
+            "Period (ms)": "    180.29",
             "Raw Hexadecimal": "80",
-            "Start Time": 1517803942.908554,
+            "Start Time": 1518293754.0500107,
             "Table Key": "(128, 121)",
-            "Time": 1517803975.2074692,
+            "Time": 1518293803.990994,
             "Units": "",
-            "VDATime": 2219413207,
+            "VDATime": 1553513025,
             "Value": "128"
         },
         "(128, 122)": {
-            "Last Time": 1517803975.2084668,
+            "Last Time": 1518293803.3082135,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0495675,
+                    1518293754.296008,
                     "AA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 55,
             "PID": " 122",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    846.31",
+            "Period (ms)": "    891.13",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803943.0485556,
+            "Start Time": 1518293754.296008,
             "Table Key": "(128, 122)",
-            "Time": 1517803975.2084668,
+            "Time": 1518293803.3082135,
             "Units": "",
-            "VDATime": 2219413207,
+            "VDATime": 1552911958,
             "Value": "b'\\x00'"
         },
         "(128, 168)": {
-            "Last Time": 1517803975.2094674,
+            "Last Time": 1518293803.3082135,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0565567,
+                    1518293754.304011,
                     "9QA="
                 ],
                 [
-                    1517803943.550782,
+                    1518293754.6000082,
                     "9AA="
                 ]
             ],
-            "Num": 38,
+            "Num": 55,
             "PID": " 168",
             "Parameter Identification": "Battery Potential (Voltage)",
-            "Period (ms)": "    846.13",
+            "Period (ms)": "    890.99",
             "Raw Hexadecimal": "F5 00",
-            "Start Time": 1517803943.0565567,
+            "Start Time": 1518293754.304011,
             "Table Key": "(128, 168)",
-            "Time": 1517803975.2094674,
+            "Time": 1518293803.3082135,
             "Units": "volts",
-            "VDATime": 2219413207,
+            "VDATime": 1552911958,
             "Value": "12.250"
         },
         "(128, 182)": {
-            "Last Time": 1517803970.562037,
+            "Last Time": 1518293800.2769687,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           4",
+            "Message Count": "           6",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0265563,
+                    1518293754.5740101,
                     "AAA="
                 ]
             ],
-            "Num": 4,
+            "Num": 6,
             "PID": " 182",
             "Parameter Identification": "Trip Fuel",
-            "Period (ms)": "   6883.87",
+            "Period (ms)": "   7617.16",
             "Raw Hexadecimal": "00 00",
-            "Start Time": 1517803943.0265563,
+            "Start Time": 1518293754.5740101,
             "Table Key": "(128, 182)",
-            "Time": 1517803970.562037,
+            "Time": 1518293800.2769687,
             "Units": "gallons",
-            "VDATime": 2212306501,
+            "VDATime": 1549809376,
             "Value": "0.000"
         },
         "(128, 183)": {
-            "Last Time": 1517803975.2074692,
+            "Last Time": 1518293803.9920008,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         190",
+            "Message Count": "         277",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9135551,
+                    1518293754.054012,
                     "AAA="
                 ]
             ],
-            "Num": 190,
+            "Num": 277,
             "PID": " 183",
             "Parameter Identification": "Fuel Rate (Instantaneous)",
-            "Period (ms)": "    169.97",
+            "Period (ms)": "    180.28",
             "Raw Hexadecimal": "00 00",
-            "Start Time": 1517803942.9135551,
+            "Start Time": 1518293754.054012,
             "Table Key": "(128, 183)",
-            "Time": 1517803975.2074692,
+            "Time": 1518293803.9920008,
             "Units": "gal/hr",
-            "VDATime": 2219413207,
+            "VDATime": 1553513025,
             "Value": "0.000"
         },
         "(128, 184)": {
-            "Last Time": 1517803975.2084668,
+            "Last Time": 1518293803.9920008,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         190",
+            "Message Count": "         277",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9205575,
+                    1518293754.0580108,
                     "AAA="
                 ]
             ],
-            "Num": 190,
+            "Num": 277,
             "PID": " 184",
             "Parameter Identification": "Instantaneous Fuel Economy",
-            "Period (ms)": "    169.94",
+            "Period (ms)": "    180.27",
             "Raw Hexadecimal": "00 00",
-            "Start Time": 1517803942.9205575,
+            "Start Time": 1518293754.0580108,
             "Table Key": "(128, 184)",
-            "Time": 1517803975.2084668,
+            "Time": 1518293803.9920008,
             "Units": "mpg",
-            "VDATime": 2219413207,
+            "VDATime": 1553513025,
             "Value": "0.000"
         },
         "(128, 185)": {
-            "Last Time": 1517803970.5630398,
+            "Last Time": 1518293800.277969,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           4",
+            "Message Count": "           6",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0355563,
+                    1518293754.5820086,
                     "AAA="
                 ]
             ],
-            "Num": 4,
+            "Num": 6,
             "PID": " 185",
             "Parameter Identification": "Average Fuel Economy",
-            "Period (ms)": "   6881.87",
+            "Period (ms)": "   7615.99",
             "Raw Hexadecimal": "00 00",
-            "Start Time": 1517803943.0355563,
+            "Start Time": 1518293754.5820086,
             "Table Key": "(128, 185)",
-            "Time": 1517803970.5630398,
+            "Time": 1518293800.277969,
             "Units": "mpg",
-            "VDATime": 2212306501,
+            "VDATime": 1549809376,
             "Value": "0.000"
         },
         "(128, 187)": {
-            "Last Time": 1517803970.6939995,
+            "Last Time": 1518293800.7458508,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           4",
+            "Message Count": "           6",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.515782,
+                    1518293754.7360122,
                     "QAk="
                 ]
             ],
-            "Num": 4,
+            "Num": 6,
             "PID": " 187",
             "Parameter Identification": "Power Takeoff Set Speed",
-            "Period (ms)": "   6794.55",
+            "Period (ms)": "   7668.31",
             "Raw Hexadecimal": "40 09",
-            "Start Time": 1517803943.515782,
+            "Start Time": 1518293754.7360122,
             "Table Key": "(128, 187)",
-            "Time": 1517803970.6939995,
+            "Time": 1518293800.7458508,
             "Units": "rpm",
-            "VDATime": 2212817492,
+            "VDATime": 1550316019,
             "Value": "592.000"
         },
         "(128, 188)": {
@@ -4452,51 +4579,51 @@
             "Value": "1800.000"
         },
         "(128, 190)": {
-            "Last Time": 1517803975.338502,
+            "Last Time": 1518293803.9959958,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         380",
+            "Message Count": "         554",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.8855555,
+                    1518293754.0320106,
                     "AAA="
                 ]
             ],
-            "Num": 380,
+            "Num": 554,
             "PID": " 190",
             "Parameter Identification": "Engine Speed",
-            "Period (ms)": "     85.40",
+            "Period (ms)": "     90.19",
             "Raw Hexadecimal": "00 00",
-            "Start Time": 1517803942.8855555,
+            "Start Time": 1518293754.0320106,
             "Table Key": "(128, 190)",
-            "Time": 1517803975.338502,
+            "Time": 1518293803.9959958,
             "Units": "rpm",
-            "VDATime": 2219456581,
+            "VDATime": 1553559410,
             "Value": "0.000"
         },
         "(128, 194)": {
-            "Last Time": 1517803975.3395188,
+            "Last Time": 1518293803.4152193,
             "MID": "128",
             "Meaning": "A - Percent Accelerator Pedal Position: Voltage below normal or shorted low. Count: 3\nA - Unknown System ID: Abnormal update rate. Count: 1\nA - Unknown System ID: Special Instructions. Count: 1",
-            "Message Count": "          39",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.871554,
+                    1518293754.416009,
                     "CVukA/i5AZu+AQ=="
                 ]
             ],
-            "Num": 39,
+            "Num": 55,
             "PID": " 194",
             "Parameter Identification": "Diagnostic Code and Occurrence Count",
-            "Period (ms)": "    832.51",
+            "Period (ms)": "    890.89",
             "Raw Hexadecimal": "09 5B A4 03 F8 B9 01 9B BE 01",
-            "Start Time": 1517803942.871554,
+            "Start Time": 1518293754.416009,
             "Table Key": "(128, 194)",
-            "Time": 1517803975.3395188,
+            "Time": 1518293803.4152193,
             "Units": "Count",
-            "VDATime": 2219530016,
+            "VDATime": 1553009104,
             "Value": "3"
         },
         "(128, 233)": {
@@ -4620,75 +4747,75 @@
             "Value": "1FUJGBDV1ALAR4676"
         },
         "(128, 244)": {
-            "Last Time": 1517803974.549576,
+            "Last Time": 1518293803.5852692,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9255543,
+                    1518293754.4350216,
                     "BE8jAAA="
                 ]
             ],
-            "Num": 38,
+            "Num": 55,
             "PID": " 244",
             "Parameter Identification": "Trip Distance",
-            "Period (ms)": "    832.21",
+            "Period (ms)": "    893.64",
             "Raw Hexadecimal": "04 4F 23 00 00",
-            "Start Time": 1517803942.9255543,
+            "Start Time": 1518293754.4350216,
             "Table Key": "(128, 244)",
-            "Time": 1517803974.549576,
+            "Time": 1518293803.5852692,
             "Units": "miles",
-            "VDATime": 2218614204,
+            "VDATime": 1553113219,
             "Value": "903.900"
         },
         "(128, 245)": {
-            "Last Time": 1517803974.6467862,
+            "Last Time": 1518293803.79506,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9385557,
+                    1518293754.0620098,
                     "BE8jAAA="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": " 245",
             "Parameter Identification": "Total Vehicle Distance",
-            "Period (ms)": "    834.43",
+            "Period (ms)": "    888.09",
             "Raw Hexadecimal": "04 4F 23 00 00",
-            "Start Time": 1517803942.9385557,
+            "Start Time": 1518293754.0620098,
             "Table Key": "(128, 245)",
-            "Time": 1517803974.6467862,
+            "Time": 1518293803.79506,
             "Units": "miles",
-            "VDATime": 2218814527,
+            "VDATime": 1553312917,
             "Value": "903.900"
         },
         "(128, 247)": {
-            "Last Time": 1517803348.048886,
+            "Last Time": 1518293799.3094058,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           3",
+            "Message Count": "           1",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803175.0708055,
+                    1518293799.3094058,
                     "BBruAAA="
                 ]
             ],
-            "Num": 3,
+            "Num": 1,
             "PID": " 247",
             "Parameter Identification": "Total Engine Hours",
-            "Period (ms)": "  57659.36",
+            "Period (ms)": "      0.00",
             "Raw Hexadecimal": "04 1A EE 00 00",
-            "Start Time": 1517803175.0708055,
+            "Start Time": 1518293799.3094058,
             "Table Key": "(128, 247)",
-            "Time": 1517803348.048886,
+            "Time": 1518293799.3094058,
             "Units": "hours",
-            "VDATime": 1592117205,
+            "VDATime": 1548823474,
             "Value": "3047.700"
         },
         "(128, 248)": {
@@ -28964,99 +29091,99 @@
             "Value": "02/05/2018"
         },
         "(128, 40)": {
-            "Last Time": 1517803975.2044716,
+            "Last Time": 1518293803.9889941,
             "MID": "128",
             "Meaning": "Engine Retarder Switch - Off / Inactive\nEngine Retarder Level Switch - 0 Cylinders",
-            "Message Count": "         190",
+            "Message Count": "         277",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.888555,
+                    1518293754.0340114,
                     "ww=="
                 ]
             ],
-            "Num": 190,
+            "Num": 277,
             "PID": "  40",
             "Parameter Identification": "Engine Retarder Switches Status",
-            "Period (ms)": "    170.08",
+            "Period (ms)": "    180.34",
             "Raw Hexadecimal": "C3",
-            "Start Time": 1517803942.888555,
+            "Start Time": 1518293754.0340114,
             "Table Key": "(128, 40)",
-            "Time": 1517803975.2044716,
+            "Time": 1518293803.9889941,
             "Units": "",
-            "VDATime": 2219358600,
+            "VDATime": 1553457380,
             "Value": "195"
         },
         "(128, 41)": {
-            "Last Time": 1517803974.9239206,
+            "Last Time": 1518293803.9959958,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.97056,
+                    1518293754.242011,
                     "wA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  41",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    840.88",
+            "Period (ms)": "    888.46",
             "Raw Hexadecimal": "C0",
-            "Start Time": 1517803942.97056,
+            "Start Time": 1518293754.242011,
             "Table Key": "(128, 41)",
-            "Time": 1517803974.9239206,
+            "Time": 1518293803.9959958,
             "Units": "",
-            "VDATime": 2219060722,
+            "VDATime": 1553559410,
             "Value": "b'\\xc0'"
         },
         "(128, 43)": {
-            "Last Time": 1517803974.925945,
+            "Last Time": 1518293803.9979944,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9775553,
+                    1518293754.2490113,
                     "xw=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  43",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    840.75",
+            "Period (ms)": "    888.37",
             "Raw Hexadecimal": "C7",
-            "Start Time": 1517803942.9775553,
+            "Start Time": 1518293754.2490113,
             "Table Key": "(128, 43)",
-            "Time": 1517803974.925945,
+            "Time": 1518293803.9979944,
             "Units": "",
-            "VDATime": 2219060722,
+            "VDATime": 1553559410,
             "Value": "b'\\xc7'"
         },
         "(128, 44)": {
-            "Last Time": 1517803974.397555,
+            "Last Time": 1518293803.580274,
             "MID": "128",
             "Meaning": "Protect Lamp Status - Not Avaliable\nAmber Lamp Status - On / Active\nRed Lamp Status - Off / Inactive",
-            "Message Count": "          38",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.897554,
+                    1518293754.4250112,
                     "9A=="
                 ]
             ],
-            "Num": 38,
+            "Num": 55,
             "PID": "  44",
             "Parameter Identification": "Attention/Warning Indicator Lamps Status",
-            "Period (ms)": "    828.95",
+            "Period (ms)": "    893.73",
             "Raw Hexadecimal": "F4",
-            "Start Time": 1517803942.897554,
+            "Start Time": 1518293754.4250112,
             "Table Key": "(128, 44)",
-            "Time": 1517803974.397555,
+            "Time": 1518293803.580274,
             "Units": "",
-            "VDATime": 2218560639,
+            "VDATime": 1553059445,
             "Value": "244"
         },
         "(128, 46)": {
@@ -29132,99 +29259,99 @@
             "Value": "b'6'"
         },
         "(128, 65)": {
-            "Last Time": 1517803974.8333852,
+            "Last Time": 1518293803.9929955,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9525576,
+                    1518293754.2220104,
                     "/A=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  65",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    838.97",
+            "Period (ms)": "    888.77",
             "Raw Hexadecimal": "FC",
-            "Start Time": 1517803942.9525576,
+            "Start Time": 1518293754.2220104,
             "Table Key": "(128, 65)",
-            "Time": 1517803974.8333852,
+            "Time": 1518293803.9929955,
             "Units": "",
-            "VDATime": 2219014223,
+            "VDATime": 1553513025,
             "Value": "b'\\xfc'"
         },
         "(128, 68)": {
-            "Last Time": 1517803974.834384,
+            "Last Time": 1518293803.9929955,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.957555,
+                    1518293754.22801,
                     "yA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  68",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    838.86",
+            "Period (ms)": "    888.66",
             "Raw Hexadecimal": "C8",
-            "Start Time": 1517803942.957555,
+            "Start Time": 1518293754.22801,
             "Table Key": "(128, 68)",
-            "Time": 1517803974.834384,
+            "Time": 1518293803.9929955,
             "Units": "",
-            "VDATime": 2219014223,
+            "VDATime": 1553513025,
             "Value": "b'\\xc8'"
         },
         "(128, 70)": {
-            "Last Time": 1517803974.925945,
+            "Last Time": 1518293803.9990287,
             "MID": "128",
             "Meaning": "Inactive",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.9845598,
+                    1518293754.2560241,
                     "fw=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  70",
             "Parameter Identification": "Parking Brake Switch Status",
-            "Period (ms)": "    840.56",
+            "Period (ms)": "    888.27",
             "Raw Hexadecimal": "7F",
-            "Start Time": 1517803942.9845598,
+            "Start Time": 1518293754.2560241,
             "Table Key": "(128, 70)",
-            "Time": 1517803974.925945,
+            "Time": 1518293803.9990287,
             "Units": "",
-            "VDATime": 2219103570,
+            "VDATime": 1553602367,
             "Value": "127"
         },
         "(128, 71)": {
-            "Last Time": 1517803974.926945,
+            "Last Time": 1518293803.9990287,
             "MID": "128",
             "Meaning": "Idle shutdown timer status - Inactive\nIdle shutdown timer function - Enabled\nIdle shutdown timer override - Inactive\nEngine has shutdown by idle timer - No\nDriver Alert Mode - Inactive",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.989557,
+                    1518293754.2630298,
                     "CA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  71",
             "Parameter Identification": "Idle Shutdown Timer Status",
-            "Period (ms)": "    840.46",
+            "Period (ms)": "    888.14",
             "Raw Hexadecimal": "08",
-            "Start Time": 1517803942.989557,
+            "Start Time": 1518293754.2630298,
             "Table Key": "(128, 71)",
-            "Time": 1517803974.926945,
+            "Time": 1518293803.9990287,
             "Units": "",
-            "VDATime": 2219103570,
+            "VDATime": 1553602367,
             "Value": "8"
         },
         "(128, 74)": {
@@ -29252,429 +29379,649 @@
             "Value": "65.000"
         },
         "(128, 83)": {
-            "Last Time": 1517803974.834384,
+            "Last Time": 1518293803.9939938,
             "MID": "128",
             "Meaning": "Road Speed Limiter Currently Not Active",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.962565,
+                    1518293754.235011,
                     "fw=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  83",
             "Parameter Identification": "Road Speed Limit Status",
-            "Period (ms)": "    838.73",
+            "Period (ms)": "    888.55",
             "Raw Hexadecimal": "7F",
-            "Start Time": 1517803942.962565,
+            "Start Time": 1518293754.235011,
             "Table Key": "(128, 83)",
-            "Time": 1517803974.834384,
+            "Time": 1518293803.9939938,
             "Units": "",
-            "VDATime": 2219014223,
+            "VDATime": 1553513025,
             "Value": "127"
         },
         "(128, 84)": {
-            "Last Time": 1517803975.3375034,
+            "Last Time": 1518293803.9949937,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         380",
+            "Message Count": "         554",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.8825555,
+                    1518293754.0290413,
                     "AA=="
                 ]
             ],
-            "Num": 380,
+            "Num": 554,
             "PID": "  84",
             "Parameter Identification": "Road Speed",
-            "Period (ms)": "     85.41",
+            "Period (ms)": "     90.19",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803942.8825555,
+            "Start Time": 1518293754.0290413,
             "Table Key": "(128, 84)",
-            "Time": 1517803975.3375034,
+            "Time": 1518293803.9949937,
             "Units": "mph",
-            "VDATime": 2219456581,
+            "VDATime": 1553559410,
             "Value": "0.000"
         },
         "(128, 85)": {
-            "Last Time": 1517803975.206468,
+            "Last Time": 1518293803.990994,
             "MID": "128",
             "Meaning": "Cruise Control Switch - Off\nSet Switch - Off\nCoast Switch - Off\nResume Switch - Off\nAccel Switch - Off\nBrake Switch - Off\nClutch Switch - Off\nCruise Mode - Not Active",
-            "Message Count": "         190",
+            "Message Count": "         277",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.903555,
+                    1518293754.0470107,
                     "AA=="
                 ]
             ],
-            "Num": 190,
+            "Num": 277,
             "PID": "  85",
             "Parameter Identification": "Cruise Control Status",
-            "Period (ms)": "    170.02",
+            "Period (ms)": "    180.30",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803942.903555,
+            "Start Time": 1518293754.0470107,
             "Table Key": "(128, 85)",
-            "Time": 1517803975.206468,
+            "Time": 1518293803.990994,
             "Units": "",
-            "VDATime": 2219413207,
+            "VDATime": 1553513025,
             "Value": "0"
         },
         "(128, 86)": {
-            "Last Time": 1517803970.677999,
+            "Last Time": 1518293800.4645748,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "           4",
+            "Message Count": "           6",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.181554,
+                    1518293754.7030077,
                     "AA=="
                 ]
             ],
-            "Num": 4,
+            "Num": 6,
             "PID": "  86",
             "Parameter Identification": "Cruise Control Set Speed",
-            "Period (ms)": "   6874.11",
+            "Period (ms)": "   7626.93",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803943.181554,
+            "Start Time": 1518293754.7030077,
             "Table Key": "(128, 86)",
-            "Time": 1517803970.677999,
+            "Time": 1518293800.4645748,
             "Units": "mph",
-            "VDATime": 2212415081,
+            "VDATime": 1549918489,
             "Value": "0.000"
         },
         "(128, 89)": {
-            "Last Time": 1517803974.926945,
+            "Last Time": 1518293803.9999964,
             "MID": "128",
             "Meaning": "PTO Mode - Inactive\nClutch Switch - Off\nBrake Switch - Off\nAccel Switch - Off\nResume Switch - Off\nCoast Switch - Off\nSet Switch - Off\nPTO Control Switch - Off",
-            "Message Count": "          38",
+            "Message Count": "          56",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.996556,
+                    1518293754.2690263,
                     "AA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 56,
             "PID": "  89",
             "Parameter Identification": "Power Takeoff Status",
-            "Period (ms)": "    840.27",
+            "Period (ms)": "    888.05",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803942.996556,
+            "Start Time": 1518293754.2690263,
             "Table Key": "(128, 89)",
-            "Time": 1517803974.926945,
+            "Time": 1518293803.9999964,
             "Units": "",
-            "VDATime": 2219103570,
+            "VDATime": 1553602367,
             "Value": "0"
         },
         "(128, 91)": {
-            "Last Time": 1517803975.338502,
+            "Last Time": 1518293803.9959958,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         380",
+            "Message Count": "         554",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.8915565,
+                    1518293754.0380096,
                     "AA=="
                 ]
             ],
-            "Num": 380,
+            "Num": 554,
             "PID": "  91",
             "Parameter Identification": "Percent Accelerator Pedal Position",
-            "Period (ms)": "     85.39",
+            "Period (ms)": "     90.18",
             "Raw Hexadecimal": "00",
-            "Start Time": 1517803942.8915565,
+            "Start Time": 1518293754.0380096,
             "Table Key": "(128, 91)",
-            "Time": 1517803975.338502,
+            "Time": 1518293803.9959958,
             "Units": "%",
-            "VDATime": 2219456581,
+            "VDATime": 1553559410,
             "Value": "0.000"
         },
         "(128, 92)": {
-            "Last Time": 1517803975.3395188,
+            "Last Time": 1518293803.9979944,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "         380",
+            "Message Count": "         554",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803942.8945541,
-                    "AA=="
-                ],
-                [
-                    1517803951.4080648,
+                    1518293754.040012,
                     "yA=="
                 ]
             ],
-            "Num": 380,
+            "Num": 554,
             "PID": "  92",
             "Parameter Identification": "Percent Engine Load",
-            "Period (ms)": "     85.38",
+            "Period (ms)": "     90.18",
             "Raw Hexadecimal": "C8",
-            "Start Time": 1517803942.8945541,
+            "Start Time": 1518293754.040012,
             "Table Key": "(128, 92)",
-            "Time": 1517803975.3395188,
+            "Time": 1518293803.9979944,
             "Units": "%",
-            "VDATime": 2219456581,
+            "VDATime": 1553559410,
             "Value": "100.000"
         },
         "(128, 93)": {
-            "Last Time": 1517803975.0198975,
+            "Last Time": 1518293803.1802135,
             "MID": "128",
             "Meaning": "",
-            "Message Count": "          38",
+            "Message Count": "          55",
             "Message Identification": "Engine #1",
             "Message List": [
                 [
-                    1517803943.0095546,
-                    "9w=="
-                ],
-                [
-                    1517803952.0532098,
+                    1518293754.2800088,
                     "GA=="
                 ]
             ],
-            "Num": 38,
+            "Num": 55,
             "PID": "  93",
             "Parameter Identification": "Not Provided",
-            "Period (ms)": "    842.38",
+            "Period (ms)": "    889.09",
             "Raw Hexadecimal": "18",
-            "Start Time": 1517803943.0095546,
+            "Start Time": 1518293754.2800088,
             "Table Key": "(128, 93)",
-            "Time": 1517803975.0198975,
+            "Time": 1518293803.1802135,
             "Units": "",
-            "VDATime": 2219210388,
+            "VDATime": 1552709036,
             "Value": "b'\\x18'"
+        },
+        "(136, 0)": {
+            "Last Time": 1518293803.2992182,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "          56",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.213009,
+                    "VA=="
+                ],
+                [
+                    1518293799.308419,
+                    "9w=="
+                ]
+            ],
+            "Num": 56,
+            "PID": "   0",
+            "Parameter Identification": "Request",
+            "Period (ms)": "    876.54",
+            "Raw Hexadecimal": "54",
+            "Start Time": 1518293754.213009,
+            "Table Key": "(136, 0)",
+            "Time": 1518293803.2992182,
+            "Units": "",
+            "VDATime": 1552729531,
+            "Value": ""
+        },
+        "(136, 1)": {
+            "Last Time": 1518293799.3064046,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "           4",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293755.5810094,
+                    "5w=="
+                ]
+            ],
+            "Num": 4,
+            "PID": "   1",
+            "Parameter Identification": "Not Provided",
+            "Period (ms)": "  10931.35",
+            "Raw Hexadecimal": "E7",
+            "Start Time": 1518293755.5810094,
+            "Table Key": "(136, 1)",
+            "Time": 1518293799.3064046,
+            "Units": "",
+            "VDATime": 1548793126,
+            "Value": "b'\\xe7'"
+        },
+        "(136, 151)": {
+            "Last Time": 1518293803.7850585,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "         110",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.0740128,
+                    "6fw="
+                ]
+            ],
+            "Num": 110,
+            "PID": " 151",
+            "Parameter Identification": "ATC Control Status",
+            "Period (ms)": "    451.92",
+            "Raw Hexadecimal": "E9 FC",
+            "Start Time": 1518293754.0740128,
+            "Table Key": "(136, 151)",
+            "Time": 1518293803.7850585,
+            "Units": "",
+            "VDATime": 1553227054,
+            "Value": "b'\\xe9\\xfc'"
+        },
+        "(136, 168)": {
+            "Last Time": 1518293803.183218,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "          55",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.0850117,
+                    "8AA="
+                ],
+                [
+                    1518293754.4560091,
+                    "8gA="
+                ]
+            ],
+            "Num": 55,
+            "PID": " 168",
+            "Parameter Identification": "Battery Potential (Voltage)",
+            "Period (ms)": "    892.69",
+            "Raw Hexadecimal": "F0 00",
+            "Start Time": 1518293754.0850117,
+            "Table Key": "(136, 168)",
+            "Time": 1518293803.183218,
+            "Units": "volts",
+            "VDATime": 1552729531,
+            "Value": "12.000"
+        },
+        "(136, 178)": {
+            "Last Time": 1518293799.3074043,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "           8",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293755.5720086,
+                    "AQM="
+                ],
+                [
+                    1518293755.58901,
+                    ""
+                ]
+            ],
+            "Num": 8,
+            "PID": " 178",
+            "Parameter Identification": "Not Provided",
+            "Period (ms)": "   5466.92",
+            "Raw Hexadecimal": "",
+            "Start Time": 1518293755.5720086,
+            "Table Key": "(136, 178)",
+            "Time": 1518293799.3074043,
+            "Units": "",
+            "VDATime": 1548793126,
+            "Value": "b''"
+        },
+        "(136, 194)": {
+            "Last Time": 1518293799.3054044,
+            "MID": "136",
+            "Meaning": "A - AC Voltage: Data valid but below normal operational range\nA - DIF 1-ASR Valve: Current below normal or open circuit. Count: 1\nA - Pressure Modulation Valve ABS Axle 2 Left: Current below normal or open circuit. Count: 1\nA - Pressure Modulation Valve ABS Axle 2 Right: Current below normal or open circuit. Count: 1\nA - Unknown System ID: Data valid but below normal operational range\nA - Pressure Modulation Valve ABS Axle 1 Left: Current below normal or open circuit. Count: 1\nA - Wheel Sensor ABS Axle 1 Left: Data erratic, intermittent, or incorrect. Count: 1\nA - Wheel Sensor ABS Axle 1 Right: Data erratic, intermittent, or incorrect. Count: 1\n",
+            "Message Count": "           4",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293755.563011,
+                    "F7IBErUBCbUBCrUBCAEHtQEBsgECsgEE"
+                ]
+            ],
+            "Num": 4,
+            "PID": " 194",
+            "Parameter Identification": "Diagnostic Code and Occurrence Count",
+            "Period (ms)": "  10935.60",
+            "Raw Hexadecimal": "17 B2 01 12 B5 01 09 B5 01 0A B5 01 08 01 07 B5 01 01 B2 01 02 B2 01 04",
+            "Start Time": 1518293755.563011,
+            "Table Key": "(136, 194)",
+            "Time": 1518293799.3054044,
+            "Units": "Count",
+            "VDATime": 1548793126,
+            "Value": "8"
+        },
+        "(136, 209)": {
+            "Last Time": 1518293803.7860572,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "         110",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.0800138,
+                    "Af8="
+                ]
+            ],
+            "Num": 110,
+            "PID": " 209",
+            "Parameter Identification": "ABS Control Status, Trailer",
+            "Period (ms)": "    451.87",
+            "Raw Hexadecimal": "01 FF",
+            "Start Time": 1518293754.0800138,
+            "Table Key": "(136, 209)",
+            "Time": 1518293803.7860572,
+            "Units": "",
+            "VDATime": 1553227054,
+            "Value": "b'\\x01\\xff'"
+        },
+        "(136, 49)": {
+            "Last Time": 1518293803.7850585,
+            "MID": "136",
+            "Meaning": "ABS off-road function switch - Off / Inactive\nABS Retarder Control - Off / Inactive\nABS brake control - Off / Inactive\nABS warning lamp - On / Active",
+            "Message Count": "         110",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.0680103,
+                    "AQ=="
+                ]
+            ],
+            "Num": 110,
+            "PID": "  49",
+            "Parameter Identification": "ABS Control Status",
+            "Period (ms)": "    451.97",
+            "Raw Hexadecimal": "01",
+            "Start Time": 1518293754.0680103,
+            "Table Key": "(136, 49)",
+            "Time": 1518293803.7850585,
+            "Units": "",
+            "VDATime": 1553227054,
+            "Value": "1"
+        },
+        "(136, 84)": {
+            "Last Time": 1518293804.0009942,
+            "MID": "136",
+            "Meaning": "",
+            "Message Count": "         551",
+            "Message Identification": "Brakes, Power Unit",
+            "Message List": [
+                [
+                    1518293754.044009,
+                    "/w=="
+                ]
+            ],
+            "Num": 551,
+            "PID": "  84",
+            "Parameter Identification": "Road Speed",
+            "Period (ms)": "     90.67",
+            "Raw Hexadecimal": "FF",
+            "Start Time": 1518293754.044009,
+            "Table Key": "(136, 84)",
+            "Time": 1518293804.0009942,
+            "Units": "mph",
+            "VDATime": 1553621303,
+            "Value": "127.500"
         }
     },
     "J1939 Parameter Group Numbers": {
         "(57344, 0)": {
             "Acronym": "CM1",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "///////z//8=",
             "Message Time": 1517793408.0147312,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "   1044.31",
+            "Period (ms)": "  48991.13",
             "Raw Hexadecimal": "FF FF FF FF FF F3 FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.0147312,
-            "VDATime": 2219408118,
+            "VDATime": 1552906863,
             "VDATime List": 235022131
         },
         "(57344, 23)": {
             "Acronym": "CM1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8810456,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 23",
             "Source": "Instrument Cluster #1",
             "Start Time": 1517793406.8810456,
-            "VDATime": 2219623086,
+            "VDATime": 1553629794,
             "VDATime List": 234543684
         },
         "(57344, 25)": {
             "Acronym": "CM1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8940456,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 25",
             "Source": "Passenger-Operator Climate Control #1",
             "Start Time": 1517793406.8940456,
-            "VDATime": 2219623671,
+            "VDATime": 1553630379,
             "VDATime List": 234544268
         },
         "(57344, 33)": {
             "Acronym": "CM1",
-            "Message Count": "      101187",
+            "Message Count": "      102128",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.9070463,
-            "Num": 101187,
+            "Num": 102128,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.71",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 33",
             "Source": "Body Controller",
             "Start Time": 1517793406.9070463,
-            "VDATime": 2219624258,
+            "VDATime": 1553630966,
             "VDATime List": 234544856
         },
         "(57344, 40)": {
             "Acronym": "CM1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.924046,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 40",
             "Source": "Cab Display #1",
             "Start Time": 1517793406.924046,
-            "VDATime": 2219624845,
+            "VDATime": 1553632138,
             "VDATime List": 234545444
         },
         "(57344, 49)": {
             "Acronym": "CM1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.9400456,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 57344",
             "Parameter Group Label": "Cab Message 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 49",
             "Source": "Cab Controller - Primary",
             "Start Time": 1517793406.9400456,
-            "VDATime": 2219625432,
+            "VDATime": 1553632723,
             "VDATime List": 234546029
         },
         "(61440, 15)": {
             "Acronym": "ERC1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AH3//w////8=",
             "Message Time": 1517793407.3567617,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 61440",
             "Parameter Group Label": "Electronic Retarder Controller 1",
-            "Period (ms)": "    104.44",
+            "Period (ms)": "   4899.65",
             "Raw Hexadecimal": "00 7D FF FF 0F FF FF FF",
             "SA": " 15",
             "Source": "Retarder - Engine",
             "Start Time": 1517793407.3567617,
-            "VDATime": 2219657588,
+            "VDATime": 1553556360,
             "VDATime List": 234571541
         },
         "(61441, 11)": {
             "Acronym": "EBC1",
-            "Message Count": "      101187",
-            "Message List": "AAAAAAAAAAA=",
-            "Message Time": 1517793406.823046,
-            "Num": 101187,
+            "Message Count": "      102090",
+            "Message List": "wP/w//9c//8=",
+            "Message Time": 1517805577.2996376,
+            "Num": 102090,
             "PGN": " 61441",
             "Parameter Group Label": "Electronic Brake Controller 1",
-            "Period (ms)": "    104.45",
-            "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
+            "Period (ms)": "    119.21",
+            "Raw Hexadecimal": "C0 FF F0 FF FF 5C FF FF",
             "SA": " 11",
             "Source": "Brakes - System Controller",
             "Start Time": 1517793406.823046,
-            "VDATime": 2219620172,
-            "VDATime List": 234540201
+            "VDATime": 3821511090,
+            "VDATime List": 3821511090
         },
         "(61441, 49)": {
             "Acronym": "EBC1",
-            "Message Count": "      101187",
+            "Message Count": "      101738",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.815049,
-            "Num": 101187,
+            "Num": 101738,
             "PGN": " 61441",
             "Parameter Group Label": "Electronic Brake Controller 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.63",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 49",
             "Source": "Cab Controller - Primary",
             "Start Time": 1517793406.815049,
-            "VDATime": 2219619592,
+            "VDATime": 3821464951,
             "VDATime List": 234539620
         },
         "(64892, 0)": {
             "Acronym": "DPFC1",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "///QNP3///8=",
             "Message Time": 1517793408.5608146,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 64892",
             "Parameter Group Label": "DPF Control 1:8",
-            "Period (ms)": "   1044.25",
+            "Period (ms)": "  48991.08",
             "Raw Hexadecimal": "FF FF D0 34 FD FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.5608146,
-            "VDATime": 2219447498,
+            "VDATime": 1552946353,
             "VDATime List": 235061585
         },
         "(64947, 0)": {
             "Acronym": "AT1OG2",
-            "Message Count": "       20237",
+            "Message Count": "       20425",
             "Message List": "//////////8=",
             "Message Time": 1517793407.494731,
-            "Num": 20237,
+            "Num": 20425,
             "PGN": " 64947",
             "Parameter Group Label": "Aftertreatment 1 Outlet Gas 2",
-            "Period (ms)": "    522.19",
+            "Period (ms)": "  24499.21",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.494731,
-            "VDATime": 2219308490,
+            "VDATime": 1553306885,
             "VDATime List": 234922088
         },
         "(64976, 0)": {
             "Acronym": "IC2",
-            "Message Count": "       20238",
+            "Message Count": "       20427",
             "Message List": "//////////8=",
             "Message Time": 1517793407.9327314,
-            "Num": 20238,
+            "Num": 20427,
             "PGN": " 64976",
             "Parameter Group Label": "Intake/Exhaust Conditions 2",
-            "Period (ms)": "    522.16",
+            "Period (ms)": "  24496.79",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.9327314,
-            "VDATime": 2219347516,
+            "VDATime": 1553346397,
             "VDATime List": 234961618
         },
         "(65188, 0)": {
             "Acronym": "ET2",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "//////////8=",
             "Message Time": 1517793408.4768128,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65188",
             "Parameter Group Label": "Engine Temperature 2",
-            "Period (ms)": "   1044.26",
+            "Period (ms)": "  48991.09",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.4768128,
-            "VDATime": 2219428341,
+            "VDATime": 1552928024,
             "VDATime List": 235042532
         },
         "(65213, 0)": {
             "Acronym": "FD1",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "//////////8=",
             "Message Time": 1517793408.5208127,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65213",
             "Parameter Group Label": "Fan Drive #1",
-            "Period (ms)": "   1044.26",
+            "Period (ms)": "  48991.08",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.5208127,
-            "VDATime": 2219437921,
+            "VDATime": 1552936853,
             "VDATime List": 235052415
         },
         "(65214, 0)": {
@@ -29695,35 +30042,51 @@
         },
         "(65217, 0)": {
             "Acronym": "VDHR",
-            "Message Count": "       10119",
+            "Message Count": "       10212",
             "Message List": "+3AEAPtwBAA=",
             "Message Time": 1517793408.9668164,
-            "Num": 10119,
+            "Num": 10212,
             "PGN": " 65217",
             "Parameter Group Label": "High Resolution Vehicle Distance",
-            "Period (ms)": "   1044.21",
+            "Period (ms)": "  49000.63",
             "Raw Hexadecimal": "FB 70 04 00 FB 70 04 00",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.9668164,
-            "VDATime": 2219528334,
+            "VDATime": 1553027438,
             "VDATime List": 235142526
         },
         "(65226, 0)": {
             "Acronym": "DM01",
-            "Message Count": "       10087",
+            "Message Count": "       10181",
             "Message List": "R/9bAAQDcQIJAXYCDgE=",
             "Message Time": 1517793409.481912,
-            "Num": 10087,
+            "Num": 10181,
             "PGN": " 65226",
             "Parameter Group Label": "Active Diagnostic Trouble Codes",
-            "Period (ms)": "   1047.48",
+            "Period (ms)": "  49149.79",
             "Raw Hexadecimal": "47 FF 5B 00 04 03 71 02 09 01 76 02 0E 01",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793409.481912,
-            "VDATime": 2219567112,
+            "VDATime": 1553066268,
             "VDATime List": 235181510
+        },
+        "(65226, 11)": {
+            "Acronym": "DM01",
+            "Message Count": "          75",
+            "Message List": "BP8rAwJ/JgMFfx0DBX8eAwV/HAMFfxsDBX8VAwJ/FgMCfxgDAn8XAwJ/fwICfw==",
+            "Message Time": 1517805555.4686427,
+            "Num": 75,
+            "PGN": " 65226",
+            "Parameter Group Label": "Active Diagnostic Trouble Codes",
+            "Period (ms)": "6509977.81",
+            "Raw Hexadecimal": "04 FF 2B 03 02 7F 26 03 05 7F 1D 03 05 7F 1E 03 05 7F 1C 03 05 7F 1B 03 05 7F 15 03 02 7F 16 03 02 7F 18 03 02 7F 17 03 02 7F 7F 02 02 7F",
+            "SA": " 11",
+            "Source": "Brakes - System Controller",
+            "Start Time": 1517805555.4686427,
+            "VDATime": 1553319581,
+            "VDATime List": 3786201287
         },
         "(65227, 0)": {
             "Acronym": "DM02",
@@ -29775,18 +30138,18 @@
         },
         "(65243, 0)": {
             "Acronym": "EFL/P2",
-            "Message Count": "       20237",
+            "Message Count": "       20426",
             "Message List": "//////////8=",
             "Message Time": 1517793407.8537307,
-            "Num": 20237,
+            "Num": 20426,
             "PGN": " 65243",
             "Parameter Group Label": "Engine Fluid Level/Pressure 2",
-            "Period (ms)": "    522.18",
+            "Period (ms)": "  24497.99",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.8537307,
-            "VDATime": 2219328343,
+            "VDATime": 1553327458,
             "VDATime List": 234942530
         },
         "(65244, 0)": {
@@ -29807,99 +30170,115 @@
         },
         "(65245, 0)": {
             "Acronym": "TC",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "//////////8=",
             "Message Time": 1517793408.9208171,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65245",
             "Parameter Group Label": "Turbocharger",
-            "Period (ms)": "   1044.22",
+            "Period (ms)": "  48991.04",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.9208171,
-            "VDATime": 2219508102,
+            "VDATime": 1553006873,
             "VDATime List": 235122334
         },
         "(65248, 0)": {
             "Acronym": "VD",
-            "Message Count": "      101186",
+            "Message Count": "      102128",
             "Message List": "ey0AAHstAAA=",
             "Message Time": 1517793407.4357333,
-            "Num": 101186,
+            "Num": 102128,
             "PGN": " 65248",
             "Parameter Group Label": "Vehicle Distance",
-            "Period (ms)": "    104.44",
+            "Period (ms)": "   4899.70",
             "Raw Hexadecimal": "7B 2D 00 00 7B 2D 00 00",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.4357333,
-            "VDATime": 2219587473,
+            "VDATime": 1553586281,
             "VDATime List": 234601557
+        },
+        "(65248, 202)": {
+            "Acronym": "VD",
+            "Message Count": "         734",
+            "Message List": "//////////8=",
+            "Message Time": 1517805555.368644,
+            "Num": 734,
+            "PGN": " 65248",
+            "Parameter Group Label": "Vehicle Distance",
+            "Period (ms)": " 665188.88",
+            "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
+            "SA": "202",
+            "Source": "Reserved",
+            "Start Time": 1517805555.368644,
+            "VDATime": 1553561064,
+            "VDATime List": 3785637507
         },
         "(65249, 15)": {
             "Acronym": "RC",
-            "Message Count": "        2027",
+            "Message Count": "        2046",
             "Message List": "AwP//////////////////////w==",
             "Message Time": 1517793409.6799128,
-            "Num": 2027,
+            "Num": 2046,
             "PGN": " 65249",
             "Parameter Group Label": "Retarder Configuration",
-            "Period (ms)": "   5211.38",
+            "Period (ms)": " 244570.02",
             "Raw Hexadecimal": "03 03 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
             "SA": " 15",
             "Source": "Retarder - Engine",
             "Start Time": 1517793409.6799128,
-            "VDATime": 2217067049,
+            "VDATime": 1549566763,
             "VDATime List": 236681195
         },
         "(65252, 0)": {
             "Acronym": "SHUTDN",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "AH///wB///8=",
             "Message Time": 1517793408.6098156,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65252",
             "Parameter Group Label": "Shutdown",
-            "Period (ms)": "   1044.25",
+            "Period (ms)": "  48991.07",
             "Raw Hexadecimal": "00 7F FF FF 00 7F FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.6098156,
-            "VDATime": 2219497995,
+            "VDATime": 1552996710,
             "VDATime List": 235111982
         },
         "(65253, 0)": {
             "Acronym": "HOURS",
-            "Message Count": "           6",
+            "Message Count": "           9",
             "Message List": "Gu4AAAAAAAA=",
             "Message Time": 1517803227.061581,
-            "Num": 6,
+            "Num": 9,
             "PGN": " 65253",
             "Parameter Group Label": "Engine Hours: Revolutions",
-            "Period (ms)": "  24586.72",
+            "Period (ms)": "54508029.42",
             "Raw Hexadecimal": "1A EE 00 00 00 00 00 00",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517803227.061581,
-            "VDATime": 1618316723,
+            "VDATime": 1548692307,
             "VDATime List": 1471092429
         },
         "(65254, 0)": {
             "Acronym": "TD",
-            "Message Count": "        6736",
-            "Message List": "lDsDAhQh//8=",
-            "Message Time": 1517803974.4025555,
-            "Num": 6736,
+            "Message Count": "        6782",
+            "Message List": "SAMUAigh//8=",
+            "Message Time": 1518293803.5882692,
+            "Num": 6782,
             "PGN": " 65254",
             "Parameter Group Label": "Time/Date",
-            "Period (ms)": "   1568.19",
-            "Raw Hexadecimal": "94 3B 03 02 14 21 FF FF",
+            "Period (ms)": "  73782.44",
+            "Raw Hexadecimal": "48 03 14 02 28 21 FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793411.0598788,
-            "VDATime": 2218473475,
-            "VDATime List": 2218473475
+            "VDATime": 1553182224,
+            "VDATime List": 1553182224
         },
         "(65255, 0)": {
             "Acronym": "VH",
@@ -29935,18 +30314,18 @@
         },
         "(65259, 250)": {
             "Acronym": "CI",
-            "Message Count": "        2010",
+            "Message Count": "        2029",
             "Message List": "U1lORVIqU1NTMi1SMDMqMDAxOSpVTklWRVJTQUw=",
             "Message Time": 1517793410.634219,
-            "Num": 2010,
+            "Num": 2029,
             "PGN": " 65259",
             "Parameter Group Label": "Component Identification",
-            "Period (ms)": "   5254.75",
+            "Period (ms)": " 246618.61",
             "Raw Hexadecimal": "53 59 4E 45 52 2A 53 53 53 32 2D 52 30 33 2A 30 30 31 39 2A 55 4E 49 56 45 52 53 41 4C",
             "SA": "250",
             "Source": "Off Board Diagnostic-Service Tool #2",
             "Start Time": 1517793410.634219,
-            "VDATime": 2216832191,
+            "VDATime": 1549164219,
             "VDATime List": 239338161
         },
         "(65260, 0)": {
@@ -29999,290 +30378,306 @@
         },
         "(65262, 0)": {
             "Acronym": "ET1",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "//////////8=",
             "Message Time": 1517793408.433817,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65262",
             "Parameter Group Label": "Engine Temperature 1",
-            "Period (ms)": "   1044.26",
+            "Period (ms)": "  48991.09",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793408.433817,
-            "VDATime": 2219417960,
+            "VDATime": 1552916701,
             "VDATime List": 235031965
         },
         "(65263, 0)": {
             "Acronym": "EFL/P1",
-            "Message Count": "       20237",
+            "Message Count": "       20425",
             "Message List": "//////////o=",
             "Message Time": 1517793407.5197287,
-            "Num": 20237,
+            "Num": 20425,
             "PGN": " 65263",
             "Parameter Group Label": "Engine Fluid Level/Pressure 1",
-            "Period (ms)": "    522.19",
+            "Period (ms)": "  24499.21",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FA",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.5197287,
-            "VDATime": 2219317932,
+            "VDATime": 1553316750,
             "VDATime List": 234931929
         },
         "(65264, 0)": {
             "Acronym": "PTO",
-            "Message Count": "      101186",
+            "Message Count": "      102128",
             "Message List": "////AADwAP8=",
             "Message Time": 1517793407.4117322,
-            "Num": 101186,
+            "Num": 102128,
             "PGN": " 65264",
             "Parameter Group Label": "Power Takeoff Information",
-            "Period (ms)": "    104.44",
+            "Period (ms)": "   4899.70",
             "Raw Hexadecimal": "FF FF FF 00 00 F0 00 FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.4117322,
-            "VDATime": 2219577388,
+            "VDATime": 1553576184,
             "VDATime List": 234591357
         },
         "(65264, 23)": {
             "Acronym": "PTO",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.9590452,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 65264",
             "Parameter Group Label": "Power Takeoff Information",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 23",
             "Source": "Instrument Cluster #1",
             "Start Time": 1517793406.9590452,
-            "VDATime": 2219626013,
+            "VDATime": 1553633307,
             "VDATime List": 234546612
         },
         "(65264, 33)": {
             "Acronym": "PTO",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.9790485,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 65264",
             "Parameter Group Label": "Power Takeoff Information",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 33",
             "Source": "Body Controller",
             "Start Time": 1517793406.9790485,
-            "VDATime": 2219626598,
+            "VDATime": 1553633889,
             "VDATime List": 234547198
         },
         "(65264, 40)": {
             "Acronym": "PTO",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.9980445,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 65264",
             "Parameter Group Label": "Power Takeoff Information",
-            "Period (ms)": "    104.44",
+            "Period (ms)": "   4899.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 40",
             "Source": "Cab Display #1",
             "Start Time": 1517793406.9980445,
-            "VDATime": 2219627761,
+            "VDATime": 1553634478,
             "VDATime List": 234547785
         },
         "(65264, 49)": {
             "Acronym": "PTO",
-            "Message Count": "      101182",
+            "Message Count": "      102124",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793407.3307312,
-            "Num": 101182,
+            "Num": 102124,
             "PGN": " 65264",
             "Parameter Group Label": "Power Takeoff Information",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "   4899.89",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 49",
             "Source": "Cab Controller - Primary",
             "Start Time": 1517793407.3307312,
-            "VDATime": 2219628349,
+            "VDATime": 1553635065,
             "VDATime List": 234548372
         },
         "(65265, 0)": {
             "Acronym": "CCVS1",
-            "Message Count": "      101187",
+            "Message Count": "      101739",
             "Message List": "wwAAAAAAADA=",
             "Message Time": 1517793406.810046,
-            "Num": 101187,
+            "Num": 101739,
             "PGN": " 65265",
             "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.62",
             "Raw Hexadecimal": "C3 00 00 00 00 00 00 30",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793406.810046,
-            "VDATime": 2219607517,
+            "VDATime": 3821553232,
             "VDATime List": 234521480
+        },
+        "(65265, 11)": {
+            "Acronym": "CCVS1",
+            "Message Count": "         349",
+            "Message List": "///+//////8=",
+            "Message Time": 1517805555.2876418,
+            "Num": 349,
+            "PGN": " 65265",
+            "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
+            "Period (ms)": "     63.07",
+            "Raw Hexadecimal": "FF FF FE FF FF FF FF FF",
+            "SA": " 11",
+            "Source": "Brakes - System Controller",
+            "Start Time": 1517805555.2876418,
+            "VDATime": 3821474869,
+            "VDATime List": 3785587858
         },
         "(65265, 23)": {
             "Acronym": "CCVS1",
-            "Message Count": "      101187",
+            "Message Count": "      101738",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8320477,
-            "Num": 101187,
+            "Num": 101738,
             "PGN": " 65265",
             "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.63",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 23",
             "Source": "Instrument Cluster #1",
             "Start Time": 1517793406.8320477,
-            "VDATime": 2219620751,
+            "VDATime": 3821466111,
             "VDATime List": 234540780
         },
         "(65265, 33)": {
             "Acronym": "CCVS1",
-            "Message Count": "      101187",
+            "Message Count": "      101738",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8420472,
-            "Num": 101187,
+            "Num": 101738,
             "PGN": " 65265",
             "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.63",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 33",
             "Source": "Body Controller",
             "Start Time": 1517793406.8420472,
-            "VDATime": 2219621924,
+            "VDATime": 3821467282,
             "VDATime List": 234541932
         },
         "(65265, 40)": {
             "Acronym": "CCVS1",
-            "Message Count": "      101187",
+            "Message Count": "      101738",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8550453,
-            "Num": 101187,
+            "Num": 101738,
             "PGN": " 65265",
             "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.63",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 40",
             "Source": "Cab Display #1",
             "Start Time": 1517793406.8550453,
-            "VDATime": 2219621340,
+            "VDATime": 3821466706,
             "VDATime List": 234542520
         },
         "(65265, 49)": {
             "Acronym": "CCVS1",
-            "Message Count": "      101187",
+            "Message Count": "      101738",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793406.8670485,
-            "Num": 101187,
+            "Num": 101738,
             "PGN": " 65265",
             "Parameter Group Label": "Cruise Control/Vehicle Speed 1",
-            "Period (ms)": "    104.45",
+            "Period (ms)": "    119.63",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 49",
             "Source": "Cab Controller - Primary",
             "Start Time": 1517793406.8670485,
-            "VDATime": 2219622503,
+            "VDATime": 3821467863,
             "VDATime List": 234543100
         },
         "(65266, 0)": {
             "Acronym": "LFE1",
-            "Message Count": "      101187",
+            "Message Count": "      102129",
             "Message List": "AAAAAAAA//8=",
             "Message Time": 1517793407.3847296,
-            "Num": 101187,
+            "Num": 102129,
             "PGN": " 65266",
             "Parameter Group Label": "Fuel Economy (Liquid)",
-            "Period (ms)": "    104.44",
+            "Period (ms)": "   4899.65",
             "Raw Hexadecimal": "00 00 00 00 00 00 FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.3847296,
-            "VDATime": 2219658192,
+            "VDATime": 1553556965,
             "VDATime List": 234572145
         },
         "(65269, 0)": {
             "Acronym": "AMB",
-            "Message Count": "       10119",
+            "Message Count": "       10214",
             "Message List": "//////////8=",
             "Message Time": 1517793407.9767308,
-            "Num": 10119,
+            "Num": 10214,
             "PGN": " 65269",
             "Parameter Group Label": "Ambient Conditions",
-            "Period (ms)": "   1044.31",
+            "Period (ms)": "  48991.13",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.9767308,
-            "VDATime": 2219397705,
+            "VDATime": 1552896429,
             "VDATime List": 235011702
         },
         "(65269, 33)": {
             "Acronym": "AMB",
-            "Message Count": "       10107",
+            "Message Count": "       10201",
             "Message List": "AAAAAAAAAAA=",
             "Message Time": 1517793407.4617321,
-            "Num": 10107,
+            "Num": 10201,
             "PGN": " 65269",
             "Parameter Group Label": "Ambient Conditions",
-            "Period (ms)": "   1045.55",
+            "Period (ms)": "  49053.66",
             "Raw Hexadecimal": "00 00 00 00 00 00 00 00",
             "SA": " 33",
             "Source": "Body Controller",
             "Start Time": 1517793407.4617321,
-            "VDATime": 2219028913,
+            "VDATime": 1553336801,
             "VDATime List": 234648954
         },
         "(65270, 0)": {
             "Acronym": "IC1",
-            "Message Count": "       20237",
+            "Message Count": "       20426",
             "Message List": "/wD///////8=",
             "Message Time": 1517793407.891732,
-            "Num": 20237,
+            "Num": 20426,
             "PGN": " 65270",
             "Parameter Group Label": "Intake/Exhaust Conditions 1",
-            "Period (ms)": "    522.18",
+            "Period (ms)": "  24497.99",
             "Raw Hexadecimal": "FF 00 FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793407.891732,
-            "VDATime": 2219338057,
+            "VDATime": 1553337384,
             "VDATime List": 234951973
         },
         "(65271, 0)": {
             "Acronym": "VEP1",
-            "Message Count": "       10119",
-            "Message List": "////////9QA=",
-            "Message Time": 1517803975.3504665,
-            "Num": 10119,
+            "Message Count": "       10212",
+            "Message List": "////////9AA=",
+            "Message Time": 1517805558.7317665,
+            "Num": 10212,
             "PGN": " 65271",
             "Parameter Group Label": "Vehicle Electrical Power 1",
-            "Period (ms)": "   1044.21",
-            "Raw Hexadecimal": "FF FF FF FF FF FF F5 00",
+            "Period (ms)": "  49000.63",
+            "Raw Hexadecimal": "FF FF FF FF FF FF F4 00",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793409.009814,
-            "VDATime": 2219537783,
-            "VDATime List": 2219537783
+            "VDATime": 1553036802,
+            "VDATime List": 3794582783
         },
         "(65279, 0)": {
             "Acronym": "OI",
-            "Message Count": "        1011",
+            "Message Count": "        1020",
             "Message List": "//////////8=",
             "Message Time": 1517793411.4488943,
-            "Num": 1011,
+            "Num": 1020,
             "PGN": " 65279",
             "Parameter Group Label": "Operator indicators",
-            "Period (ms)": "  10444.50",
+            "Period (ms)": " 490577.60",
             "Raw Hexadecimal": "FF FF FF FF FF FF FF FF",
             "SA": "  0",
             "Source": "Engine #1",
             "Start Time": 1517793411.4488943,
-            "VDATime": 2212597488,
+            "VDATime": 1550096318,
             "VDATime List": 242211901
         }
     },
@@ -30647,6 +31042,18 @@
             "Units": "bit",
             "Value": "3"
         },
+        "(1213, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "0",
+            "Meaning": "Lamp off",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 1213",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Malfunction Indicator Lamp",
+            "Units": "bit",
+            "Value": "0"
+        },
         "(1214, 0)": {
             "Acronym": "DM01",
             "Last Value": "268436224",
@@ -30658,6 +31065,18 @@
             "Suspect Parameter Number Label": "Suspect Parameter Number",
             "Units": "binary",
             "Value": "268436224"
+        },
+        "(1214, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "408420608",
+            "Meaning": "Out of Range - High",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 1214",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Suspect Parameter Number",
+            "Units": "binary",
+            "Value": "408420608"
         },
         "(1215, 0)": {
             "Acronym": "DM01",
@@ -30671,6 +31090,18 @@
             "Units": "binary",
             "Value": "14"
         },
+        "(1215, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "2",
+            "Meaning": "",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 1215",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Failure Mode Identifier",
+            "Units": "binary",
+            "Value": "2"
+        },
         "(1216, 0)": {
             "Acronym": "DM01",
             "Last Value": "1",
@@ -30683,6 +31114,18 @@
             "Units": "binary",
             "Value": "1"
         },
+        "(1216, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "63",
+            "Meaning": "",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 1216",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Occurrence Count",
+            "Units": "binary",
+            "Value": "63"
+        },
         "(1237, 0)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -30694,6 +31137,18 @@
             "Suspect Parameter Number Label": "Engine Shutdown Override Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(1237, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": " 1237",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Engine Shutdown Override Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(1237, 23)": {
             "Acronym": "CCVS1",
@@ -30769,15 +31224,15 @@
         },
         "(1243, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Not fully operational",
+            "Last Value": "1",
+            "Meaning": "Fully operational",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1243",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "ABS Fully Operational",
             "Units": "bit",
-            "Value": "0"
+            "Value": "1"
         },
         "(1243, 49)": {
             "Acronym": "EBC1",
@@ -30805,15 +31260,15 @@
         },
         "(1438, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Take no action",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1438",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "ABS/EBS Amber Warning Signal (Powered Vehicle)",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(1438, 49)": {
             "Acronym": "EBC1",
@@ -30829,15 +31284,15 @@
         },
         "(1439, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "1",
+            "Meaning": "On",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1439",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "EBS Red Warning Signal",
             "Units": "bit",
-            "Value": "0"
+            "Value": "1"
         },
         "(1439, 49)": {
             "Acronym": "EBC1",
@@ -30865,15 +31320,15 @@
         },
         "(1481, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "",
+            "Last Value": "255",
+            "Meaning": "Out of Range - High",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1481",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Source Address of Controlling Device for Brake Control",
             "Units": "SA",
-            "Value": "0"
+            "Value": "255"
         },
         "(1481, 49)": {
             "Acronym": "EBC1",
@@ -30913,7 +31368,7 @@
         },
         "(158, 0)": {
             "Acronym": "VEP1",
-            "Last Value": "12.250",
+            "Last Value": "12.200",
             "Meaning": "",
             "PGN": " 65271",
             "SA": "  0",
@@ -30921,7 +31376,7 @@
             "Source": "Engine #1",
             "Suspect Parameter Number Label": "Keyswitch Battery Potential",
             "Units": "Volts",
-            "Value": "12.250"
+            "Value": "12.200"
         },
         "(1601, 0)": {
             "Acronym": "TD",
@@ -30958,6 +31413,18 @@
             "Suspect Parameter Number Label": "Cruise Control Pause Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(1633, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Take no action",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": " 1633",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Pause Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(1633, 23)": {
             "Acronym": "CCVS1",
@@ -31919,6 +32386,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(1706, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "1",
+            "Meaning": ".  spn assumed to be sent most significant bit first",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 1706",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "SPN Conversion Method",
+            "Units": "bit",
+            "Value": "1"
+        },
         "(171, 0)": {
             "Acronym": "AMB",
             "Last Value": "3226.944",
@@ -32125,15 +32604,15 @@
         },
         "(1792, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Take no action",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1792",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Tractor-Mounted Trailer ABS Warning Signal",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(1792, 49)": {
             "Acronym": "EBC1",
@@ -32197,15 +32676,15 @@
         },
         "(1836, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Trailer abs status information available but not active",
+            "Last Value": "3",
+            "Meaning": "Trailer abs status information not available or parameter not supported",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 1836",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Trailer ABS Status",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(1836, 49)": {
             "Acronym": "EBC1",
@@ -32555,6 +33034,18 @@
             "Units": "miles",
             "Value": "904.328"
         },
+        "(244, 202)": {
+            "Acronym": "VD",
+            "Last Value": "333596015.383",
+            "Meaning": "Out of Range - High",
+            "PGN": " 65248",
+            "SA": "202",
+            "SPN": "  244",
+            "Source": "Unknown",
+            "Suspect Parameter Number Label": "Trip Distance",
+            "Units": "miles",
+            "Value": "333596015.383"
+        },
         "(245, 0)": {
             "Acronym": "VD",
             "Last Value": "904.328",
@@ -32566,6 +33057,18 @@
             "Suspect Parameter Number Label": "Total Vehicle Distance",
             "Units": "miles",
             "Value": "904.328"
+        },
+        "(245, 202)": {
+            "Acronym": "VD",
+            "Last Value": "333596015.383",
+            "Meaning": "Out of Range - High",
+            "PGN": " 65248",
+            "SA": "202",
+            "SPN": "  245",
+            "Source": "Unknown",
+            "Suspect Parameter Number Label": "Total Vehicle Distance",
+            "Units": "miles",
+            "Value": "333596015.383"
         },
         "(246, 0)": {
             "Acronym": "VH",
@@ -32845,15 +33348,15 @@
         },
         "(2911, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Halt brake switch passive",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": " 2911",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Halt brake switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(2911, 49)": {
             "Acronym": "EBC1",
@@ -32879,6 +33382,18 @@
             "Units": "bit",
             "Value": "3"
         },
+        "(3038, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "3",
+            "Meaning": "Unavailable / do not flash",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 3038",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Flash Malfunction Indicator Lamp (MIL)",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(3039, 0)": {
             "Acronym": "DM01",
             "Last Value": "3",
@@ -32887,6 +33402,18 @@
             "SA": "  0",
             "SPN": " 3039",
             "Source": "Engine #1",
+            "Suspect Parameter Number Label": "Flash Red Stop Lamp (RSL)",
+            "Units": "bit",
+            "Value": "3"
+        },
+        "(3039, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "3",
+            "Meaning": "Unavailable / do not flash",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 3039",
+            "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Flash Red Stop Lamp (RSL)",
             "Units": "bit",
             "Value": "3"
@@ -32903,6 +33430,18 @@
             "Units": "bit",
             "Value": "3"
         },
+        "(3040, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "3",
+            "Meaning": "Unavailable / do not flash",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 3040",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Flash Amber Warning Lamp (AWL)",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(3041, 0)": {
             "Acronym": "DM01",
             "Last Value": "3",
@@ -32911,6 +33450,18 @@
             "SA": "  0",
             "SPN": " 3041",
             "Source": "Engine #1",
+            "Suspect Parameter Number Label": "Flash Protect Lamp",
+            "Units": "bit",
+            "Value": "3"
+        },
+        "(3041, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "3",
+            "Meaning": "Unavailable / do not flash",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": " 3041",
+            "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Flash Protect Lamp",
             "Units": "bit",
             "Value": "3"
@@ -33587,6 +34138,18 @@
             "Units": "bit",
             "Value": "3"
         },
+        "(3807, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Unavailable",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": " 3807",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Park Brake Release Inhibit Request",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(3807, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -33769,15 +34332,15 @@
         },
         "(521, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0.000",
-            "Meaning": "",
+            "Last Value": "102.000",
+            "Meaning": "Out of Range - High",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  521",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Brake Pedal Position",
             "Units": "%",
-            "Value": "0.000"
+            "Value": "102.000"
         },
         "(521, 49)": {
             "Acronym": "EBC1",
@@ -33802,6 +34365,18 @@
             "Suspect Parameter Number Label": "Cruise Control States",
             "Units": "bit",
             "Value": "0"
+        },
+        "(527, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "7",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  527",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control States",
+            "Units": "bit",
+            "Value": "7"
         },
         "(527, 23)": {
             "Acronym": "CCVS1",
@@ -34057,15 +34632,15 @@
         },
         "(561, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Asr engine control passive but installed",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  561",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "ASR Engine Control Active",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(561, 49)": {
             "Acronym": "EBC1",
@@ -34249,15 +34824,15 @@
         },
         "(575, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Abs off-road switch passive",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  575",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "ABS Off-road Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(575, 49)": {
             "Acronym": "EBC1",
@@ -34273,15 +34848,15 @@
         },
         "(576, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Asr off-road switch passive",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  576",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "ASR Off-road Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(576, 49)": {
             "Acronym": "EBC1",
@@ -34451,6 +35026,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(595, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  595",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Active",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(595, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -34510,6 +35097,18 @@
             "Suspect Parameter Number Label": "Cruise Control Enable Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(596, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  596",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Enable Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(596, 23)": {
             "Acronym": "CCVS1",
@@ -34571,6 +35170,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(597, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  597",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Brake Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(597, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -34630,6 +35241,18 @@
             "Suspect Parameter Number Label": "Clutch Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(598, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  598",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Clutch Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(598, 23)": {
             "Acronym": "CCVS1",
@@ -34691,6 +35314,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(599, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  599",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Set Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(599, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -34750,6 +35385,18 @@
             "Suspect Parameter Number Label": "Cruise Control Coast (Decelerate) Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(600, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  600",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Coast (Decelerate) Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(600, 23)": {
             "Acronym": "CCVS1",
@@ -34811,6 +35458,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(601, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  601",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Resume Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(601, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -34870,6 +35529,18 @@
             "Suspect Parameter Number Label": "Cruise Control Accelerate Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(602, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  602",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Accelerate Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(602, 23)": {
             "Acronym": "CCVS1",
@@ -34943,6 +35614,18 @@
             "Units": "bit",
             "Value": "1"
         },
+        "(623, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "1",
+            "Meaning": "Lamp on",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": "  623",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Red Stop Lamp",
+            "Units": "bit",
+            "Value": "1"
+        },
         "(624, 0)": {
             "Acronym": "DM01",
             "Last Value": "0",
@@ -34955,6 +35638,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(624, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "0",
+            "Meaning": "Lamp off",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": "  624",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Amber Warning Lamp",
+            "Units": "bit",
+            "Value": "0"
+        },
         "(69, 0)": {
             "Acronym": "CCVS1",
             "Last Value": "3",
@@ -34963,6 +35658,18 @@
             "SA": "  0",
             "SPN": "   69",
             "Source": "Engine #1",
+            "Suspect Parameter Number Label": "Two Speed Axle Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
+        "(69, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "   69",
+            "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Two Speed Axle Switch",
             "Units": "bit",
             "Value": "3"
@@ -35026,6 +35733,18 @@
             "Suspect Parameter Number Label": "Parking Brake Switch",
             "Units": "bit",
             "Value": "0"
+        },
+        "(70, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "   70",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Parking Brake Switch",
+            "Units": "bit",
+            "Value": "3"
         },
         "(70, 23)": {
             "Acronym": "CCVS1",
@@ -35135,6 +35854,18 @@
             "Units": "mph",
             "Value": "0.000"
         },
+        "(84, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "158.447",
+            "Meaning": "Out of Range - High",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "   84",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Wheel-Based Vehicle Speed",
+            "Units": "mph",
+            "Value": "158.447"
+        },
         "(84, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0.000",
@@ -35194,6 +35925,18 @@
             "Suspect Parameter Number Label": "Cruise Control Set Speed",
             "Units": "mph",
             "Value": "0.000"
+        },
+        "(86, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "158.450",
+            "Meaning": "Out of Range - High",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "   86",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Cruise Control Set Speed",
+            "Units": "mph",
+            "Value": "158.450"
         },
         "(86, 23)": {
             "Acronym": "CCVS1",
@@ -35413,7 +36156,7 @@
         },
         "(959, 0)": {
             "Acronym": "TD",
-            "Last Value": "37",
+            "Last Value": "18",
             "Meaning": "",
             "PGN": " 65254",
             "SA": "  0",
@@ -35421,11 +36164,11 @@
             "Source": "Engine #1",
             "Suspect Parameter Number Label": "Seconds",
             "Units": "Seconds",
-            "Value": "37"
+            "Value": "18"
         },
         "(960, 0)": {
             "Acronym": "TD",
-            "Last Value": "59",
+            "Last Value": "3",
             "Meaning": "",
             "PGN": " 65254",
             "SA": "  0",
@@ -35433,11 +36176,11 @@
             "Source": "Engine #1",
             "Suspect Parameter Number Label": "Minutes",
             "Units": "minutes",
-            "Value": "59"
+            "Value": "3"
         },
         "(961, 0)": {
             "Acronym": "TD",
-            "Last Value": "3",
+            "Last Value": "20",
             "Meaning": "",
             "PGN": " 65254",
             "SA": "  0",
@@ -35445,11 +36188,11 @@
             "Source": "Engine #1",
             "Suspect Parameter Number Label": "Hours",
             "Units": "hours",
-            "Value": "3"
+            "Value": "20"
         },
         "(962, 0)": {
             "Acronym": "TD",
-            "Last Value": "5",
+            "Last Value": "10",
             "Meaning": "",
             "PGN": " 65254",
             "SA": "  0",
@@ -35457,7 +36200,7 @@
             "Source": "Engine #1",
             "Suspect Parameter Number Label": "Day",
             "Units": "Days",
-            "Value": "5"
+            "Value": "10"
         },
         "(963, 0)": {
             "Acronym": "TD",
@@ -35519,6 +36262,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(966, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  966",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Engine Test Mode Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(966, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -35575,6 +36330,18 @@
             "SA": "  0",
             "SPN": "  967",
             "Source": "Engine #1",
+            "Suspect Parameter Number Label": "Engine Idle Decrement Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
+        "(967, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  967",
+            "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Engine Idle Decrement Switch",
             "Units": "bit",
             "Value": "3"
@@ -35639,6 +36406,18 @@
             "Units": "bit",
             "Value": "0"
         },
+        "(968, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "3",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  968",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Engine Idle Increment Switch",
+            "Units": "bit",
+            "Value": "3"
+        },
         "(968, 23)": {
             "Acronym": "CCVS1",
             "Last Value": "0",
@@ -35689,15 +36468,15 @@
         },
         "(969, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  969",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Remote Accelerator Enable Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(969, 49)": {
             "Acronym": "EBC1",
@@ -35725,15 +36504,15 @@
         },
         "(970, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  970",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Engine Auxiliary Shutdown Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(970, 49)": {
             "Acronym": "EBC1",
@@ -35749,15 +36528,15 @@
         },
         "(971, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  971",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Engine Derate Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(971, 49)": {
             "Acronym": "EBC1",
@@ -35773,15 +36552,15 @@
         },
         "(972, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0",
-            "Meaning": "Off",
+            "Last Value": "3",
+            "Meaning": "Not available",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  972",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Accelerator Interlock Switch",
             "Units": "bit",
-            "Value": "0"
+            "Value": "3"
         },
         "(972, 49)": {
             "Acronym": "EBC1",
@@ -35797,15 +36576,15 @@
         },
         "(973, 11)": {
             "Acronym": "EBC1",
-            "Last Value": "0.000",
-            "Meaning": "",
+            "Last Value": "102.000",
+            "Meaning": "Out of Range - High",
             "PGN": " 61441",
             "SA": " 11",
             "SPN": "  973",
             "Source": "Brakes - System Controller",
             "Suspect Parameter Number Label": "Engine Retarder Selection",
             "Units": "%",
-            "Value": "0.000"
+            "Value": "102.000"
         },
         "(973, 49)": {
             "Acronym": "EBC1",
@@ -35842,6 +36621,18 @@
             "Suspect Parameter Number Label": "PTO Governor State",
             "Units": "bit",
             "Value": "0"
+        },
+        "(976, 11)": {
+            "Acronym": "CCVS1",
+            "Last Value": "31",
+            "Meaning": "Not available",
+            "PGN": " 65265",
+            "SA": " 11",
+            "SPN": "  976",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "PTO Governor State",
+            "Units": "bit",
+            "Value": "31"
         },
         "(976, 23)": {
             "Acronym": "CCVS1",
@@ -36430,6 +37221,18 @@
             "Suspect Parameter Number Label": "Protect Lamp",
             "Units": "bit",
             "Value": "1"
+        },
+        "(987, 11)": {
+            "Acronym": "DM01",
+            "Last Value": "0",
+            "Meaning": "Lamp off",
+            "PGN": " 65226",
+            "SA": " 11",
+            "SPN": "  987",
+            "Source": "Brakes - System Controller",
+            "Suspect Parameter Number Label": "Protect Lamp",
+            "Units": "bit",
+            "Value": "0"
         }
     },
     "Machine UUID": "4C4C4544-0031-5310-804C-B2C04F473932",
@@ -36453,16 +37256,16 @@
             "PC Time minus ECM Time": 797.2178664207458
         },
         "Engine #1 on J1939": {
-            "Last ECM Time": 1517803177,
-            "PC Time minus ECM Time": 797.4035546779633
+            "Last ECM Time": 1518292998,
+            "PC Time minus ECM Time": 805.5892691612244
         },
         "Instrument Cluster #1 on J1939": {},
-        "Last GPS Time": 1517803975,
-        "Last PC Time": 1517803974.2505953,
+        "Last GPS Time": 1517805578,
+        "Last PC Time": 1518293803.5372133,
         "Off Board Diagnostic-Service Tool #2 on J1939": {},
         "PC Time at Last ECM Time": 1517803402.2178664,
-        "PC Time at Last GPS Reading": 1517803974.7737489,
-        "PC Time minus GPS Time": -0.22625112533569336,
+        "PC Time at Last GPS Reading": 1517805577.3126225,
+        "PC Time minus GPS Time": -0.6873774528503418,
         "Passenger-Operator Climate Control #1 on J1939": {},
         "Permission Time": 1517803127.9869914,
         "Retarder - Engine on J1939": {}
@@ -37036,5 +37839,7 @@
         "Title": "Associate Professor",
         "Web Token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb2NhbGhvc3QiLCJleHAiOjE1MjAzOTQ1MjAuMzgxMTMwNSwiaWF0IjoxNTE3ODAyNTIwLjM4MTEzMDUsInN1YiI6ImplcmVteS1kYWlseUB1dHVsc2EuZWR1Iiwic3ViX2V4cCI6NDI5NDk2NzI5NSwiYXV0aF90aW1lIjoxNTE3ODAyNTIwLjM4MTEzMDUsImVtYWlsIjoiamVyZW15LWRhaWx5QHV0dWxzYS5lZHUiLCJzY29wZSI6WyJhZG1pbiJdfQ.UVKNBYscEd5sVDr89eoyGeeCQXCeFA9YuhjVUIBitq0"
     },
-    "Warnings": []
+    "Warnings": [
+        "File signature not verified."
+    ]
 }

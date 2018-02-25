@@ -14,7 +14,13 @@ The Python package for this repository is available on pip.
 
 ```pip install TURP1210```
 
-The example.py program will enable you to import and run the module. Running a program base on the TURP1210 module is as simple as: 
+or you can clone this repository and use setup tools to install. From the command prompt: 
+
+```python setup.py install```
+
+This will install an module in your site-packages and copy over all the necessary files.
+
+The demo program will enable you to import and run the module. Running a program base on the TURP1210 module is as simple as: 
 
 ```
 import TURP1210 
@@ -43,11 +49,13 @@ open a command prompt (cmd) that has the python path ready to go. In the `GitHub
 
 If this doesn't work, try ```pip install pipreqs``` first.
 
-2. Build a wheel
+  1. Remove the setup utilities, if they are in requirements.txt
+
+  2. Build a wheel
 
  ```python setup.py bdist_wheel```
 
-3. Upload to PiPy
+  3. Upload to PiPy
 
 ```twine upload dist/*```
 

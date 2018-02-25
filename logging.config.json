@@ -1,0 +1,40 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "json_format": {
+            "class": "logging.Formatter",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+            "format": "{timestamp: \"%(asctime)s\", level: \"%(levelname)s\", module: \"%(module)s\", function: \"%(funcName)s\",  message: \"%(message)s\"},"
+        },
+        "simple": {
+            "format": "%(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout"
+        },
+        "file_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "json_format",
+            "filename": "TU_RP1210_Log.json",
+            "mode": "w",
+            "encoding": "utf8"
+        }
+    },
+    "loggers": {
+        "": {
+            "handlers": [
+                "console",
+                "file_handler"
+            ],
+            "level": "DEBUG",
+            "propagate": true
+        }
+    }
+}

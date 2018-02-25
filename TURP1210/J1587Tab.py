@@ -428,12 +428,14 @@ class J1587Tab(QWidget):
 
 
             if pid == 168: #Battery Potential
-                self.battery_potential[source_key].append((time.time(), float(self.J1587_unique_ids[pid_key]["Value"])))
-                self.root.voltage_graph.add_data(self.battery_potential[source_key], 
-                    marker = 'x-', 
-                    label = self.J1587_unique_ids[pid_key]["Message Identification"]+": PID {}".format(pid))
-                self.root.voltage_graph.plot()
-            
+                try:
+                    self.battery_potential[source_key].append((time.time(), float(self.J1587_unique_ids[pid_key]["Value"])))
+                    self.root.voltage_graph.add_data(self.battery_potential[source_key], 
+                        marker = 'x-', 
+                        label = self.J1587_unique_ids[pid_key]["Message Identification"]+": PID {}".format(pid))
+                    self.root.voltage_graph.plot()
+                except ValueError:
+                    logger.debug("No Definition for Battery Potential in J1587db")
             elif pid == 245: #Total Vehicle Distance
                 val = float(self.J1587_unique_ids[pid_key]["Value"])
                 units = self.J1587_unique_ids[pid_key]["Units"]

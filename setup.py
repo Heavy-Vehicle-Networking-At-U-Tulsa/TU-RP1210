@@ -24,7 +24,7 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
-with open(path.join(here, 'TURP1210/version.json')) as f:
+with open(path.join(here, 'version.json')) as f:
     version = json.load(f)
 
 ver = "{}.{}.{}".format(version["major"],version["minor"],version["patch"])
@@ -147,11 +147,12 @@ setup(
     #
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
-    package_data = {'TUPR1210': ['TURP1210/J1587db.json',
+    include_package_data = True,
+    package_data = {'TUPR1210': ['TURP1210/icons',
                                  'TURP1210/J1939db.json',
-                                 'TURP1210/icons/*',
-                                 'TURP1210/logging.config.json',
-                                 'TURP1210/SCELogo.pdf']},
+                                 'TURP1210/J1587db.json',
+                                 'TURP1210/logging.config.json'
+                                ]},
                                  
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
