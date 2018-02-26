@@ -17,9 +17,9 @@ def load_public_key(keyfile):
     Loads an SSH (PEM) public key from a the path.
     """
     try:
-        with open(keyfile, 'r') as f:
+        with open(keyfile, 'rb') as f:
             keystring = f.read()
-    except FileNotFoundError:
+    except (FileNotFoundError, OSError):
         keystring = bytes(keyfile,'ascii')
 
     return load_ssh_public_key(keystring, default_backend())

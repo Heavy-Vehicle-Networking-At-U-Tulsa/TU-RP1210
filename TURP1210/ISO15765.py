@@ -262,6 +262,18 @@ class ISO15765Driver():
                 meaning = negative_response_codes[nrc_code]
             except KeyError:
                 meaning = "Unknown Response Code"
+        else:
+            try:
+                meaning = "{}".format(struct.unpack(">L",data[1:5])[0])
+            except struct.error:
+                try:
+                    meaning = "{}".format(struct.unpack(">H",data[1:3])[0])
+                except struct.error:
+                    pass
+                except:
+                    logger.debug(traceback.format_exc())
+            except:
+                logger.debug(traceback.format_exc())
         return meaning, value, units
 
 
