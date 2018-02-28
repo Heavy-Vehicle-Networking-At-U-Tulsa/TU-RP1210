@@ -14,3 +14,6 @@ TURP1210/TU_RP1210.dist/
 
 TURP1210/TestReport.pdf
 *.zip
+TestReport.pdf
+J1939db.json
+J1587db.json

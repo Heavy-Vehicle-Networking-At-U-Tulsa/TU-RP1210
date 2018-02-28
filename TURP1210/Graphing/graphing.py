@@ -114,7 +114,14 @@ class GraphDialog(QDialog):
     
     def add_xy_data(self, data, marker='*-', label=""):
         x, y = zip(*data) #unpacks a list of tuples
-        self.data[label] = {"X": x, "Y": y, "Marker": marker}
+        # logger.debug("X data:")
+        # logger.debug(x)
+        # logger.debug("Y data:")
+        # logger.debug(y)
+
+        self.data[label] = {"X": [float(val) for val in x], 
+                            "Y": [float(val) for val in y], 
+                            "Marker": marker}
         
 
     def set_yrange(self,min_y, max_y):
@@ -213,7 +220,7 @@ class GraphTab(QWidget):
             try:
                 with open(filename,'w', newline='') as csv_file:
                     writer = csv.writer(csv_file)
-                    writer.writerow(["Synercon Technologies, LLC"])
+                    writer.writerow(["The University of Tulsa"])
 
                     writer.writerow(["Date of Creation:", "{}".format(get_local_time_string(time.time()))])
                     
@@ -249,7 +256,7 @@ class GraphTab(QWidget):
             
     
 
-    def plot_xy(self):
+    def update_plot_xy(self):
         for key, value in self.data.items():
             self.ax.plot(value["X"], value["Y"], value["Marker"],label=key)
         self.ax.grid(True)

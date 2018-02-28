@@ -25,8 +25,6 @@ default license is as follows:
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-TU_RP1210_version={"major":2,"minor":0}
-
 from PyQt5.QtWidgets import (QMainWindow,
                              QWidget,
                              QTreeView,
@@ -108,16 +106,24 @@ else:
     # unfrozen
     module_directory = os.path.dirname(os.path.realpath(__file__))
 
-with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
-    logging_dictionary = json.load(f)
+try:
+    with open("logging.config.json",'r') as f:
+        logging_dictionary = json.load(f)
+except FileNotFoundError:
+    try:
+        with open(os.path.join(module_directory,"logging.config.json"),'r') as f:
+            logging_dictionary = json.load(f)
+    except FileNotFoundError:
+        print("No logging.config.json file found.")
 
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
+with open('version.json') as f:
+    TU_RP1210_version = json.load(f)
+
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
-logger.info("Starting TU_RP1210 Version {}.{} at {}".format(TU_RP1210_version['major'],
-                                                            TU_RP1210_version['major'],
-                                                            start_time))
+
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
@@ -134,15 +140,77 @@ class TU_RP1210(QMainWindow):
         progress_label = QLabel("Loading the J1939 Database")
         #load the J1939 Database
         progress.setLabel(progress_label)
-        with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
-            self.j1939db = json.load(j1939_file) #should verify these file
+        try:
+            with open("J1939db.json",'r') as j1939_file:
+                self.j1939db = json.load(j1939_file) 
+        except FileNotFoundError:
+            try:
+                with open(os.path.join(module_directory,"J1939db.json"),'r') as j1939_file:
+                    self.j1939db = json.load(j1939_file) 
+            except FileNotFoundError: 
+                # Make a data structure to do something anyways
+                logger.debug("J1939db.json file was not found.")
+                self.j1939db = {"J1939BitDecodings":{},
+                                "J1939FMITabledb": {},
+                            "J1939LampFlashTabledb": {},
+                            "J1939OBDTabledb": {},
+                            "J1939PGNdb": {},
+                            "J1939SAHWTabledb": {},
+                            "J1939SATabledb": {},
+                            "J1939SPNdb": {} }
         logger.info("Done Loading J1939db")
         progress.setValue(1)
         QCoreApplication.processEvents()
 
         progress_label.setText("Loading the J1587 Database")
-        with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
-            self.j1587db = json.load(j1587_file)
+        try:
+            with open("J1587db.json",'r') as j1587_file:
+                self.j1587db = json.load(j1587_file)
+        except FileNotFoundError:
+            logger.debug("J1587db.json file was not found.")
+            self.j1587db = { "FMI": {},
+                             "MID": {},
+                             "MIDAlias": {},
+                             "PID": {"168":{"BitResolution" : 0.05,
+                                            "Category" : "live",
+                                            "DataForm" : "a a",
+                                            "DataLength" : 2,
+                                            "DataType" : "Unsigned Integer",
+                                            "FormatStr" : "%0.2f",
+                                            "Maximum" : 3276.75,
+                                            "Minimum" : 0.0,
+                                            "Name" : "Battery Potential (Voltage)",
+                                            "Period" : "1",
+                                            "Priority" : 5,
+                                            "Unit" : "volts"},
+                                    "245" : { "BitResolution" : 0.1,
+                                              "Category" : "hist",
+                                              "DataForm" : "n a a a a",
+                                              "DataLength" : 4,
+                                              "DataType" : "Unsigned Long Integer",
+                                              "FormatStr" : "%0.1f",
+                                              "Maximum" : 429496729.5,
+                                              "Minimum" : 0.0,
+                                              "Name" : "Total Vehicle Distance",
+                                              "Period" : "10",
+                                              "Priority" : 7,
+                                              "Unit" : "miles"},
+                                    "247" : {
+                                        "BitResolution" : 0.05,
+                                        "Category" : "hist",
+                                        "DataForm" : "n a a a a",
+                                        "DataLength" : 4,
+                                        "DataType" : "Unsigned Long Integer",
+                                        "FormatStr" : "%0.2f",
+                                        "Maximum" : 214748364.8,
+                                        "Minimum" : 0.0,
+                                        "Name" : "Total Engine Hours",
+                                        "Period" : "On request",
+                                        "Priority" : 8,
+                                        "Unit" : "hours"}
+                                    },
+                             "PIDNames": {},
+                             "SID": {} }
         logger.info("Done Loading J1587db")
         progress.setValue(2)
         QCoreApplication.processEvents()
@@ -316,37 +384,38 @@ class TU_RP1210(QMainWindow):
         # RP1210 Menu Items
         self.rp1210_menu = menubar.addMenu('&RP1210')
         
-        run_menu = menubar.addMenu("&Download")
+        self.run_menu = menubar.addMenu("&Download")
         run_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Go_48px.png')), 'Get All &Known Data', self)
         run_action.setShortcut('Ctrl+Shift+K')
         run_action.setStatusTip('Scan for all data using standard data and known EDR recovery routines.')
         run_action.triggered.connect(self.start_scan)
-        run_menu.addAction(run_action)
+        self.run_menu.addAction(run_action)
         
         ddec1587_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_D_52px.png')), 'Start &DDEC J1708 Download', self)
         ddec1587_action.setShortcut('Ctrl+Shift+D')
         ddec1587_action.setStatusTip('Send requests to download DDEC Reports Data Pages.')
         ddec1587_action.triggered.connect(self.start_ddec_J1587)
-        run_menu.addAction(ddec1587_action)
+        self.run_menu.addAction(ddec1587_action)
         
         
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
         setup_gps_action.setStatusTip('Adjust settings for integrating GPS data into the report.')
         setup_gps_action.triggered.connect(self.setup_gps)
-        run_menu.addAction(setup_gps_action)
+        self.run_menu.addAction(setup_gps_action)
         
         upload_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Upload_to_Cloud_48px.png')), 'Upload to EDR Data', self)
         upload_action.setShortcut('Ctrl+Shift+U')
         upload_action.setStatusTip('Upload the data package to the central server to be decoded.')
         upload_action.triggered.connect(self.upload_data_package)
-        run_menu.addAction(upload_action)
+        self.run_menu.addAction(upload_action)
 
 
-        run_toolbar = self.addToolBar("&Download")
-        run_toolbar.addAction(run_action)
-        run_toolbar.addAction(ddec1587_action)
-        run_toolbar.addAction(upload_action)
+        self.run_toolbar = self.addToolBar("&Download")
+        self.run_toolbar.addAction(run_action)
+        self.run_toolbar.addAction(ddec1587_action)
+        self.run_toolbar.addAction(setup_gps_action)
+        self.run_toolbar.addAction(upload_action)
         
         graph_menu = menubar.addMenu("&Graph")
         graph_data_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), '&Plot Incident Graphs', self)
@@ -663,8 +732,8 @@ class TU_RP1210(QMainWindow):
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
-        logger.debug("returned_message:")
-        logger.debug(returned_message)
+        #logger.debug("returned_message:")
+        #logger.debug(returned_message)
         try:
             self.data_package["Decrypted Data"] = json.loads(returned_message)
             self.ddec_j1587.plot_decrypted_data()
@@ -685,12 +754,9 @@ class TU_RP1210(QMainWindow):
     def show_graphs(self):
         self.voltage_graph.show()
         try:
-            self.ddec_preview_graph.show()
+            self.ddec_j1587.ddec_preview_graph.show()
         except AttributeError:
-            pass
-        try:
-            self.cat_preview_graph.show()
-        except AttributeError:
+            logger.debug(traceback.format_exc())
             pass
 
     def new_file(self):
@@ -803,6 +869,14 @@ class TU_RP1210(QMainWindow):
 
 
     def save_file(self, backup=False):
+        """
+        Save the file as a CPT (short for TruckCRYPT) file to the
+        current path. 
+        """
+
+        #update the data package
+        self.data_package["UDS Messages"] = self.J1939.iso_recorder.uds_messages
+
         if backup:
             temp_name = os.path.basename(self.filename)
             temp_name.strip("Backup_")
@@ -877,20 +951,12 @@ class TU_RP1210(QMainWindow):
         self.pdf_engine = FLAReportTemplate(self)
         
     def export_to_json(self):
-        logger.debug("Export to JSON Selected.") 
-        
+        logger.debug("Export to JSON Selected.")
+        self.save_file() 
         try:
-            filename, json_contents = self.open_file(reload=False)
-        except TypeError:
-            return #no decent file was selected.
-        except:
-            logger.debug("Failed to Export JSON. json_contents may be None.")
-            logger.debug(traceback.format_exc())
-            return
-
-        try:
+            filename = os.path.join(self.export_path,self.filename)
             with open(filename[:-3] + 'json', 'w') as outfile:
-                json.dump(json_contents, outfile, indent=4, sort_keys=True)
+                json.dump(self.data_package, outfile, indent=4, sort_keys=True)
             info = "Successfully exported JSON file from {}".format(filename)
             QMessageBox.information(self,"Export Successful",info)
             logger.info(info)
@@ -1649,11 +1715,11 @@ class TU_RP1210(QMainWindow):
                             logger.debug("Can't keep up with messages.")
                             return
                 except KeyError:
-                    #logger.debug(traceback.format_exc())
-                    pass # nothing is connected.
+                    logger.debug(traceback.format_exc())
+                    #pass # nothing is connected.
         except AttributeError:
-            #logger.debug(traceback.format_exc())
-            pass # nothing is connected.        
+            logger.debug(traceback.format_exc())
+            #pass # nothing is connected.        
 
     def register_software(self):
         logging.debug("Register Software Request")                      
@@ -1703,12 +1769,3 @@ class TU_RP1210(QMainWindow):
 
     def plot_decrypted_data(self):
         self.ddec_j1587.plot_decrypted_data()
-
-if __name__ == '__main__':
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    else:
-        app.close()
-    execute = TU_RP1210()
-    sys.exit(app.exec_())

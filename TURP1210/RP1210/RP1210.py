@@ -621,7 +621,7 @@ class RP1210Class():
                                                                 self.RP1210.get_error_code(return_value))
                 logger.warning(message)
         except:
-            logger.warninig(traceback.format_exc())
+            logger.warning(traceback.format_exc())
 
     def send_command(self, command_num, client_id, message_bytes):
         """

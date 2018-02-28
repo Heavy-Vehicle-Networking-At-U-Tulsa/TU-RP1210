@@ -10,13 +10,24 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+import json
+import shutil
+
+
+try:
+    shutil.rmtree(r"dist")
+except FileNotFoundError:
+    pass
 
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
+with open(path.join(here, 'version.json')) as f:
+    version = json.load(f)
 
+ver = "{}.{}.{}".format(version["major"],version["minor"],version["patch"])
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
 
@@ -40,7 +51,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.2',  # Required
+    version=ver,  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -80,14 +91,14 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers, Students',
         'Topic :: Vehicle Networks :: Data Visualization',
 
         # Pick your license as you wish
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GPL v3 with exceptions',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -109,7 +120,7 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
+    packages=find_packages(exclude=['contrib', 'docs', 'tests', 'build']),  # Required
 
     # This field lists other packages that your project depends on to run.
     # Any package you put here will be installed by pip when your project is
@@ -123,7 +134,6 @@ setup(
                       'matplotlib>=2.0.2',
                       'passlib>=1.7.1',
                       'pdfrw>=0.4',
-                      'setuptools>=38.4.0',
                       'humanize>=0.5.1',
                       'cryptography>=2.1.4',
                       'PyQt5>=5.10',
@@ -137,13 +147,12 @@ setup(
     #
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
-    package_data = {'TUPR1210': ['TURP1210/J1587db.json',
+    include_package_data = True,
+    package_data = {'TUPR1210': ['TURP1210/icons',
                                  'TURP1210/J1939db.json',
-                                 'TURP1210/icons/*',
-                                 'TURP1210/logging.config.json',
-                                 'TURP1210/SCELogo.pdf',
-                                 'TURP1210/UserData.json',
-                                 'TURP1210/ExamplePrivatePGPkey.pgp']},
+                                 'TURP1210/J1587db.json',
+                                 'TURP1210/logging.config.json'
+                                ]},
                                  
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
