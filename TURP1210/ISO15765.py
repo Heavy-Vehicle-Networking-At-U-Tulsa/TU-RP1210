@@ -14,6 +14,28 @@ logger = logging.getLogger(__name__)
 
 ISO_PGN = 0xDA00
 
+SIDNR = 0x7F
+
+service_identifier = { 0x7F: "Negative Response",
+                       0x10: "Diagnostic Session Control",
+                       0x11: "ECU Reset",
+                       0x27: "Security Access",
+                       0x22: "Read Data By Identifier",
+                       0x28: "Communication Control",
+                       0x3E: "Tester Present",
+                       0x83: "Access Timing Parameter",
+                       0x84: "Secure Data Transmission",
+                       0x85: "Control DTC Setting",
+                       0x31: "Routine Control"
+
+    }
+
+negative_response_codes = { 0x7F: "Service Not Supported in Active Session",
+                            0x12: "Subfunction Not Supported",
+                            0x31: "Request Out of Range"
+   }
+
+
 def get_first_nibble(data_byte):
     return (data_byte & 0xF0) >> 4
 
@@ -106,6 +128,7 @@ class ISO15765Driver():
         self.root = parent
         self.transport_queues = {}
         self.uds_count = 0
+        self.uds_messages = {}
 
     def send_message(self, data_bytes, dst=0x00):
         #logger.debug("Sending ISO Message Data: {}".format(data_bytes))
@@ -117,11 +140,12 @@ class ISO15765Driver():
         except KeyError:
             return "Unknown"
 
-    def read_message(self):
+    def read_message(self, display=False):
         # The queue is fed by RP1210ReadMessageThread 
         while self.read_queue.qsize():
             (pgn, priority, src_addr, dst_addr, message_data) = self.read_queue.get()
-            #logger.debug("Received ISO message: {}".format((pgn, priority, src_addr, dst_addr, message_data)))
+            #if display:
+            #    logger.debug("Received ISO message: {}".format((pgn, priority, src_addr, dst_addr, message_data)))
             if is_first_frame(message_data):
                 #don't do anything if we already see a session from this source
                 #logger.debug("This was the First Frame of an ISO message.")
@@ -130,8 +154,8 @@ class ISO15765Driver():
                                                                             dst_addr,
                                                                             message_data)
                     fc_data = bytes([(0x3 << 4), 0, 0, 0, 0, 0, 0, 0])
-                    self.send_message(fc_data, dst=src_addr)
-
+                    if not display: # Only respond if not displaying. Display is a different object
+                        self.send_message(fc_data, dst=src_addr)
 
             elif is_consecutive_frame(message_data):
                 #logger.debug("This was a consecutive frame of an ISO message.")
@@ -141,33 +165,117 @@ class ISO15765Driver():
                     if this_queue.is_full():
                         completed_data = this_queue.get_data()
                         del(self.transport_queues[src_addr])
-                        self.uds_count += 1
-                        self.root.J1939.uds_messages[self.uds_count]={"SA": this_queue.source_address,
-                                                              "Source": self.look_up_source(this_queue.source_address),
-                                                              "DA": this_queue.dest_address,
-                                                              "Desination": self.look_up_source(this_queue.dest_address),
-                                                              "Raw Bytes": repr(completed_data), 
-                                                              "Encoded Bytes" : str(base64.b64encode(completed_data), "ascii"),
-                                                              "Raw Hexadecimal": bytes_to_hex_string(completed_data)}
-                        self.root.J1939.fill_uds_table()
+                        if display:
+                            self.display_values(completed_data,
+                                                this_queue.source_address,
+                                                this_queue.dest_address)
                         return (0xda00, 6, this_queue.source_address,
                                 this_queue.dest_address, completed_data)
             elif is_fc_frame(message_data):
                 pass
             else:
                 data_length, message_data = dissect_other_frame(message_data)
-                self.uds_count += 1
-                self.root.J1939.uds_messages[self.uds_count]={"SA": src_addr,
-                                                              "Source": self.look_up_source(src_addr),
-                                                              "DA": dst_addr,
-                                                              "Desination": self.look_up_source(dst_addr),
-                                                              "Raw Bytes": repr(message_data[:data_length]),
-                                                              "Encoded Bytes" : str(base64.b64encode(message_data[:data_length]), "ascii"),
-                                                              "Raw Hexadecimal": bytes_to_hex_string(message_data[:data_length])}
-                self.root.J1939.fill_uds_table()
+                if display:
+                    self.display_values(message_data[:data_length], src_addr, dst_addr)
                 return (pgn, priority, src_addr, dst_addr, message_data)
         
         return (None, None, None, None, None)
+
+    def display_values(self, A_data, sa, da):
+        """
+        Provide a common function to display UDS values in the UDS table
+        """
+        self.uds_count += 1
+        meaning, value, units = self.get_meaning(A_data[0], A_data[1:])
+        #["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_messages[self.uds_count] = {"SA": sa,
+                                          "Source": self.look_up_source(sa),
+                                          "DA": da,
+                                          "SID": "{:02X}".format(A_data[0]),
+                                          "Service Name": self.get_service_identifier(A_data[0]),
+                                          "Meaning": meaning,
+                                          "Value": value,
+                                          "Units": units,
+                                          "Raw Bytes": repr(A_data[1:]),
+                                          "Encoded Bytes" : str(base64.b64encode(A_data[1:]), "ascii"),
+                                          "Raw Hexadecimal": bytes_to_hex_string(A_data[1:])}
+        
+        #logger.debug(self.uds_messages[self.uds_count])
+        
+    def get_service_identifier(self, sid):
+        """
+        Pass in a UDS Service Identifier number and look up what it means. 
+        A positive response code has 0x40 added to the SID, so we mask it off to look up 
+        the requesting sid. 
+        Look up data according to ISO 14229-1:2013 Table 23
+        """
+        try:
+            return service_identifier[sid]
+        except KeyError:
+            try:
+                return "Res. " + service_identifier[sid & 0b10111111]    
+            except KeyError:
+                return "Unknown SID"
+    
+    def get_meaning(self, sid, data):
+        """
+        Using the service identifier, determine which type of data we need. For example, a 0x62 
+        is a positive response to the request data by parameter sid. Ues ISO 14229-1 Table C.1 to 
+        determine the values. 
+
+        Use the ISO Standard
+        """
+
+        meaning = ""
+        value = ""
+        units = ""
+        if sid == 0x62: #positive response to read data by identifier
+            code = struct.unpack(">H",data[0:2])[0]
+            #look up codes according to ISO 14229-1 Table C1
+            if code == 0xF195:
+                meaning = "System Supplier ECU Software Version Number"
+            elif code ==  0xF190:
+                meaning = "Vehicle Identfication Number"
+                value = data[2:].decode('ascii','ignore')
+                units = "ASCII"
+            elif code == 0xF193:
+                meaning = "System Supplier ECU Hardware Version Number"   
+            elif code == 0xF18C:
+                meaning = "ECU Serial Number"
+                value = data[2:].decode('ascii','ignore')
+                units = "ASCII"
+            elif code == 0xF180:
+                meaning = "Boot Software Identfication"
+            elif code == 0xF181:
+                meaning = "Application Software Identfication"
+            elif code == 0xF186:
+                meaning = "Active Diagnostic Session"
+            elif code == 0xF192:
+                meaning = "System Supplier ECU Hardware Number"
+            elif code == 0xF197:
+                meaning = "System Name or Engine Type"
+
+        elif sid == 0x7F: #NACK
+            nrc_code = data[1] #negative response code
+            #Look up data according to ISO 14229-1:2013 Table A.1
+            try:
+                meaning = negative_response_codes[nrc_code]
+            except KeyError:
+                meaning = "Unknown Response Code"
+        else:
+            try:
+                meaning = "{}".format(struct.unpack(">L",data[1:5])[0])
+            except struct.error:
+                try:
+                    meaning = "{}".format(struct.unpack(">H",data[1:3])[0])
+                except struct.error:
+                    pass
+                except:
+                    logger.debug(traceback.format_exc())
+            except:
+                logger.debug(traceback.format_exc())
+        return meaning, value, units
+
 
     def uds_read_data_by_id(self, param_bytes, dst=0, timeout=.5):
         '''UDS "read data by identifier" message. param_bytes is everything following

@@ -31,17 +31,17 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QVariant, QAbstractItemModel, QSortFilterProxyModel
 from PyQt5.QtGui import QIcon
-
+import queue
 import time
 import calendar
 import struct
 import base64
 import traceback
 from collections import OrderedDict
-#import TURP1210.RP1210 as RP1210
 from TURP1210.RP1210.RP1210Functions import *
 from TURP1210.TableModel.TableModel import *
 from TURP1210.Graphing.graphing import *
+from TURP1210.ISO15765 import *
 
 import logging
 logger = logging.getLogger(__name__)
@@ -51,10 +51,18 @@ class J1939Tab(QWidget):
         super(J1939Tab,self).__init__()
         self.root = parent
         self.tabs = tabs
+        
+        self.iso_queue = queue.Queue()
+        self.iso_recorder = ISO15765Driver(self.root, self.iso_queue)
+
+        self.previous_spn_length = 0
+        self.previous_uds_length = 0
         self.reset_data()
+
         self.spn_needs_updating = True
         self.dm01_needs_updating = True
         self.dm02_needs_updating = True
+
         self.init_pgn()
         self.init_spn()
         self.init_dtc()
@@ -68,6 +76,10 @@ class J1939Tab(QWidget):
         stop_broadcast_timer = QTimer(self)
         stop_broadcast_timer.timeout.connect(self.stop_broadcast)
         stop_broadcast_timer.start(5000) #milliseconds
+
+        uds_fill_timer = QTimer(self)
+        uds_fill_timer.timeout.connect(self.fill_uds_table)
+        uds_fill_timer.start(500)
 
         # spn_table_timer = QTimer(self)
         # spn_table_timer.timeout.connect(self.fill_spn_table)
@@ -116,7 +128,8 @@ class J1939Tab(QWidget):
         self.active_trouble_codes = {}
         self.previous_trouble_codes = {}
         self.freeze_frame = {}
-        self.uds_messages = OrderedDict()
+        self.iso_recorder.uds_messages = OrderedDict()
+        #self.root.data_package["UDS Messages"] = self.iso_recorder.uds_messages
         
 
     def init_pgn(self):
@@ -141,11 +154,13 @@ class J1939Tab(QWidget):
         self.pgn_table_proxy = Proxy()
         self.pgn_data_model.setDataDict(self.j1939_unique_ids)
         self.j1939_id_table_columns = ["PGN","Acronym","Parameter Group Label","SA","Source","Message Count","Period (ms)","Raw Hexadecimal"]
+        self.pgn_resizable_rows = [0,1,2,3,4]
         self.pgn_data_model.setDataHeader(self.j1939_id_table_columns)
         self.pgn_table_proxy.setSourceModel(self.pgn_data_model)
         self.j1939_id_table.setModel(self.pgn_table_proxy)
         self.j1939_id_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.j1939_id_table.setSortingEnabled(True)
+        self.j1939_id_table.setWordWrap(False)
         
         #Create a layout for that box using a grid
         j1939_id_box_layout = QGridLayout()
@@ -171,14 +186,15 @@ class J1939Tab(QWidget):
         self.uds_table = QTableView()
         self.uds_data_model = J1939TableModel()
         self.uds_table_proxy = Proxy()
-        self.uds_data_model.setDataDict(self.uds_messages)
-        self.uds_table_columns = ["SA","DA","Raw Hexadecimal"]
+        self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
+        self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_resizable_rows = [0,2,3,4,6,7,8]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
         self.uds_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.uds_table.setSortingEnabled(False)
-        self.uds_table.setWordWrap(True)
+        self.uds_table.setWordWrap(False)
         
         #Create a layout for that box using a grid
         uds_box_layout = QGridLayout()
@@ -292,11 +308,13 @@ class J1939Tab(QWidget):
         self.spn_table_proxy = Proxy()
         self.spn_data_model.setDataDict(self.unique_spns)
         self.spn_table_columns = ["Acronym","PGN","SA","Source","SPN","Suspect Parameter Number Label","Value","Units","Meaning"]
+        self.spn_resizable_rows = [0,1,2,4,5,6,7,8]
         self.spn_data_model.setDataHeader(self.spn_table_columns)
         self.spn_table_proxy.setSourceModel(self.spn_data_model)
         self.spn_table.setModel(self.spn_table_proxy)
         self.spn_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.spn_table.setSortingEnabled(True)
+        self.spn_table.setWordWrap(False)
 
         #Create a layout for that box using the vertical
         spn_box_layout = QGridLayout()
@@ -320,12 +338,17 @@ class J1939Tab(QWidget):
         logger.info("User initiated request for DM02.")
     
     def fill_uds_table(self):
-        self.uds_data_model.aboutToUpdate()
-        self.uds_data_model.setDataDict(self.uds_messages)
-        self.uds_data_model.signalUpdate()
-        self.uds_table.resizeColumnsToContents()
-        self.uds_table.resizeRowsToContents()
-        self.root.data_package["UDS Messages"].update(self.uds_messages)
+        #self.root.data_package["UDS Messages"].update(self.iso_recorder.uds_messages)
+        if self.tabs.currentIndex() == self.tabs.indexOf(self.uds_tab):
+            if len(self.iso_recorder.uds_messages) > self.previous_uds_length:
+                self.previous_uds_length = len(self.iso_recorder.uds_messages)
+                self.uds_data_model.aboutToUpdate()
+                self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
+                self.uds_data_model.signalUpdate()
+                self.uds_table.resizeRowsToContents()
+                for r in self.uds_resizable_rows:
+                    self.uds_table.resizeColumnToContents(r)
+                self.uds_table.scrollToBottom()
 
     def fill_dm01_table(self):
         #if self.tabs.currentIndex() == self.tabs.indexOf(self.j1939_dtc_tab):
@@ -356,10 +379,13 @@ class J1939Tab(QWidget):
 
     def fill_spn_table(self):
         if self.tabs.currentIndex() == self.tabs.indexOf(self.j1939_spn_tab):
-            self.spn_data_model.aboutToUpdate()
-            self.spn_data_model.signalUpdate()
-            self.spn_table.resizeColumnsToContents()
-            self.spn_table.resizeRowsToContents()
+            if len(self.unique_spns) > self.previous_spn_length:
+                self.previous_spn_length = len(self.unique_spns)
+                self.spn_data_model.aboutToUpdate()
+                self.spn_data_model.signalUpdate()
+                self.spn_table.resizeRowsToContents()
+                for r in self.spn_resizable_rows:
+                    self.spn_table.resizeColumnToContents(r)
         #self.spn_table.scrollToBottom()
 
     def clear_j1939_table(self):
@@ -390,22 +416,28 @@ class J1939Tab(QWidget):
         self.dm04_data_model.endResetModel()
 
         self.uds_data_model.beginResetModel()
-        self.uds_messages = OrderedDict()
-        self.uds_data_model.setDataDict(self.uds_messages)
+        self.iso_recorder.uds_messages = OrderedDict()
+        self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_data_model.endResetModel()
         
     def fill_j1939_table(self, rx_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
+        
+        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
+        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
+        pri = rx_buffer[8] # how/priority
+        sa = rx_buffer[9] #Source Address
+        da = rx_buffer[10] #Destination Address
+        
+        if pgn == 0xDA00: #ISO
+            self.iso_queue.put((pgn, pri, sa, da, rx_buffer[11:]))
+            self.iso_recorder.read_message(True)
+            return
+        
         if rx_buffer[4] == 1: #Echo message
             # Return when the VDA is the one that sent the message. 
             # The message gets logged, but not displayed in the table
             return 
-        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
-        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
-        da = rx_buffer[8] #Destination Address
-        sa = rx_buffer[9] #Source Address
-        # if pgn == 0xDA00: #ISO
-            # self.root.isodriver.read_message()
 
         if pgn in self.pgns_to_not_decode:
             # Return when we aren't interested in the data.
@@ -467,16 +499,17 @@ class J1939Tab(QWidget):
         self.j1939_unique_ids[pgn_key]["Period (ms)"] = "{:10.2f}".format(1000 * (current_time - self.j1939_unique_ids[pgn_key]["Start Time"])/self.j1939_unique_ids[pgn_key]["Num"])
         
         if self.j1939_unique_ids[pgn_key]["Num"] == 1:
-            logger.debug("Adding Row to PGN Table:")
-            logger.debug(self.j1939_unique_ids[pgn_key])
+            #logger.debug("Adding Row to PGN Table:")
+            #logger.debug(self.j1939_unique_ids[pgn_key])
             self.pgn_data_model.aboutToUpdate()
             self.pgn_data_model.setDataDict(self.j1939_unique_ids)
             self.pgn_data_model.signalUpdate()
-            self.j1939_id_table.resizeColumnsToContents()
             self.j1939_id_table.resizeRowsToContents()     
             self.j1939_id_table.scrollToBottom()
+            for r in self.pgn_resizable_rows:
+                self.j1939_id_table.resizeColumnToContents(r)
 
-            #QCoreApplication.processEvents()
+            QCoreApplication.processEvents()
 
         elif self.add_message_button.isChecked():
            

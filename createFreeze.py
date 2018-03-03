@@ -2,10 +2,12 @@ import sys
 import shutil
 import os
 from cx_Freeze import setup, Executable
+import json
+with open("TURP1210/version.json") as fp:
+    version = json.load(fp)
 
-
-os.environ['TCL_LIBRARY'] = r'C:\Users\dailyadmin\AppData\Local\Programs\Python\Python36-32\tcl\tcl8.6'
-os.environ['TK_LIBRARY'] = r'C:\Users\dailyadmin\AppData\Local\Programs\Python\Python36-32\tcl\tk8.6'
+#os.environ['TCL_LIBRARY'] = r'C:\Users\dailyadmin\AppData\Local\Programs\Python\Python36-32\tcl\tcl8.6'
+#os.environ['TK_LIBRARY'] = r'C:\Users\dailyadmin\AppData\Local\Programs\Python\Python36-32\tcl\tk8.6'
 
 # Dependencies are automatically detected, but it might need fine tuning.
 
@@ -116,7 +118,7 @@ target = Executable(
     )
 
 setup(  name = "TU-RP1210",
-        version = "1.0.2",
+        version = "{}.{}.{}".format(version["major"],version["minor"],version["patch"]),
         description = "A graphical user interface for Vehicle Diagnostic Adapters compatible with RP1210",
         options = {"build_exe": build_exe_options,
                    "install_exe":{"force":True},

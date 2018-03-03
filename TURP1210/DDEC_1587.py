@@ -479,9 +479,12 @@ class DDEC_J1587(QWidget):
                     for i in range(3):
                         self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\x03') # ACK/EOM
                 else:
-                    logger.warning("The number of bytes received was different than the number promised for {}".format(data_page_name))                
+                    warn = "The number of bytes received was different than the number promised for {}\n Please try again.".format(data_page_name)
+                    logger.warning(warn)                
                     for i in range(3):
                         self.root.RP1210.send_message(self.root.client_ids["J1708"], b'\x05\xb6\xc5\x02\x80\xFF') # Abort   
+                    self.ddec_progress.deleteLater()
+                    QMessageBox.warning(self.root,"Download issue", warn )
                     return
                 # Store the raw bytes to use later.
                 raw_pages[data_page_name] = response
@@ -539,15 +542,16 @@ class DDEC_J1587(QWidget):
         
         i = 0
         for hb_data in self.generate_ddec_preview(raw_pages["Hard Brake Data"]):
-            print(hb_data['record_lines'])
             i += 1
+            logger.debug("Hard Brake {} record lines:".format(i))
+            logger.debug(hb_data['record_lines'])
             self.ddec_preview_graph.add_xy_data(hb_data['record_lines'],
                         marker=markers[i] + '-',
                         label="Hard Brake #{}".format(i)
                         )
         for ls_data in self.generate_ddec_preview(raw_pages["Last Stop Data"]):
-            print(ls_data['record_lines'])
-            i += 1
+            logger.debug("Last Stop record lines:")
+            logger.debug(ls_data['record_lines'])
             self.ddec_preview_graph.add_xy_data(ls_data['record_lines'],
                         marker=markers[i] + '-',
                         label="Last Stop"
@@ -555,7 +559,7 @@ class DDEC_J1587(QWidget):
         self.ddec_preview_graph.plot_xy()
         self.root.ok_to_send_j1587_requests = True
 
-
+        self.ddec_progress.deleteLater()
 
         # Encrypt the data
         raw_report = json.dumps(encoded_pages)
