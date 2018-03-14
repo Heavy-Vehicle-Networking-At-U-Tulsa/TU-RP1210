@@ -188,17 +188,17 @@ class ISO15765Driver():
         self.uds_count += 1
         meaning, value, units = self.get_meaning(A_data[0], A_data[1:])
         #["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
-        self.uds_messages[self.uds_count] = {"SA": sa,
-                                          "Source": self.look_up_source(sa),
-                                          "DA": da,
-                                          "SID": "{:02X}".format(A_data[0]),
-                                          "Service Name": self.get_service_identifier(A_data[0]),
-                                          "Meaning": meaning,
-                                          "Value": value,
-                                          "Units": units,
-                                          "Raw Bytes": repr(A_data[1:]),
-                                          "Encoded Bytes" : str(base64.b64encode(A_data[1:]), "ascii"),
-                                          "Raw Hexadecimal": bytes_to_hex_string(A_data[1:])}
+        self.uds_messages["{}".format(self.uds_count)] = {"SA": sa,
+            "Source": self.look_up_source(sa),
+            "DA": da,
+            "SID": "{:02X}".format(A_data[0]),
+            "Service Name": self.get_service_identifier(A_data[0]),
+            "Meaning": meaning,
+            "Value": value,
+            "Units": units,
+            "Raw Bytes": repr(A_data[1:]),
+            "Encoded Bytes" : str(base64.b64encode(A_data), "ascii"),
+            "Raw Hexadecimal": bytes_to_hex_string(A_data[1:])}
         
         #logger.debug(self.uds_messages[self.uds_count])
         

@@ -115,7 +115,12 @@ class RP1210ReadMessageThread(threading.Thread):
                         #else:
                         #    print("Blocked {} {}".format(pgn,sa))
                         # Logging for J1939 is taken care of by CAN
-                
+                    elif self.protocol == "ISO15765": 
+                        self.rx_queue.put(ucTxRxBuffer[:return_value])
+                        self.extra_queue.put(ucTxRxBuffer[:return_value])
+                        print(ucTxRxBuffer[:return_value])
+
+                    
         logger.debug("RP1210 Receive Thread is finished.")
 
     def make_log_data(self,message_bytes,return_value,time_bytes,ucTxRxBuffer):

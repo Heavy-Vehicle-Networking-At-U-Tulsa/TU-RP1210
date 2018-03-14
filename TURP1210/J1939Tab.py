@@ -188,7 +188,7 @@ class J1939Tab(QWidget):
         self.uds_table_proxy = Proxy()
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
-        self.uds_resizable_rows = [0,2,3,4,6,7,8]
+        self.uds_resizable_cols = [0,2,3,4,6,7,8]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
@@ -346,7 +346,7 @@ class J1939Tab(QWidget):
                 self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
                 self.uds_data_model.signalUpdate()
                 self.uds_table.resizeRowsToContents()
-                for r in self.uds_resizable_rows:
+                for r in self.uds_resizable_cols:
                     self.uds_table.resizeColumnToContents(r)
                 self.uds_table.scrollToBottom()
 
@@ -432,6 +432,7 @@ class J1939Tab(QWidget):
         if pgn == 0xDA00: #ISO
             self.iso_queue.put((pgn, pri, sa, da, rx_buffer[11:]))
             self.iso_recorder.read_message(True)
+            self.root.data_package["UDS Messages"].update(self.iso_recorder.uds_messages)
             return
         
         if rx_buffer[4] == 1: #Echo message

@@ -128,9 +128,12 @@ current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
 class TU_RP1210(QMainWindow):
-    def __init__(self, connect_gps=False, backup_interval=False):
+    def __init__(self, title, connect_gps=False, backup_interval=False):
         super(TU_RP1210,self).__init__()
         
+        self.title = title
+        self.setWindowTitle(self.title)
+
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
         progress.setWindowTitle("Starting Application")
@@ -397,6 +400,12 @@ class TU_RP1210(QMainWindow):
         ddec1587_action.triggered.connect(self.start_ddec_J1587)
         self.run_menu.addAction(ddec1587_action)
         
+        iso_replay_action = QAction(QIcon(os.path.join(module_directory,r'icons/Replay_48px.png')), 'Replay &ISO Network Traffic', self)
+        iso_replay_action.setShortcut('Ctrl+Shift+I')
+        iso_replay_action.setStatusTip('Responds to requests over the ISO15765 protocol based on the saved data.')
+        iso_replay_action.triggered.connect(self.iso_replay)
+        self.run_menu.addAction(iso_replay_action)
+        
         
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
@@ -413,6 +422,7 @@ class TU_RP1210(QMainWindow):
 
         self.run_toolbar = self.addToolBar("&Download")
         self.run_toolbar.addAction(run_action)
+        self.run_toolbar.addAction(iso_replay_action)
         self.run_toolbar.addAction(ddec1587_action)
         self.run_toolbar.addAction(setup_gps_action)
         self.run_toolbar.addAction(upload_action)
@@ -580,7 +590,7 @@ class TU_RP1210(QMainWindow):
         main_widget = QWidget()
         main_widget.setLayout(self.grid_layout)
         self.setCentralWidget(main_widget)
-        self.setWindowTitle('TU RP1210')
+        
         self.show()
     
     def get_plot_bytes(self, fig):
@@ -730,6 +740,73 @@ class TU_RP1210(QMainWindow):
         self.J1587.clear_J1587_table()
         self.Components.clear_data()
 
+    def iso_replay(self):
+        logger.debug("ISO Replay")
+        length = len(self.data_package["UDS Messages"])
+        logger.debug("Length of ISO Traffic Record: {}".format(length))
+        response_dict = {}
+        message_index = 1
+        #logger.debug(self.data_package["UDS Messages"])
+        while message_index < length:
+            message = self.data_package["UDS Messages"]["{}".format(message_index)]
+            message_index += 1
+            if message["SA"] == 249: #Source from VDA
+                #Pick the next message to be the response
+                response_message = self.data_package["UDS Messages"]["{}".format(message_index)]
+                if response_message["SA"] == 249:
+                    continue
+                else:
+                    message_index += 1
+                    da = message["DA"]
+                    sid = message["SID"]
+                    #str(base64.b64encode(A_data), "ascii")
+                    req_bytes = bytes([int(sid,16)])
+                    req_bytes += base64.b64decode(message["Encoded Bytes"])
+                    response = base64.b64decode(response_message["Encoded Bytes"])
+                    
+                    response_bytes = bytes([3, int(response_message["SID"], 16)])
+                    response_bytes += response
+                    response_dict[(da, req_bytes)] = response_bytes
+        logger.info("Created UDS Response Dictionary")
+        #logger.debug(response_dict)
+        progress = QProgressDialog(self)
+        progress.setMinimumWidth(600)
+        progress.setWindowTitle("ISO Message Responder")
+        progress.setMinimumDuration(0)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMaximum(1000)
+        progress_label = QLabel("Listening for Messages")
+        progress.setLabel(progress_label)
+        rx_count=1
+        progress.setValue(rx_count)
+        protocol = "CAN"
+        #Flush the buffer
+        while self.rx_queues[protocol].qsize():
+            rxmessage = self.rx_queues[protocol].get()
+        while not progress.wasCanceled():
+            QCoreApplication.processEvents()
+            while self.rx_queues[protocol].qsize():
+                rxmessage = self.rx_queues[protocol].get()
+
+                if rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
+                    logger.debug(bytes_to_hex_string(rxmessage))
+                    rx_count+=1
+                    progress.setValue(rx_count)
+                    da = rxmessage[8]
+                    sa = rxmessage[9]
+                    length = rxmessage[10]
+                    sid = rxmessage[11]
+                    req_bytes=rxmessage[11:11+3]
+                    try:
+                        tx_msg = response_dict[(da,req_bytes)]
+                        logger.debug(bytes_to_hex_string(tx_msg))
+                        self.send_j1939_message(0xDA00, tx_msg, DA=sa, SA=da, priority=6)
+                    except KeyError:
+                        logger.debug(traceback.format_exc())
+                            
+        progress.deleteLater()
+
+
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
         #logger.debug("returned_message:")
@@ -838,11 +915,15 @@ class TU_RP1210(QMainWindow):
             return (fname[0], new_data_package)   
         
     def reload_data(self):
+        """
+        Reload and refresh the data tables.
+        """
         self.J1939.pgn_data_model.aboutToUpdate()
         self.J1939.j1939_unique_ids = self.data_package["J1939 Parameter Group Numbers"]
         self.J1939.pgn_data_model.setDataDict(self.J1939.j1939_unique_ids)
         self.J1939.pgn_data_model.signalUpdate()
-        
+        #TODO: Add the row and column resizers like the one for UDS.
+
         self.J1939.pgn_rows = list(self.J1939.j1939_unique_ids.keys())
         
         self.J1939.spn_data_model.aboutToUpdate()
@@ -865,6 +946,15 @@ class TU_RP1210(QMainWindow):
         self.J1939.dm04_data_model.setDataDict(self.J1939.freeze_frame)
         self.J1939.dm04_data_model.signalUpdate()
 
+        self.J1939.uds_data_model.aboutToUpdate()
+        self.J1939.iso_recorder.uds_messages = self.data_package["UDS Messages"]
+        self.J1939.uds_data_model.setDataDict(self.J1939.iso_recorder.uds_messages)
+        self.J1939.uds_data_model.signalUpdate()
+        self.J1939.uds_table.resizeRowsToContents()
+        for c in self.J1939.uds_resizable_cols:
+            self.J1939.uds_table.resizeColumnToContents(c)            
+        self.J1939.uds_table.scrollToBottom()
+
         self.plot_decrypted_data()
 
 
@@ -875,7 +965,7 @@ class TU_RP1210(QMainWindow):
         """
 
         #update the data package
-        self.data_package["UDS Messages"] = self.J1939.iso_recorder.uds_messages
+        
 
         if backup:
             temp_name = os.path.basename(self.filename)
@@ -1039,6 +1129,8 @@ class TU_RP1210(QMainWindow):
         progress.setValue(2)
         self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
         progress.setValue(3)
+        self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
+        progress.setValue(3)
         
         logger.debug('Client IDs: {}'.format(self.client_ids))
 
@@ -1068,6 +1160,7 @@ class TU_RP1210(QMainWindow):
                                                        byref(fpchClientCommand), 1)
                 logger.debug('RP1210_Echo_Transmitted_Messages returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
                 
+                 #Set all filters to pass
                 return_value = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), 
                                                        c_short(nClientID),
                                                        None, 0)
@@ -1092,6 +1185,26 @@ class TU_RP1210(QMainWindow):
                     
                 else :
                     logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+
+                if protocol == "ISO15765":
+                    fpchClientCommand[0] = b'\x01' #EXTENDED CAN
+                    fpchClientCommand[1] = b'\x00'
+                    fpchClientCommand[2] = b'\xda'
+                    fpchClientCommand[3] = b'\x00'
+                    fpchClientCommand[4] = b'\x00'
+                    fpchClientCommand[5] = b'\xFF'
+                    fpchClientCommand[6] = b'\x00'
+                    fpchClientCommand[7] = b'\xda'
+                    fpchClientCommand[8] = b'\x00'
+                    fpchClientCommand[9] = b'\x00'
+                    fpchClientCommand[10] = b'\xFF'
+                    
+                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_Message_Filtering_For_ISO15765), 
+                                                           c_short(nClientID), 
+                                                           byref(fpchClientCommand), 11)
+                    logger.debug('RP1210_Set_Message_Filtering_For_ISO15765 returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                    
+               
             else:
                 logger.debug("{} Client not connected for All Filters to pass. No Queue will be set up.".format(protocol))
             i+=1
@@ -1699,7 +1812,7 @@ class TU_RP1210(QMainWindow):
     def read_rp1210(self):
         # This needs to run often to keep the queues from filling
         try:
-            for protocol, client in self.client_ids.items():
+            for protocol in ["J1939","J1708"]:
                 try:
                     start_time = time.time()
                     while self.rx_queues[protocol].qsize():
