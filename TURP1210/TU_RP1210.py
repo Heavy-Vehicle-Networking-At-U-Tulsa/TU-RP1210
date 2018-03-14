@@ -774,7 +774,7 @@ class TU_RP1210(QMainWindow):
         progress.setWindowTitle("ISO Message Responder")
         progress.setMinimumDuration(0)
         progress.setWindowModality(Qt.WindowModal)
-        progress.setMaximum(1000)
+        progress.setMaximum(500)
         progress_label = QLabel("Listening for Messages")
         progress.setLabel(progress_label)
         rx_count=1
@@ -791,6 +791,8 @@ class TU_RP1210(QMainWindow):
                 if rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
                     logger.debug(bytes_to_hex_string(rxmessage))
                     rx_count+=1
+                    if rx_count == 499:
+                        rx_count = 1
                     progress.setValue(rx_count)
                     da = rxmessage[8]
                     sa = rxmessage[9]
@@ -799,6 +801,7 @@ class TU_RP1210(QMainWindow):
                     req_bytes=rxmessage[11:11+3]
                     try:
                         tx_msg = response_dict[(da,req_bytes)]
+                        #TODO: Write a routine to transport 
                         logger.debug(bytes_to_hex_string(tx_msg))
                         self.send_j1939_message(0xDA00, tx_msg, DA=sa, SA=da, priority=6)
                     except KeyError:

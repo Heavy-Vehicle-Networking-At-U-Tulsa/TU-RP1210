@@ -623,7 +623,7 @@ class RP1210Class():
                                         c_short(msg_len), 0, 0)
             if return_value != 0:
                 message = "RP1210_SendMessage failed with a return value of  {}: {}".format(return_value,
-                                                                self.RP1210.get_error_code(return_value))
+                                                                self.get_error_code(return_value))
                 logger.warning(message)
         except:
             logger.warning(traceback.format_exc())
