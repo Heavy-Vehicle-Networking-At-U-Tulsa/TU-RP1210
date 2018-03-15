@@ -77,8 +77,8 @@ class RP1210ReadMessageThread(threading.Thread):
                             can_data = ucTxRxBuffer[8:16]
                         # Build the 24 bytes that make up a CAN message.
                         
-                        if can_id not in self.can_ids_to_block:
-                            self.rx_queue.put(ucTxRxBuffer[:return_value])
+                        #if can_id not in self.can_ids_to_block:
+                        self.rx_queue.put(ucTxRxBuffer[:return_value])
                     
                         message_bytes += time_bytes
                         message_bytes += vda_timestamp

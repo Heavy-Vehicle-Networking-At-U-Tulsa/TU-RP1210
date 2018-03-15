@@ -742,32 +742,11 @@ class TU_RP1210(QMainWindow):
 
     def iso_replay(self):
         logger.debug("ISO Replay")
-        length = len(self.data_package["UDS Messages"])
-        logger.debug("Length of ISO Traffic Record: {}".format(length))
-        response_dict = {}
-        message_index = 1
-        #logger.debug(self.data_package["UDS Messages"])
-        while message_index < length:
-            message = self.data_package["UDS Messages"]["{}".format(message_index)]
-            message_index += 1
-            if message["SA"] == 249: #Source from VDA
-                #Pick the next message to be the response
-                response_message = self.data_package["UDS Messages"]["{}".format(message_index)]
-                if response_message["SA"] == 249:
-                    continue
-                else:
-                    message_index += 1
-                    da = message["DA"]
-                    sid = message["SID"]
-                    #str(base64.b64encode(A_data), "ascii")
-                    req_bytes = bytes([int(sid,16)])
-                    req_bytes += base64.b64decode(message["Encoded Bytes"])
-                    response = base64.b64decode(response_message["Encoded Bytes"])
-                    
-                    response_bytes = bytes([3, int(response_message["SID"], 16)])
-                    response_bytes += response
-                    response_dict[(da, req_bytes)] = response_bytes
-        logger.info("Created UDS Response Dictionary")
+        responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
+        responder_thread.setDaemon(True) #needed to close the thread when the application closes.
+        responder_thread.start()
+        logger.debug("Started Replay Thread.")
+
         #logger.debug(response_dict)
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
@@ -781,33 +760,7 @@ class TU_RP1210(QMainWindow):
         progress.setValue(rx_count)
         protocol = "CAN"
         #Flush the buffer
-        while self.rx_queues[protocol].qsize():
-            rxmessage = self.rx_queues[protocol].get()
-        while not progress.wasCanceled():
-            QCoreApplication.processEvents()
-            while self.rx_queues[protocol].qsize():
-                rxmessage = self.rx_queues[protocol].get()
-
-                if rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
-                    logger.debug(bytes_to_hex_string(rxmessage))
-                    rx_count+=1
-                    if rx_count == 499:
-                        rx_count = 1
-                    progress.setValue(rx_count)
-                    da = rxmessage[8]
-                    sa = rxmessage[9]
-                    length = rxmessage[10]
-                    sid = rxmessage[11]
-                    req_bytes=rxmessage[11:11+3]
-                    try:
-                        tx_msg = response_dict[(da,req_bytes)]
-                        #TODO: Write a routine to transport 
-                        logger.debug(bytes_to_hex_string(tx_msg))
-                        self.send_j1939_message(0xDA00, tx_msg, DA=sa, SA=da, priority=6)
-                    except KeyError:
-                        logger.debug(traceback.format_exc())
-                            
-        progress.deleteLater()
+        
 
 
     def upload_data_package(self):
@@ -1685,6 +1638,13 @@ class TU_RP1210(QMainWindow):
             return False
         
         return self.verify_stream(message, key)
+    
+    def send_can_message(self, data_bytes):
+        #initialize the buffer
+        if self.client_ids["CAN"] is not None:
+            message_bytes = b'\x01'
+            message_bytes += data_bytes
+            self.RP1210.send_message(self.client_ids["CAN"], message_bytes)
 
     def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6):
         #initialize the buffer

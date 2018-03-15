@@ -3,6 +3,7 @@ from PyQt5.QtCore import QCoreApplication
 import time
 import sys
 import struct
+import threading
 import base64
 from TURP1210.RP1210.RP1210Functions import *
 
@@ -320,3 +321,127 @@ def init_session(isodriver):
     message_bytes = bytes([0x2, 0x10, 0x81, 0, 0, 0, 0, 0])
     isodriver.send_message(message_bytes, 0)
 
+
+class UDSResponder(threading.Thread):
+    def __init__(self, parent, recording, rxqueue):
+        threading.Thread.__init__(self)
+        self.root = parent
+        self.recording = recording #self.data_package["UDS Messages"]
+        self.rxqueue = rxqueue
+        self.response_dict = {}
+        self.rx_count = 0
+        self.runSignal = True
+        self.create_responses()
+        while self.rxqueue.qsize():
+            rxmessage = self.rxqueue.get()
+
+    def run(self):
+        while self.runSignal:
+            time.sleep(0.01)
+            while self.rxqueue.qsize():
+
+                rxmessage = self.rxqueue.get()
+                #logger.debug("RX: " + bytes_to_hex_string(rxmessage))
+                if rxmessage[4] == 0 and rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
+                    logger.debug("RX: " + bytes_to_hex_string(rxmessage[10:]))
+                    self.rx_count+=1
+                    if self.rx_count == 499:
+                        self.rx_count = 1
+                    da = rxmessage[8]
+                    sa = rxmessage[9]
+                    length = rxmessage[10]
+                    sid = rxmessage[11]
+                    req_bytes=rxmessage[11:11+3]
+                    try:
+                        tx_msg_list = self.response_dict[(da,req_bytes)]
+                    except KeyError:
+                        logger.debug("No Response.")
+                        #logger.debug(traceback.format_exc())
+                    else:
+                        #TODO: Write a routine to transport 
+                        
+                        for msg_segment in tx_msg_list:
+                            logger.debug("TX: " + bytes_to_hex_string(msg_segment))
+                            bytes_to_send = bytes([0x01, 0x18, 0xDA, sa, da]) + msg_segment
+                            self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                            time.sleep(0.001)
+                            if msg_segment[0] == (0x10 & 0xF0):
+                                self.wait_for_ack()
+                elif rxmessage[4] == 0 and rxmessage[7] == 0xEA:
+                    if rxmessage[10:13] == b'\xEC\xFE\x00':
+                        logger.debug("REQ: " + bytes_to_hex_string(rxmessage[10:]))
+                        bytes_to_send = bytes([0x01, 0x1C, 0xEC, 0xF9, 0x00, 0x10, 0x12, 0x00, 0x03, 0xFF, 0xEC, 0xFE, 0x00])
+                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
+                        time.sleep(0.020)
+                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x01, 0x31, 0x58, 0x50, 0x58, 0x44, 0x50, 0x39])
+                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
+                        time.sleep(0.010)
+                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x02, 0x58, 0x37, 0x4A, 0x44, 0x34, 0x38, 0x30])
+                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
+                        time.sleep(0.010)
+                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x03, 0x30, 0x39, 0x30, 0x2A, 0xFF, 0xFF, 0xFF])
+                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
+                        time.sleep(0.010)
+                    elif rxmessage[10:13] == b'\x00\xEE\x00':
+                        logger.debug("REQ: " + bytes_to_hex_string(rxmessage[10:]))
+                        for i in range(10):
+                            bytes_to_send = bytes([0x01, 0x18, 0xEE, 0xFF, 0x00, 0xF7, 0x02, 0xA1, 0x01, 0x00, 0x00, 0x00, 0x10])
+                            self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
+                            logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
+                            time.sleep(0.010)              
+
+    def wait_for_ack(self):
+        start_time = time.time()
+        while time.time() - start_time < .05:
+            while self.rxqueue.qsize():
+                rxmessage = self.rxqueue.get()
+                if rxmessage[4] == 0: #Not an echo message
+                    logger.debug("RX: " + bytes_to_hex_string(rxmessage[10:]))
+                    if rxmessage[7] == 0xDA and rxmessage[10] == 0x30: 
+                        return
+            time.sleep(0.01)
+        logger.debug("UDS Responder Timed Out looking for ack message.")
+    
+    def create_responses(self):
+        length = len(self.recording)
+        logger.debug("Length of ISO Traffic Record: {}".format(length))
+        response_dict = {}
+        message_index = 1
+        #logger.debug(self.data_package["UDS Messages"])
+        while message_index < length:
+            message = self.recording["{}".format(message_index)]
+            message_index += 1
+            if message["SA"] == 249: #Source from VDA
+                #Pick the next message to be the response
+                response_message = self.recording["{}".format(message_index)]
+                if response_message["SA"] == 249:
+                    continue
+                else:
+                    message_index += 1
+                    da = message["DA"]
+                    sid = message["SID"]
+                    #str(base64.b64encode(A_data), "ascii")
+                    req_bytes = bytes([int(sid,16)])
+                    req_bytes += base64.b64decode(message["Encoded Bytes"])
+                    response = base64.b64decode(response_message["Encoded Bytes"])
+                    response_len = len(response)
+                    if response_len < 7:
+                        response_bytes = [bytes([response_len+1, int(response_message["SID"],16)]) + response]
+                    else:
+                        first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len+1)) #first frame plus 12 bits for length 
+                        response_bytes = [ first_two_bytes + bytes([int(response_message["SID"],16)]) + response[:5] ]
+                        frame = 1
+                        for i in range(5,response_len,7):
+                            first_byte = struct.pack("B", 0x20 | (0x0F & frame))
+                            frame += 1
+                            response_bytes.append( first_byte + response[i:i+7] )
+                            while len(response_bytes[-1]) < 8:
+                                response_bytes[-1] += b'\xFF'
+
+                    logger.debug(response_bytes)
+                    self.response_dict[(da, req_bytes)] = response_bytes
+        logger.info("Created UDS Response Dictionary")
