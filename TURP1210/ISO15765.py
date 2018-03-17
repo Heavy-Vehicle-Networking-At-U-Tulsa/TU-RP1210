@@ -4,6 +4,7 @@ import time
 import sys
 import struct
 import threading
+import json
 import base64
 from TURP1210.RP1210.RP1210Functions import *
 
@@ -343,7 +344,7 @@ class UDSResponder(threading.Thread):
                 rxmessage = self.rxqueue.get()
                 #logger.debug("RX: " + bytes_to_hex_string(rxmessage))
                 if rxmessage[4] == 0 and rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
-                    logger.debug("RX: " + bytes_to_hex_string(rxmessage[10:]))
+                    logger.debug("RX: " + bytes_to_hex_string(rxmessage[6:]))
                     self.rx_count+=1
                     if self.rx_count == 499:
                         self.rx_count = 1
@@ -351,9 +352,10 @@ class UDSResponder(threading.Thread):
                     sa = rxmessage[9]
                     length = rxmessage[10]
                     sid = rxmessage[11]
-                    req_bytes=rxmessage[11:11+3]
+                    req_bytes=rxmessage[11:11+length]
+                    logger.debug("Looking for ({},{})".format(sa,bytes_to_hex_string(req_bytes)))
                     try:
-                        tx_msg_list = self.response_dict[(da,req_bytes)]
+                        tx_msg_list = self.response_dict[(sa,bytes_to_hex_string(req_bytes))]
                     except KeyError:
                         logger.debug("No Response.")
                         #logger.debug(traceback.format_exc())
@@ -409,7 +411,8 @@ class UDSResponder(threading.Thread):
     def create_responses(self):
         length = len(self.recording)
         logger.debug("Length of ISO Traffic Record: {}".format(length))
-        response_dict = {}
+        response_dict = {(249, b'\x10\x60'):[b'\x50\x60']}
+        response_dict[(249, b'\x10\x01')] = [b'\x50\x01']
         message_index = 1
         #logger.debug(self.data_package["UDS Messages"])
         while message_index < length:
@@ -425,14 +428,13 @@ class UDSResponder(threading.Thread):
                     da = message["DA"]
                     sid = message["SID"]
                     #str(base64.b64encode(A_data), "ascii")
-                    req_bytes = bytes([int(sid,16)])
-                    req_bytes += base64.b64decode(message["Encoded Bytes"])
+                    req_bytes = base64.b64decode(message["Encoded Bytes"])
                     response = base64.b64decode(response_message["Encoded Bytes"])
                     response_len = len(response)
                     if response_len < 7:
-                        response_bytes = [bytes([response_len+1, int(response_message["SID"],16)]) + response]
+                        response_bytes = [bytes([response_len]) + response]
                     else:
-                        first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len+1)) #first frame plus 12 bits for length 
+                        first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len)) #first frame plus 12 bits for length 
                         response_bytes = [ first_two_bytes + bytes([int(response_message["SID"],16)]) + response[:5] ]
                         frame = 1
                         for i in range(5,response_len,7):
@@ -442,6 +444,8 @@ class UDSResponder(threading.Thread):
                             while len(response_bytes[-1]) < 8:
                                 response_bytes[-1] += b'\xFF'
 
-                    logger.debug(response_bytes)
-                    self.response_dict[(da, req_bytes)] = response_bytes
+                    #logger.debug(response_bytes)
+                    self.response_dict[(249, bytes_to_hex_string(req_bytes))] = response_bytes
         logger.info("Created UDS Response Dictionary")
+        for k,v in sorted(self.response_dict.items()):
+            logger.debug("{}: {}".format(k,v))
