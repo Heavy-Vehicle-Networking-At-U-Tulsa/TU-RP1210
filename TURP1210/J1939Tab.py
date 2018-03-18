@@ -422,13 +422,15 @@ class J1939Tab(QWidget):
         
     def fill_j1939_table(self, rx_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
-        
-        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
-        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
-        pri = rx_buffer[8] # how/priority
-        sa = rx_buffer[9] #Source Address
-        da = rx_buffer[10] #Destination Address
-        
+        try:
+            vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
+            pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
+            pri = rx_buffer[8] # how/priority
+            sa = rx_buffer[9] #Source Address
+            da = rx_buffer[10] #Destination Address
+        except (struct.error, IndexError):
+            return
+
         if pgn == 0xDA00: #ISO
             self.iso_queue.put((pgn, pri, sa, da, rx_buffer[11:]))
             self.iso_recorder.read_message(True)

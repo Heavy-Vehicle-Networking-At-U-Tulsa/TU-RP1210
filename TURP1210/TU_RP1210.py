@@ -1085,8 +1085,8 @@ class TU_RP1210(QMainWindow):
         progress.setValue(2)
         self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
         progress.setValue(3)
-        self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
-        progress.setValue(3)
+        #self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
+        #progress.setValue(3)
         
         logger.debug('Client IDs: {}'.format(self.client_ids))
 
@@ -1168,6 +1168,8 @@ class TU_RP1210(QMainWindow):
         
         if self.client_ids["J1939"] is None or self.client_ids["J1708"] is None:
             QMessageBox.information(self,"RP1210 Client Not Connected.","The default RP1210 Device was not found or is unplugged. Please reconnect your Vehicle Diagnostic Adapter (VDA) and select the RP1210 device to use.")
+        
+        progress.deleteLater()
 
     def check_connections(self):
         '''
@@ -1205,14 +1207,14 @@ class TU_RP1210(QMainWindow):
                     for tool in [0xB6]: #or 0xAC
                         j1587_request = bytes([0x03, tool, 0, pid])
                         self.RP1210.send_message(self.client_ids["J1708"], j1587_request)
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
         
         # Request Time and Date
         try:
             if self.client_ids["J1939"] is not None: 
                 self.send_j1939_request(65254)
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
     def get_hardware_status_ex(self):
@@ -1776,7 +1778,7 @@ class TU_RP1210(QMainWindow):
         # This needs to run often to keep the queues from filling
         try:
             for protocol in ["J1939","J1708"]:
-                try:
+                if protocol in self.rx_queues:
                     start_time = time.time()
                     while self.rx_queues[protocol].qsize():
                         #Get a message from the queue. These are raw bytes
@@ -1790,8 +1792,8 @@ class TU_RP1210(QMainWindow):
                         if time.time() - start_time + 50 > self.update_rate: #give some time to process events
                             logger.debug("Can't keep up with messages.")
                             return
-                except KeyError:
-                    logger.debug(traceback.format_exc())
+                #except KeyError:
+                #    logger.debug(traceback.format_exc())
                     #pass # nothing is connected.
         except AttributeError:
             logger.debug(traceback.format_exc())

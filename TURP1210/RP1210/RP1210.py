@@ -62,7 +62,10 @@ class RP1210ReadMessageThread(threading.Thread):
                         dlc = int(return_value - 10)
                         #the following conversion is to emulate the data structure from the NMFTA CAN Logger Project
                         # See https://github.com/Heavy-Vehicle-Networking-At-U-Tulsa/NMFTA-CAN-Logger/tree/master/_07_Low_Latency_Logger_with_Requests
-                        microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
+                        try:
+                            microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
+                        except struct.error:
+                            continue
                         # RP1210_ReadMessage API:
                         #Reverse endianess
                         vda_timestamp = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[0:4])[0])  
