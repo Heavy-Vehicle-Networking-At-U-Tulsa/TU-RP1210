@@ -23,7 +23,7 @@ class RP1210ReadMessageThread(threading.Thread):
     nClientID - this lets us know which network is being used to receive the
                 messages. This will likely be a 1 or 2'''
 
-    def __init__(self, parent, rx_queue, extra_queue, RP1210_ReadMessage, nClientID, protocol, filename="NetworkTraffic"):
+    def __init__(self, parent, rx_queue, extra_queue, RP1210_ReadMessage, nClientID, protocol, title, filename="NetworkTraffic"):
         threading.Thread.__init__(self)
         self.root = parent
         self.rx_queue = rx_queue
@@ -34,7 +34,7 @@ class RP1210ReadMessageThread(threading.Thread):
         self.message_count = 0
         self.start_time = time.time()
         self.duration = 0
-        self.filename = os.path.join(get_storage_path(), protocol + filename + ".bin")
+        self.filename = os.path.join(get_storage_path(title), protocol + filename + ".bin")
         self.protocol = protocol
         self.pgns_to_block=[61444, 61443, 65134, 65215]
         self.sources_to_block=[0, 11]

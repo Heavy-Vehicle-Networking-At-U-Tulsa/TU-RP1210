@@ -569,7 +569,7 @@ class DDEC_J1587(QWidget):
 
         # Encrypt the data
         raw_report = json.dumps(encoded_pages)
-        encryption_file = self.root.user_data.user_data["Decoder Public Key"]
+        encryption_file = bytes(self.root.user_data.user_data["Decoder Public Key"],'ascii')
         logger.debug("Decoder Public Key: {}".format(encryption_file))
         try:
             self.root.data_package["DDEC J1587 Encrypted"] = encrypt_bytes(raw_report.encode(), encryption_file)

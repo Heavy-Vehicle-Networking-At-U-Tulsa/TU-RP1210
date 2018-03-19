@@ -167,7 +167,7 @@ class TU_RP1210(QMainWindow):
 
         progress_label.setText("Loading the J1587 Database")
         try:
-            with open("J1587db.json",'r') as j1587_file:
+            with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
                 self.j1587db = json.load(j1587_file)
         except FileNotFoundError:
             logger.debug("J1587db.json file was not found.")
@@ -227,7 +227,7 @@ class TU_RP1210(QMainWindow):
 
         self.module_directory = module_directory
         
-        self.user_data = UserData()
+        self.user_data = UserData(self.title)
 
         self.isodriver = None
 
@@ -266,7 +266,7 @@ class TU_RP1210(QMainWindow):
         QCoreApplication.processEvents()
 
         progress_label.setText("Setting up the GPS System")
-        self.GPS = GPSDialog()
+        self.GPS = GPSDialog(self.title)
         if connect_gps:
             self.setup_gps(dialog = False)
         progress.setValue(7)
@@ -651,7 +651,7 @@ class TU_RP1210(QMainWindow):
             item.deleteLater()
 
         try:
-            self.export_path = os.path.join(os.path.expanduser('~'),"Documents","TU_RP1210")
+            self.export_path = os.path.join(os.path.expanduser('~'),"Documents","{}".format(self.title))
             if not os.path.exists(self.export_path):
                 os.makedirs(self.export_path)
 
@@ -660,10 +660,10 @@ class TU_RP1210(QMainWindow):
             self.export_path = os.path.expanduser('~')
 
         self.filename = os.path.join(self.export_path,
-            "TU_RP1210data {}.cpt".format(time.strftime("%Y-%m-%d %H%M%S",time.localtime())))
+            "{}data {}.cpt".format(self.title, time.strftime("%Y-%m-%d %H%M%S", time.localtime())))
         if new_file:
             fname = QFileDialog.getSaveFileName(self,
-                                             "Create New TU_RP1210 Data File",
+                                             "Create New {} Data File".format(self.title),
                                              os.path.join(self.export_path, self.filename),
                                              "",
                                              "")
@@ -676,7 +676,8 @@ class TU_RP1210(QMainWindow):
         logger.info("Current Data Package file is set to {}".format(self.filename))
 
         self.data_package = {"File Format":{"major":TU_RP1210_version["major"],
-                                            "minor":TU_RP1210_version["minor"]}}
+                                            "minor":TU_RP1210_version["minor"],
+                                            "patch":TU_RP1210_version["minor"]}}
         
         try:
             CAN_log_name = self.read_message_threads["CAN"].filename
@@ -701,8 +702,8 @@ class TU_RP1210(QMainWindow):
 
         self.data_package["Machine UUID"] = current_machine_id
         self.data_package["Harddrive UUID"] = current_drive_id
-        logger.info("TU_RP1210 running on a machine with UUID: {}".format(current_machine_id))
-        logger.info("TU_RP1210 running on a diskdrive with Serial Number: {}".format(current_drive_id))
+        logger.info("{} running on a machine with UUID: {}".format(self.title, current_machine_id))
+        logger.info("{} running on a diskdrive with Serial Number: {}".format(self.title, current_drive_id))
         
         self.data_package["Time Records"] = {"PC Start Time": time.time(),
                                              "Last PC Time": None,
@@ -803,8 +804,8 @@ class TU_RP1210(QMainWindow):
                 or 
                 None if something went wrong.
         """  
-        filters = "TU_RP1210 Data Files (*.cpt);;All Files (*.*)"
-        selected_filter = "TU_RP1210 Data Files (*.cpt)"
+        filters = "{} Data Files (*.cpt);;All Files (*.*)".format(self.title)
+        selected_filter = "{} Data Files (*.cpt)".format(self.title)
         fname = QFileDialog.getOpenFileName(self, 
                                             'Open File',
                                             self.export_path,
@@ -815,7 +816,7 @@ class TU_RP1210(QMainWindow):
                 pgp_file_contents = pgpy.PGPMessage.from_file(fname[0])
                 logger.info("User opened signed file {}".format(fname[0]))
             except:
-                err_msg = "File {} was not a properly formatted TU_RP1210 file.".format(self.filename)
+                err_msg = "File {} was not a properly formatted {} file.".format(self.filename, self.title)
                 QMessageBox.warning(self, "File Format Error", err_msg)
                 logger.info(err_msg)
                 logger.debug(traceback.format_exc())
@@ -863,7 +864,10 @@ class TU_RP1210(QMainWindow):
             #if reload:    
             self.data_package = new_data_package
             self.export_path, self.filename = os.path.split(fname[0])
-            self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            self.setWindowTitle('{} {}.{} - {}'.format(self.title,
+                                                       TU_RP1210_version["major"],
+                                                       TU_RP1210_version["minor"],
+                                                       self.filename))
             self.data_package["File Name"] = self.filename 
             self.reload_data()
             logger.info("Opened File: {}".format(self.filename))
@@ -942,13 +946,16 @@ class TU_RP1210(QMainWindow):
             msg = "Saved signed file to {}".format(filename)
             logger.info(msg)
             self.filename = os.path.basename(self.filename)
-            self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            self.setWindowTitle('{} {}.{} - {}'.format(self.title,
+                                                       TU_RP1210_version["major"],
+                                                       TU_RP1210_version["minor"],
+                                                       self.filename))
             self.statusBar().showMessage(msg)
         return pgp_message
 
     def save_file_as(self):
-        filters = "TU_RP1210 Data Files (*.cpt);;All Files (*.*)"
-        selected_filter = "TU_RP1210 Data Files (*.cpt)"
+        filters = "{} Data Files (*.cpt);;All Files (*.*)".format(self.title)
+        selected_filter = "{} Data Files (*.cpt)".format(self.title)
         fname = QFileDialog.getSaveFileName(self, 
                                             'Save File As',
                                             os.path.join(self.export_path,self.filename),
@@ -1039,7 +1046,7 @@ class TU_RP1210(QMainWindow):
 
     def selectRP1210(self, automatic=False):
         logger.debug("Select RP1210 function called.")
-        selection = SelectRP1210()
+        selection = SelectRP1210(self.title)
         logger.debug(selection.dll_name)
         if not automatic:
             selection.show_dialog()
@@ -1130,7 +1137,7 @@ class TU_RP1210(QMainWindow):
                                                                                   self.extra_queues[protocol],
                                                                                   self.RP1210.ReadMessage, 
                                                                                   nClientID,
-                                                                                  protocol)
+                                                                                  protocol, self.title)
                     self.read_message_threads[protocol].setDaemon(True) #needed to close the thread when the application closes.
                     self.read_message_threads[protocol].start()
                     logger.debug("Started RP1210ReadMessage Thread.")
@@ -1427,7 +1434,7 @@ class TU_RP1210(QMainWindow):
         
         file_list = [self.data_package["Network Logs"]["CAN Log File Name"],
                      self.data_package["Network Logs"]["J1708 Log File Name"],
-                     "TU_RP1210.log"
+                     self.title + ".log"
                     ] + additional_files
         logger.debug("Signing and Copying the following files to {}".format(self.export_path))
         logger.debug(file_list)
@@ -1634,7 +1641,7 @@ class TU_RP1210(QMainWindow):
             logger.info("Failed to open {} as a PGP message.".format(filename))
             QMessageBox.warning(self, 
                 "Invalid File",
-                "Failed to open {} as a valid PGP message. Be sure the file was saved by TU_RP1210".format(filename),
+                "Failed to open {} as a valid PGP message. Be sure the file was saved by {}".format(filename,self.title),
                 QMessageBox.Close,
                 QMessageBox.Close)
             return False
@@ -1807,7 +1814,7 @@ class TU_RP1210(QMainWindow):
         logger.debug("show_about_dialog Request")
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
-        msg.setText("About TU_RP1210")
+        msg.setText("About {}".format(self.title))
         msg.setInformativeText("""Icons by Icons8\nhttps://icons8.com/""")
         msg.setWindowTitle("About")
         msg.setDetailedText("There will be some details here.")
