@@ -165,6 +165,8 @@ class TU_RP1210(QMainWindow):
         progress.setValue(1)
         QCoreApplication.processEvents()
 
+        self.rx_queues = {}
+
         progress_label.setText("Loading the J1587 Database")
         try:
             with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
@@ -770,9 +772,10 @@ class TU_RP1210(QMainWindow):
         #logger.debug(returned_message)
         try:
             self.data_package["Decrypted Data"] = json.loads(returned_message)
-            self.ddec_j1587.plot_decrypted_data()
+            self.plot_decrypted_data()
         except TypeError:
-            pass
+            logger.debug(traceback.format_exc())
+
 
     def edit_user_data(self):
         self.user_data.show_dialog() 
@@ -797,7 +800,7 @@ class TU_RP1210(QMainWindow):
         logger.debug("New File Selected.")
         self.create_new(True)
 
-    def open_file(self): #, reload=True): 
+    def open_file(self):  
         """
 
         Returns: a tuple as (filename, data_dictionary)
@@ -916,6 +919,7 @@ class TU_RP1210(QMainWindow):
         self.J1939.uds_table.scrollToBottom()
 
         self.plot_decrypted_data()
+        logger.debug(self.pdf_engine.event_groups)
 
 
     def save_file(self, backup=False):
@@ -1850,7 +1854,6 @@ class TU_RP1210(QMainWindow):
 
     def start_ddec_J1587(self):
         self.ddec_j1587.start_ddec_J1587()
-        self.upload_data_package()
-
+        
     def plot_decrypted_data(self):
         self.ddec_j1587.plot_decrypted_data()

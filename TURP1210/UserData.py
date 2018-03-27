@@ -583,7 +583,8 @@ class UserData(QDialog):
                                  sensitive=False,
                                  compression=CompressionAlgorithm.ZIP,
                                  encoding='ascii')
-        pgp_message |= self.private_key.sign(pgp_message)
+        if self.private_key is not None:
+            pgp_message |= self.private_key.sign(pgp_message)
         return pgp_message
 
 
