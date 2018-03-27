@@ -187,13 +187,13 @@ class J1939Tab(QWidget):
         self.uds_data_model = J1939TableModel()
         self.uds_table_proxy = Proxy()
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
-        self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
-        self.uds_resizable_cols = [0,2,3,4,6,7,8]
+        self.uds_table_columns = ["Line","SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_resizable_cols = [0,1,2,3,4,5,7,8,9]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
         self.uds_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.uds_table.setSortingEnabled(False)
+        self.uds_table.setSortingEnabled(True)
         self.uds_table.setWordWrap(False)
         
         #Create a layout for that box using a grid

@@ -189,8 +189,9 @@ class ISO15765Driver():
         """
         self.uds_count += 1
         meaning, value, units = self.get_meaning(A_data[0], A_data[1:])
-        #["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
-        self.uds_messages["{}".format(self.uds_count)] = {"SA": sa,
+        #["Line","SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_messages["{}".format(self.uds_count)] = {"Line": "{:7d}".format(self.uds_count),
+            "SA": sa,
             "Source": self.look_up_source(sa),
             "DA": da,
             "SID": "{:02X}".format(A_data[0]),
@@ -355,7 +356,7 @@ class UDSResponder(threading.Thread):
                     req_bytes=rxmessage[11:11+length]
                     logger.debug("Looking for ({},{})".format(sa,bytes_to_hex_string(req_bytes)))
                     try:
-                        tx_msg_list = self.response_dict[(sa,bytes_to_hex_string(req_bytes))]
+                        tx_msg_list = self.response_dict[(sa, bytes_to_hex_string(req_bytes))]
                     except KeyError:
                         logger.debug("No Response.")
                         #logger.debug(traceback.format_exc())
@@ -411,41 +412,60 @@ class UDSResponder(threading.Thread):
     def create_responses(self):
         length = len(self.recording)
         logger.debug("Length of ISO Traffic Record: {}".format(length))
-        response_dict = {(249, b'\x10\x60'):[b'\x50\x60']}
-        response_dict[(249, b'\x10\x01')] = [b'\x50\x01']
+        response_dict = {}
+        response_dict[(249, bytes_to_hex_string(b'\x10\x01'))] = [b'\x50\x01']
         message_index = 1
         #logger.debug(self.data_package["UDS Messages"])
         while message_index < length:
             message = self.recording["{}".format(message_index)]
             message_index += 1
             if message["SA"] == 249: #Source from VDA
-                #Pick the next message to be the response
-                response_message = self.recording["{}".format(message_index)]
-                if response_message["SA"] == 249:
+                #search through the messages for a response
+                da = int(message["DA"])
+                sid = int(message["SID"],16)
+                if sid == 0x3E: #tester present (these sometimes don't have responses.)
                     continue
-                else:
-                    message_index += 1
-                    da = message["DA"]
-                    sid = message["SID"]
-                    #str(base64.b64encode(A_data), "ascii")
-                    req_bytes = base64.b64decode(message["Encoded Bytes"])
-                    response = base64.b64decode(response_message["Encoded Bytes"])
-                    response_len = len(response)
-                    if response_len < 7:
-                        response_bytes = [bytes([response_len]) + response]
-                    else:
-                        first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len)) #first frame plus 12 bits for length 
-                        response_bytes = [ first_two_bytes + bytes([int(response_message["SID"],16)]) + response[:5] ]
-                        frame = 1
-                        for i in range(5,response_len,7):
-                            first_byte = struct.pack("B", 0x20 | (0x0F & frame))
-                            frame += 1
-                            response_bytes.append( first_byte + response[i:i+7] )
-                            while len(response_bytes[-1]) < 8:
-                                response_bytes[-1] += b'\xFF'
+                len_req_bytes = len(base64.b64decode(message["Encoded Bytes"]))
+                req_bytes = base64.b64decode(message["Encoded Bytes"])[:min(len_req_bytes,4)]
+                response_message_index = message_index
+                while response_message_index < min(response_message_index + 100, length):
+                    response_message = self.recording["{}".format(response_message_index)]
+                    response_message_index += 1
+                    response_sid = int(response_message["SID"],16)
+                    response_sa = int(response_message["SA"])
+                    response = base64.b64decode(response_message["Encoded Bytes"])[1:]
+                    if response_sid == 0x7F:
+                        break
+                    if response_sa == da and response_sid != 0x7E :
+                    #tests
+                    #logger.debug("response_sa: {} == da: {}".format(response_sa,da))
+                    #logger.debug("response_sid - 0x40: {} == sid: {}".format(response_sid - 0x40,sid))
+                        logger.debug("response: {} == req_bytes: {}".format(bytes_to_hex_string(response[:min(len_req_bytes,4)-1]), bytes_to_hex_string(req_bytes[1:])))
+                        
+                        if (response_sid - 0x40) == sid and response[:min(len_req_bytes,4)-1] == req_bytes[1:]:
+                            response_len = len(response)
+                            if response_len < 6:
+                                response_bytes = [bytes([response_len-1]) + bytes([response_sid]) + response]
+                            else:
+                                first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len-1)) #first frame plus 12 bits for length 
+                                response_bytes = [ first_two_bytes + bytes([response_sid]) + response[:5] ]
+                                frame = 1
+                                for i in range(5,response_len,7):
+                                    first_byte = struct.pack("B", 0x20 | (0x0F & frame))
+                                    frame += 1
+                                    response_bytes.append( first_byte + response[i:i+7] )
+                                    while len(response_bytes[-1]) < 8:
+                                        response_bytes[-1] += b'\xFF'
 
-                    #logger.debug(response_bytes)
-                    self.response_dict[(249, bytes_to_hex_string(req_bytes))] = response_bytes
+                            #logger.debug(response_bytes)
+                            logger.debug("Found (249, {})".format(bytes_to_hex_string(req_bytes)))
+                            self.response_dict[(249, bytes_to_hex_string(req_bytes))] = response_bytes
+                            break
+                    
+
+
+        self.response_dict = {(249,  bytes_to_hex_string(b'\x3E\x00')):[b'\x02\x7E\x00']}
+        self.response_dict[(249, bytes_to_hex_string(b'\x10\x01'))] = [b'\x02\x50\x01']
         logger.info("Created UDS Response Dictionary")
         for k,v in sorted(self.response_dict.items()):
             logger.debug("{}: {}".format(k,v))
