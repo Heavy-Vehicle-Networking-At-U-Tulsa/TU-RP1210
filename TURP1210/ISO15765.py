@@ -399,7 +399,7 @@ class UDSResponder(threading.Thread):
 
     def wait_for_ack(self):
         start_time = time.time()
-        while time.time() - start_time < .05:
+        while time.time() - start_time < .2:
             while self.rxqueue.qsize():
                 rxmessage = self.rxqueue.get()
                 if rxmessage[4] == 0: #Not an echo message
@@ -445,9 +445,9 @@ class UDSResponder(threading.Thread):
                         if (response_sid - 0x40) == sid and response[:min(len_req_bytes,4)-1] == req_bytes[1:]:
                             response_len = len(response)
                             if response_len < 6:
-                                response_bytes = [bytes([response_len-1]) + bytes([response_sid]) + response]
+                                response_bytes = [bytes([response_len+1]) + bytes([response_sid]) + response]
                             else:
-                                first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len-1)) #first frame plus 12 bits for length 
+                                first_two_bytes = struct.pack(">H", 0x1000 | (0x0FFF & response_len+1)) #first frame plus 12 bits for length 
                                 response_bytes = [ first_two_bytes + bytes([response_sid]) + response[:5] ]
                                 frame = 1
                                 for i in range(5,response_len,7):
@@ -464,7 +464,7 @@ class UDSResponder(threading.Thread):
                     
 
 
-        self.response_dict = {(249,  bytes_to_hex_string(b'\x3E\x00')):[b'\x02\x7E\x00']}
+        self.response_dict[(249, bytes_to_hex_string(b'\x3E\x00'))] = [b'\x02\x7E\x00']
         self.response_dict[(249, bytes_to_hex_string(b'\x10\x01'))] = [b'\x02\x50\x01']
         logger.info("Created UDS Response Dictionary")
         for k,v in sorted(self.response_dict.items()):
