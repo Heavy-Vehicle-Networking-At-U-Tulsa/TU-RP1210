@@ -334,12 +334,15 @@ class UDSResponder(threading.Thread):
         self.rx_count = 0
         self.runSignal = True
         self.create_responses()
+        
+    def run(self):
+        
+        #clear queue
         while self.rxqueue.qsize():
             rxmessage = self.rxqueue.get()
 
-    def run(self):
         while self.runSignal:
-            time.sleep(0.01)
+            time.sleep(0.005)
             while self.rxqueue.qsize():
 
                 rxmessage = self.rxqueue.get()
@@ -354,9 +357,10 @@ class UDSResponder(threading.Thread):
                     length = rxmessage[10]
                     sid = rxmessage[11]
                     req_bytes=rxmessage[11:11+length]
-                    logger.debug("Looking for ({},{})".format(sa,bytes_to_hex_string(req_bytes)))
+                    response_key = (sa, bytes_to_hex_string(req_bytes))
+                    logger.debug("Looking for {}".format(response_key))
                     try:
-                        tx_msg_list = self.response_dict[(sa, bytes_to_hex_string(req_bytes))]
+                        tx_msg_list = self.response_dict[response_key]
                     except KeyError:
                         logger.debug("No Response.")
                         #logger.debug(traceback.format_exc())
@@ -369,6 +373,7 @@ class UDSResponder(threading.Thread):
                             self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
                             time.sleep(0.001)
                             if msg_segment[0] == (0x10 & 0xF0):
+                                time.sleep(0.005)
                                 self.wait_for_ack()
                 elif rxmessage[4] == 0 and rxmessage[7] == 0xEA:
                     if rxmessage[10:13] == b'\xEC\xFE\x00':
@@ -376,7 +381,7 @@ class UDSResponder(threading.Thread):
                         bytes_to_send = bytes([0x01, 0x1C, 0xEC, 0xF9, 0x00, 0x10, 0x12, 0x00, 0x03, 0xFF, 0xEC, 0xFE, 0x00])
                         self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
                         logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                        time.sleep(0.020)
+                        time.sleep(0.050)
                         bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x01, 0x31, 0x58, 0x50, 0x58, 0x44, 0x50, 0x39])
                         self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
                         logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
@@ -402,11 +407,11 @@ class UDSResponder(threading.Thread):
         while time.time() - start_time < .2:
             while self.rxqueue.qsize():
                 rxmessage = self.rxqueue.get()
-                if rxmessage[4] == 0: #Not an echo message
+                #Check the following: 1) Not an echo message, 2) it's an ISO message, and 3) its a response
+                if rxmessage[4] == 0 and rxmessage[7] == 0xDA and rxmessage[10] == 0x30: 
                     logger.debug("RX: " + bytes_to_hex_string(rxmessage[10:]))
-                    if rxmessage[7] == 0xDA and rxmessage[10] == 0x30: 
-                        return
-            time.sleep(0.01)
+                    return
+            time.sleep(0.001)
         logger.debug("UDS Responder Timed Out looking for ack message.")
     
     def create_responses(self):
@@ -428,22 +433,27 @@ class UDSResponder(threading.Thread):
                 len_req_bytes = len(base64.b64decode(message["Encoded Bytes"]))
                 req_bytes = base64.b64decode(message["Encoded Bytes"])[:min(len_req_bytes,4)]
                 response_message_index = message_index
+                
+
+                #Don't redo lookups
+                # if response_key in self.response_dict.keys():
+                #     logger.debug("Already found Item.")
+                #     continue
+
                 while response_message_index < min(response_message_index + 100, length):
                     response_message = self.recording["{}".format(response_message_index)]
                     response_message_index += 1
                     response_sid = int(response_message["SID"],16)
                     response_sa = int(response_message["SA"])
                     response = base64.b64decode(response_message["Encoded Bytes"])[1:]
-                    if response_sid == 0x7F:
-                        break
+
                     if response_sa == da and response_sid != 0x7E :
                     #tests
                     #logger.debug("response_sa: {} == da: {}".format(response_sa,da))
                     #logger.debug("response_sid - 0x40: {} == sid: {}".format(response_sid - 0x40,sid))
                         logger.debug("response: {} == req_bytes: {}".format(bytes_to_hex_string(response[:min(len_req_bytes,4)-1]), bytes_to_hex_string(req_bytes[1:])))
-                        
+                        response_len = len(response)
                         if (response_sid - 0x40) == sid and response[:min(len_req_bytes,4)-1] == req_bytes[1:]:
-                            response_len = len(response)
                             if response_len < 6:
                                 response_bytes = [bytes([response_len+1]) + bytes([response_sid]) + response]
                             else:
@@ -456,16 +466,25 @@ class UDSResponder(threading.Thread):
                                     response_bytes.append( first_byte + response[i:i+7] )
                                     while len(response_bytes[-1]) < 8:
                                         response_bytes[-1] += b'\xFF'
-
-                            #logger.debug(response_bytes)
-                            logger.debug("Found (249, {})".format(bytes_to_hex_string(req_bytes)))
-                            self.response_dict[(249, bytes_to_hex_string(req_bytes))] = response_bytes
-                            break
+                        elif response_sid == 0x7F and response[0] == sid:
+                            response_bytes = [bytes([response_len+1]) + bytes([response_sid]) + response]
+                        else:
+                            continue
+                        #logger.debug(response_bytes)
+                        response_key = (249, bytes_to_hex_string(req_bytes))
+                        logger.debug("Found {}".format(response_key))
+                        self.response_dict[response_key] = response_bytes
+                        break
                     
 
-
+        #Tester present response.
         self.response_dict[(249, bytes_to_hex_string(b'\x3E\x00'))] = [b'\x02\x7E\x00']
-        self.response_dict[(249, bytes_to_hex_string(b'\x10\x01'))] = [b'\x02\x50\x01']
+        
+        # Add special codes and Negative responses. 
+        # TODO: Make this a GUI widget.
+        #self.response_dict[(249, bytes_to_hex_string(b'\x10\x01'))] = [b'\x02\x50\x01']
+        self.response_dict[(249, bytes_to_hex_string(b'\x10\x60'))] = [b'\x03\x7F\x10\x12']
+
         logger.info("Created UDS Response Dictionary")
         for k,v in sorted(self.response_dict.items()):
             logger.debug("{}: {}".format(k,v))
