@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QCoreApplication
 from TURP1210.RP1210.RP1210Functions import *
 from TURP1210.TableModel.TableModel import *
 from TURP1210.Graphing.graphing import *
-from TURP1210.TU_crypt.TU_crypt_public import *
+from TURP1210.TU_crypt.TU_crypt import *
 
 import json
 import base64
@@ -272,6 +272,15 @@ class DDEC_J1587(QWidget):
         return (request_type, total_len, bitmask_bytes, data_len, page_data)
 
     def start_ddec_J1587(self):
+         # Empty the queue
+        try:
+            while self.root.extra_queues["J1708"].qsize():
+                message = self.root.extra_queues["J1708"].get_nowait()
+        except KeyError:
+            # RP1210 J1708 Not Hooked up
+            QMessageBox.warning(self, "J1708 Issue","The J1708 network message queue is not setup. Please connect a valid RP1210 device.")
+            return
+            
         self.ddec_progress = QProgressDialog(self)
         self.ddec_progress.setMinimumWidth(600)
         self.ddec_progress.setWindowTitle("Downloading DDEC Data Pages")
@@ -298,10 +307,7 @@ class DDEC_J1587(QWidget):
                     b'\x00\xc8\x07\x04\x02\x00\x46\x41\x41\x5a\x03\xe9',
                     b'\x00\xc8\x07\x04\x04\x00\x46\x41\x41\x5a\x8e\x08']
         
-        # Empty the queue
-        while self.root.extra_queues["J1708"].qsize():
-            message = self.root.extra_queues["J1708"].get_nowait()
-        
+
         encoded_pages = {}
         raw_pages = {}
         
@@ -563,12 +569,13 @@ class DDEC_J1587(QWidget):
 
         # Encrypt the data
         raw_report = json.dumps(encoded_pages)
-        encryption_file = self.root.user_data.user_data["Decoder Public Key"]
+        encryption_file = bytes(self.root.user_data.user_data["Decoder Public Key"],'ascii')
         logger.debug("Decoder Public Key: {}".format(encryption_file))
         try:
             self.root.data_package["DDEC J1587 Encrypted"] = encrypt_bytes(raw_report.encode(), encryption_file)
         except:
             logger.debug(traceback.format_exc())
+            QMessageBox.warning(self,"Encryption Error","The local encryption failed using {}. Be sure to load the correct public encryption key.".format(encryption_file))
 
         
 

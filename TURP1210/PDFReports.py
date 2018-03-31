@@ -687,11 +687,26 @@ class FLAReportTemplate(SimpleDocTemplate):
 
     def add_event_table(self, title, table_list):
         """
-        A utility to acumulate chart data for events. Often these charts will be in chunks.
+        A utility to accumulate chart data for events. Often these charts will be in chunks.
         """
         logger.debug("Adding Table Data for {} to PDF.".format(title))
         #logger.debug(table_list)
-        table_object = Table(table_list, repeatRows=2, repeatCols=1)
+        page_width = 7.5 * inch
+        col_widths = [.08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width, 
+                      .08*page_width]
+        
+        table_object = Table(table_list, repeatRows=2, repeatCols=1, colWidths=col_widths )
         table_object.setStyle(TableStyle(self.table_options))
         self.event_groups[title] = table_object
 

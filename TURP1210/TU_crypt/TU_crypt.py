@@ -8,10 +8,36 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP
 from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 from cryptography.hazmat.primitives.asymmetric import rsa as RSA
-from cryptography.hazmat.primitives.serialization import load_ssh_public_key, load_pem_private_key
+import cryptography.hazmat.primitives.serialization as serialization
+from cryptography.hazmat.primitives.serialization import load_pem_public_key, load_pem_private_key, BestAvailableEncryption
 import base64
 import os
 
+def make_key_pair(name="TURP1210",passwd=None):
+    private_key = RSA.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend())
+    if passwd is None:
+        pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption())
+    else:
+        pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.BestAvailableEncryption(bytes(passwd)))
+    with open(name+"_PrivateKey.pem",'wb') as fp:
+        fp.write(pem)
+
+    public_key = private_key.public_key()
+    pem_pub = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    with open(name+"_PublicKey.pem",'wb') as fp:
+        fp.write(pem_pub)
+    
 def load_public_key(keyfile):
     """
     Loads an SSH (PEM) public key from a the path.
@@ -19,10 +45,10 @@ def load_public_key(keyfile):
     try:
         with open(keyfile, 'rb') as f:
             keystring = f.read()
-    except FileNotFoundError:
+    except (FileNotFoundError, OSError):
         keystring = keyfile
 
-    return load_ssh_public_key(keystring, default_backend())
+    return load_pem_public_key(keystring, default_backend())
 
 def load_private_key(keyfile, passwd=None):
     """
@@ -31,11 +57,11 @@ def load_private_key(keyfile, passwd=None):
     try:
         with open(keyfile, 'rb') as f:
             keystring = f.read()
-    except FileNotFoundError:
-        keystring = keyfile
-        
+    except (FileNotFoundError, OSError):
+        keystring = bytes(keyfile,'ascii')
     return load_pem_private_key(keystring, password=passwd, backend=default_backend())
-
+    
+        
 def encrypt_bytes(data, keyfile):
     """
     Encrypt data using envelope encryption. 
@@ -82,7 +108,7 @@ def decrypt_bytes(package, keyfile):
     
     privkey = load_private_key(keyfile)
     if not privkey:
-        print("Public Key Not Found")
+        print("Private Key Not Found")
         return 
     symkey = privkey.decrypt(cryptkey, 
                     OAEP(mgf=asym_padding.MGF1(algorithm=SHA256()),
@@ -104,13 +130,14 @@ if __name__ == '__main__':
     """
     A simple example case
     """
+    make_key_pair("Example")
     data = b'This is a test message! Giddie up! \x00' + bytes([x for x in range(256)])
-    package = encrypt_bytes(data,"Client Public Key.pem")
+    package = encrypt_bytes(data,"Example_PublicKey.pem")
     print("The following is the data to be encrypted:")
     print(data)
     print("\nThe encrypted package is as follows:")
     print(package)
-    new_data = decrypt_bytes(package,"Client Private Key.pem")
+    new_data = decrypt_bytes(package,"Example_PrivateKey.pem")
     print("\nDecrypting the data gives back the original message:")
     print(new_data)
     print("\nEquality test results: {}".format(data==new_data))

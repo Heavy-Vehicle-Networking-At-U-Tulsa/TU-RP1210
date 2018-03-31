@@ -128,9 +128,12 @@ current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('
 current_drive_id = subprocess.check_output('wmic DISKDRIVE get SerialNumber').decode('ascii','ignore').split('\n')[1].strip() 
 
 class TU_RP1210(QMainWindow):
-    def __init__(self, connect_gps=False, backup_interval=False):
+    def __init__(self, title, connect_gps=False, backup_interval=False):
         super(TU_RP1210,self).__init__()
         
+        self.title = title
+        self.setWindowTitle(self.title)
+
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
         progress.setWindowTitle("Starting Application")
@@ -162,9 +165,11 @@ class TU_RP1210(QMainWindow):
         progress.setValue(1)
         QCoreApplication.processEvents()
 
+        self.rx_queues = {}
+
         progress_label.setText("Loading the J1587 Database")
         try:
-            with open("J1587db.json",'r') as j1587_file:
+            with open(os.path.join(module_directory,"J1587db.json"),'r') as j1587_file:
                 self.j1587db = json.load(j1587_file)
         except FileNotFoundError:
             logger.debug("J1587db.json file was not found.")
@@ -224,7 +229,7 @@ class TU_RP1210(QMainWindow):
 
         self.module_directory = module_directory
         
-        self.user_data = UserData()
+        self.user_data = UserData(self.title)
 
         self.isodriver = None
 
@@ -263,7 +268,7 @@ class TU_RP1210(QMainWindow):
         QCoreApplication.processEvents()
 
         progress_label.setText("Setting up the GPS System")
-        self.GPS = GPSDialog()
+        self.GPS = GPSDialog(self.title)
         if connect_gps:
             self.setup_gps(dialog = False)
         progress.setValue(7)
@@ -397,6 +402,12 @@ class TU_RP1210(QMainWindow):
         ddec1587_action.triggered.connect(self.start_ddec_J1587)
         self.run_menu.addAction(ddec1587_action)
         
+        iso_replay_action = QAction(QIcon(os.path.join(module_directory,r'icons/Replay_48px.png')), 'Replay &ISO Network Traffic', self)
+        iso_replay_action.setShortcut('Ctrl+Shift+I')
+        iso_replay_action.setStatusTip('Responds to requests over the ISO15765 protocol based on the saved data.')
+        iso_replay_action.triggered.connect(self.iso_replay)
+        self.run_menu.addAction(iso_replay_action)
+        
         
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
@@ -413,6 +424,7 @@ class TU_RP1210(QMainWindow):
 
         self.run_toolbar = self.addToolBar("&Download")
         self.run_toolbar.addAction(run_action)
+        self.run_toolbar.addAction(iso_replay_action)
         self.run_toolbar.addAction(ddec1587_action)
         self.run_toolbar.addAction(setup_gps_action)
         self.run_toolbar.addAction(upload_action)
@@ -580,7 +592,7 @@ class TU_RP1210(QMainWindow):
         main_widget = QWidget()
         main_widget.setLayout(self.grid_layout)
         self.setCentralWidget(main_widget)
-        self.setWindowTitle('TU RP1210')
+        
         self.show()
     
     def get_plot_bytes(self, fig):
@@ -641,7 +653,7 @@ class TU_RP1210(QMainWindow):
             item.deleteLater()
 
         try:
-            self.export_path = os.path.join(os.path.expanduser('~'),"Documents","TU_RP1210")
+            self.export_path = os.path.join(os.path.expanduser('~'),"Documents","{}".format(self.title))
             if not os.path.exists(self.export_path):
                 os.makedirs(self.export_path)
 
@@ -650,10 +662,10 @@ class TU_RP1210(QMainWindow):
             self.export_path = os.path.expanduser('~')
 
         self.filename = os.path.join(self.export_path,
-            "TU_RP1210data {}.cpt".format(time.strftime("%Y-%m-%d %H%M%S",time.localtime())))
+            "{}data {}.cpt".format(self.title, time.strftime("%Y-%m-%d %H%M%S", time.localtime())))
         if new_file:
             fname = QFileDialog.getSaveFileName(self,
-                                             "Create New TU_RP1210 Data File",
+                                             "Create New {} Data File".format(self.title),
                                              os.path.join(self.export_path, self.filename),
                                              "",
                                              "")
@@ -666,7 +678,8 @@ class TU_RP1210(QMainWindow):
         logger.info("Current Data Package file is set to {}".format(self.filename))
 
         self.data_package = {"File Format":{"major":TU_RP1210_version["major"],
-                                            "minor":TU_RP1210_version["minor"]}}
+                                            "minor":TU_RP1210_version["minor"],
+                                            "patch":TU_RP1210_version["minor"]}}
         
         try:
             CAN_log_name = self.read_message_threads["CAN"].filename
@@ -691,8 +704,8 @@ class TU_RP1210(QMainWindow):
 
         self.data_package["Machine UUID"] = current_machine_id
         self.data_package["Harddrive UUID"] = current_drive_id
-        logger.info("TU_RP1210 running on a machine with UUID: {}".format(current_machine_id))
-        logger.info("TU_RP1210 running on a diskdrive with Serial Number: {}".format(current_drive_id))
+        logger.info("{} running on a machine with UUID: {}".format(self.title, current_machine_id))
+        logger.info("{} running on a diskdrive with Serial Number: {}".format(self.title, current_drive_id))
         
         self.data_package["Time Records"] = {"PC Start Time": time.time(),
                                              "Last PC Time": None,
@@ -730,15 +743,39 @@ class TU_RP1210(QMainWindow):
         self.J1587.clear_J1587_table()
         self.Components.clear_data()
 
+    def iso_replay(self):
+        logger.debug("ISO Replay")
+        responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
+        responder_thread.setDaemon(True) #needed to close the thread when the application closes.
+        responder_thread.start()
+        logger.debug("Started Replay Thread.")
+
+        #logger.debug(response_dict)
+        progress = QProgressDialog(self)
+        progress.setMinimumWidth(600)
+        progress.setWindowTitle("ISO Message Responder")
+        progress.setMinimumDuration(0)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMaximum(500)
+        progress_label = QLabel("Listening for Messages")
+        progress.setLabel(progress_label)
+        rx_count=1
+        progress.setValue(rx_count)
+        protocol = "CAN"
+        #Flush the buffer
+        
+
+
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
         #logger.debug("returned_message:")
         #logger.debug(returned_message)
         try:
             self.data_package["Decrypted Data"] = json.loads(returned_message)
-            self.ddec_j1587.plot_decrypted_data()
+            self.plot_decrypted_data()
         except TypeError:
-            pass
+            logger.debug(traceback.format_exc())
+
 
     def edit_user_data(self):
         self.user_data.show_dialog() 
@@ -763,15 +800,15 @@ class TU_RP1210(QMainWindow):
         logger.debug("New File Selected.")
         self.create_new(True)
 
-    def open_file(self): #, reload=True): 
+    def open_file(self):  
         """
 
         Returns: a tuple as (filename, data_dictionary)
                 or 
                 None if something went wrong.
         """  
-        filters = "TU_RP1210 Data Files (*.cpt);;All Files (*.*)"
-        selected_filter = "TU_RP1210 Data Files (*.cpt)"
+        filters = "{} Data Files (*.cpt);;All Files (*.*)".format(self.title)
+        selected_filter = "{} Data Files (*.cpt)".format(self.title)
         fname = QFileDialog.getOpenFileName(self, 
                                             'Open File',
                                             self.export_path,
@@ -782,7 +819,7 @@ class TU_RP1210(QMainWindow):
                 pgp_file_contents = pgpy.PGPMessage.from_file(fname[0])
                 logger.info("User opened signed file {}".format(fname[0]))
             except:
-                err_msg = "File {} was not a properly formatted TU_RP1210 file.".format(self.filename)
+                err_msg = "File {} was not a properly formatted {} file.".format(self.filename, self.title)
                 QMessageBox.warning(self, "File Format Error", err_msg)
                 logger.info(err_msg)
                 logger.debug(traceback.format_exc())
@@ -830,7 +867,10 @@ class TU_RP1210(QMainWindow):
             #if reload:    
             self.data_package = new_data_package
             self.export_path, self.filename = os.path.split(fname[0])
-            self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            self.setWindowTitle('{} {}.{} - {}'.format(self.title,
+                                                       TU_RP1210_version["major"],
+                                                       TU_RP1210_version["minor"],
+                                                       self.filename))
             self.data_package["File Name"] = self.filename 
             self.reload_data()
             logger.info("Opened File: {}".format(self.filename))
@@ -838,11 +878,15 @@ class TU_RP1210(QMainWindow):
             return (fname[0], new_data_package)   
         
     def reload_data(self):
+        """
+        Reload and refresh the data tables.
+        """
         self.J1939.pgn_data_model.aboutToUpdate()
         self.J1939.j1939_unique_ids = self.data_package["J1939 Parameter Group Numbers"]
         self.J1939.pgn_data_model.setDataDict(self.J1939.j1939_unique_ids)
         self.J1939.pgn_data_model.signalUpdate()
-        
+        #TODO: Add the row and column resizers like the one for UDS.
+
         self.J1939.pgn_rows = list(self.J1939.j1939_unique_ids.keys())
         
         self.J1939.spn_data_model.aboutToUpdate()
@@ -865,7 +909,17 @@ class TU_RP1210(QMainWindow):
         self.J1939.dm04_data_model.setDataDict(self.J1939.freeze_frame)
         self.J1939.dm04_data_model.signalUpdate()
 
+        self.J1939.uds_data_model.aboutToUpdate()
+        self.J1939.iso_recorder.uds_messages = self.data_package["UDS Messages"]
+        self.J1939.uds_data_model.setDataDict(self.J1939.iso_recorder.uds_messages)
+        self.J1939.uds_data_model.signalUpdate()
+        self.J1939.uds_table.resizeRowsToContents()
+        for c in self.J1939.uds_resizable_cols:
+            self.J1939.uds_table.resizeColumnToContents(c)            
+        self.J1939.uds_table.scrollToBottom()
+
         self.plot_decrypted_data()
+        logger.debug(self.pdf_engine.event_groups)
 
 
     def save_file(self, backup=False):
@@ -875,7 +929,7 @@ class TU_RP1210(QMainWindow):
         """
 
         #update the data package
-        self.data_package["UDS Messages"] = self.J1939.iso_recorder.uds_messages
+        
 
         if backup:
             temp_name = os.path.basename(self.filename)
@@ -896,13 +950,16 @@ class TU_RP1210(QMainWindow):
             msg = "Saved signed file to {}".format(filename)
             logger.info(msg)
             self.filename = os.path.basename(self.filename)
-            self.setWindowTitle('TU_RP1210 2.0 - {}'.format(self.filename))
+            self.setWindowTitle('{} {}.{} - {}'.format(self.title,
+                                                       TU_RP1210_version["major"],
+                                                       TU_RP1210_version["minor"],
+                                                       self.filename))
             self.statusBar().showMessage(msg)
         return pgp_message
 
     def save_file_as(self):
-        filters = "TU_RP1210 Data Files (*.cpt);;All Files (*.*)"
-        selected_filter = "TU_RP1210 Data Files (*.cpt)"
+        filters = "{} Data Files (*.cpt);;All Files (*.*)".format(self.title)
+        selected_filter = "{} Data Files (*.cpt)".format(self.title)
         fname = QFileDialog.getSaveFileName(self, 
                                             'Save File As',
                                             os.path.join(self.export_path,self.filename),
@@ -993,7 +1050,7 @@ class TU_RP1210(QMainWindow):
 
     def selectRP1210(self, automatic=False):
         logger.debug("Select RP1210 function called.")
-        selection = SelectRP1210()
+        selection = SelectRP1210(self.title)
         logger.debug(selection.dll_name)
         if not automatic:
             selection.show_dialog()
@@ -1039,6 +1096,8 @@ class TU_RP1210(QMainWindow):
         progress.setValue(2)
         self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
         progress.setValue(3)
+        #self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
+        #progress.setValue(3)
         
         logger.debug('Client IDs: {}'.format(self.client_ids))
 
@@ -1068,6 +1127,7 @@ class TU_RP1210(QMainWindow):
                                                        byref(fpchClientCommand), 1)
                 logger.debug('RP1210_Echo_Transmitted_Messages returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
                 
+                 #Set all filters to pass
                 return_value = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), 
                                                        c_short(nClientID),
                                                        None, 0)
@@ -1081,7 +1141,7 @@ class TU_RP1210(QMainWindow):
                                                                                   self.extra_queues[protocol],
                                                                                   self.RP1210.ReadMessage, 
                                                                                   nClientID,
-                                                                                  protocol)
+                                                                                  protocol, self.title)
                     self.read_message_threads[protocol].setDaemon(True) #needed to close the thread when the application closes.
                     self.read_message_threads[protocol].start()
                     logger.debug("Started RP1210ReadMessage Thread.")
@@ -1092,6 +1152,26 @@ class TU_RP1210(QMainWindow):
                     
                 else :
                     logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+
+                if protocol == "ISO15765":
+                    fpchClientCommand[0] = b'\x01' #EXTENDED CAN
+                    fpchClientCommand[1] = b'\x00'
+                    fpchClientCommand[2] = b'\xda'
+                    fpchClientCommand[3] = b'\x00'
+                    fpchClientCommand[4] = b'\x00'
+                    fpchClientCommand[5] = b'\xFF'
+                    fpchClientCommand[6] = b'\x00'
+                    fpchClientCommand[7] = b'\xda'
+                    fpchClientCommand[8] = b'\x00'
+                    fpchClientCommand[9] = b'\x00'
+                    fpchClientCommand[10] = b'\xFF'
+                    
+                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_Message_Filtering_For_ISO15765), 
+                                                           c_short(nClientID), 
+                                                           byref(fpchClientCommand), 11)
+                    logger.debug('RP1210_Set_Message_Filtering_For_ISO15765 returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                    
+               
             else:
                 logger.debug("{} Client not connected for All Filters to pass. No Queue will be set up.".format(protocol))
             i+=1
@@ -1099,6 +1179,8 @@ class TU_RP1210(QMainWindow):
         
         if self.client_ids["J1939"] is None or self.client_ids["J1708"] is None:
             QMessageBox.information(self,"RP1210 Client Not Connected.","The default RP1210 Device was not found or is unplugged. Please reconnect your Vehicle Diagnostic Adapter (VDA) and select the RP1210 device to use.")
+        
+        progress.deleteLater()
 
     def check_connections(self):
         '''
@@ -1136,14 +1218,14 @@ class TU_RP1210(QMainWindow):
                     for tool in [0xB6]: #or 0xAC
                         j1587_request = bytes([0x03, tool, 0, pid])
                         self.RP1210.send_message(self.client_ids["J1708"], j1587_request)
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
         
         # Request Time and Date
         try:
             if self.client_ids["J1939"] is not None: 
                 self.send_j1939_request(65254)
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError):
             pass
 
     def get_hardware_status_ex(self):
@@ -1356,7 +1438,7 @@ class TU_RP1210(QMainWindow):
         
         file_list = [self.data_package["Network Logs"]["CAN Log File Name"],
                      self.data_package["Network Logs"]["J1708 Log File Name"],
-                     "TU_RP1210.log"
+                     self.title + ".log"
                     ] + additional_files
         logger.debug("Signing and Copying the following files to {}".format(self.export_path))
         logger.debug(file_list)
@@ -1563,12 +1645,19 @@ class TU_RP1210(QMainWindow):
             logger.info("Failed to open {} as a PGP message.".format(filename))
             QMessageBox.warning(self, 
                 "Invalid File",
-                "Failed to open {} as a valid PGP message. Be sure the file was saved by TU_RP1210".format(filename),
+                "Failed to open {} as a valid PGP message. Be sure the file was saved by {}".format(filename,self.title),
                 QMessageBox.Close,
                 QMessageBox.Close)
             return False
         
         return self.verify_stream(message, key)
+    
+    def send_can_message(self, data_bytes):
+        #initialize the buffer
+        if self.client_ids["CAN"] is not None:
+            message_bytes = b'\x01'
+            message_bytes += data_bytes
+            self.RP1210.send_message(self.client_ids["CAN"], message_bytes)
 
     def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6):
         #initialize the buffer
@@ -1699,8 +1788,8 @@ class TU_RP1210(QMainWindow):
     def read_rp1210(self):
         # This needs to run often to keep the queues from filling
         try:
-            for protocol, client in self.client_ids.items():
-                try:
+            for protocol in ["J1939","J1708"]:
+                if protocol in self.rx_queues:
                     start_time = time.time()
                     while self.rx_queues[protocol].qsize():
                         #Get a message from the queue. These are raw bytes
@@ -1714,8 +1803,8 @@ class TU_RP1210(QMainWindow):
                         if time.time() - start_time + 50 > self.update_rate: #give some time to process events
                             logger.debug("Can't keep up with messages.")
                             return
-                except KeyError:
-                    logger.debug(traceback.format_exc())
+                #except KeyError:
+                #    logger.debug(traceback.format_exc())
                     #pass # nothing is connected.
         except AttributeError:
             logger.debug(traceback.format_exc())
@@ -1729,7 +1818,7 @@ class TU_RP1210(QMainWindow):
         logger.debug("show_about_dialog Request")
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
-        msg.setText("About TU_RP1210")
+        msg.setText("About {}".format(self.title))
         msg.setInformativeText("""Icons by Icons8\nhttps://icons8.com/""")
         msg.setWindowTitle("About")
         msg.setDetailedText("There will be some details here.")
@@ -1765,7 +1854,6 @@ class TU_RP1210(QMainWindow):
 
     def start_ddec_J1587(self):
         self.ddec_j1587.start_ddec_J1587()
-        self.upload_data_package()
-
+        
     def plot_decrypted_data(self):
         self.ddec_j1587.plot_decrypted_data()

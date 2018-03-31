@@ -187,13 +187,13 @@ class J1939Tab(QWidget):
         self.uds_data_model = J1939TableModel()
         self.uds_table_proxy = Proxy()
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
-        self.uds_table_columns = ["SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
-        self.uds_resizable_rows = [0,2,3,4,6,7,8]
+        self.uds_table_columns = ["Line","SA","Source","DA","SID","Service Name","Raw Hexadecimal","Meaning","Value","Units","Raw Bytes"]
+        self.uds_resizable_cols = [0,1,2,3,4,5,7,8,9]
         self.uds_data_model.setDataHeader(self.uds_table_columns)
         self.uds_table_proxy.setSourceModel(self.uds_data_model)
         self.uds_table.setModel(self.uds_table_proxy)
         self.uds_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.uds_table.setSortingEnabled(False)
+        self.uds_table.setSortingEnabled(True)
         self.uds_table.setWordWrap(False)
         
         #Create a layout for that box using a grid
@@ -346,7 +346,7 @@ class J1939Tab(QWidget):
                 self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
                 self.uds_data_model.signalUpdate()
                 self.uds_table.resizeRowsToContents()
-                for r in self.uds_resizable_rows:
+                for r in self.uds_resizable_cols:
                     self.uds_table.resizeColumnToContents(r)
                 self.uds_table.scrollToBottom()
 
@@ -422,16 +422,19 @@ class J1939Tab(QWidget):
         
     def fill_j1939_table(self, rx_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
-        
-        vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
-        pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
-        pri = rx_buffer[8] # how/priority
-        sa = rx_buffer[9] #Source Address
-        da = rx_buffer[10] #Destination Address
-        
+        try:
+            vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
+            pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
+            pri = rx_buffer[8] # how/priority
+            sa = rx_buffer[9] #Source Address
+            da = rx_buffer[10] #Destination Address
+        except (struct.error, IndexError):
+            return
+
         if pgn == 0xDA00: #ISO
             self.iso_queue.put((pgn, pri, sa, da, rx_buffer[11:]))
             self.iso_recorder.read_message(True)
+            self.root.data_package["UDS Messages"].update(self.iso_recorder.uds_messages)
             return
         
         if rx_buffer[4] == 1: #Echo message

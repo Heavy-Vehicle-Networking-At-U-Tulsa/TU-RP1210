@@ -23,7 +23,7 @@ class RP1210ReadMessageThread(threading.Thread):
     nClientID - this lets us know which network is being used to receive the
                 messages. This will likely be a 1 or 2'''
 
-    def __init__(self, parent, rx_queue, extra_queue, RP1210_ReadMessage, nClientID, protocol, filename="NetworkTraffic"):
+    def __init__(self, parent, rx_queue, extra_queue, RP1210_ReadMessage, nClientID, protocol, title, filename="NetworkTraffic"):
         threading.Thread.__init__(self)
         self.root = parent
         self.rx_queue = rx_queue
@@ -34,7 +34,7 @@ class RP1210ReadMessageThread(threading.Thread):
         self.message_count = 0
         self.start_time = time.time()
         self.duration = 0
-        self.filename = os.path.join(get_storage_path(), protocol + filename + ".bin")
+        self.filename = os.path.join(get_storage_path(title), protocol + filename + ".bin")
         self.protocol = protocol
         self.pgns_to_block=[61444, 61443, 65134, 65215]
         self.sources_to_block=[0, 11]
@@ -62,7 +62,10 @@ class RP1210ReadMessageThread(threading.Thread):
                         dlc = int(return_value - 10)
                         #the following conversion is to emulate the data structure from the NMFTA CAN Logger Project
                         # See https://github.com/Heavy-Vehicle-Networking-At-U-Tulsa/NMFTA-CAN-Logger/tree/master/_07_Low_Latency_Logger_with_Requests
-                        microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
+                        try:
+                            microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
+                        except struct.error:
+                            continue
                         # RP1210_ReadMessage API:
                         #Reverse endianess
                         vda_timestamp = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[0:4])[0])  
@@ -77,8 +80,8 @@ class RP1210ReadMessageThread(threading.Thread):
                             can_data = ucTxRxBuffer[8:16]
                         # Build the 24 bytes that make up a CAN message.
                         
-                        if can_id not in self.can_ids_to_block:
-                            self.rx_queue.put(ucTxRxBuffer[:return_value])
+                        #if can_id not in self.can_ids_to_block:
+                        self.rx_queue.put(ucTxRxBuffer[:return_value])
                     
                         message_bytes += time_bytes
                         message_bytes += vda_timestamp
@@ -115,7 +118,12 @@ class RP1210ReadMessageThread(threading.Thread):
                         #else:
                         #    print("Blocked {} {}".format(pgn,sa))
                         # Logging for J1939 is taken care of by CAN
-                
+                    # elif self.protocol == "ISO15765": 
+                    #     self.rx_queue.put(ucTxRxBuffer[:return_value])
+                    #     self.extra_queue.put(ucTxRxBuffer[:return_value])
+                    #     print(ucTxRxBuffer[:return_value])
+
+                    
         logger.debug("RP1210 Receive Thread is finished.")
 
     def make_log_data(self,message_bytes,return_value,time_bytes,ucTxRxBuffer):
@@ -618,7 +626,7 @@ class RP1210Class():
                                         c_short(msg_len), 0, 0)
             if return_value != 0:
                 message = "RP1210_SendMessage failed with a return value of  {}: {}".format(return_value,
-                                                                self.RP1210.get_error_code(return_value))
+                                                                self.get_error_code(return_value))
                 logger.warning(message)
         except:
             logger.warning(traceback.format_exc())

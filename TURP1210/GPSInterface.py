@@ -96,7 +96,7 @@ class GPSThread(threading.Thread):
 
 
 class GPSDialog(QDialog):
-    def __init__(self):
+    def __init__(self,title):
         super(GPSDialog,self).__init__()
         #self.root = parent
         self.baudrate = 4800
@@ -106,7 +106,7 @@ class GPSDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.connected = False
         self.ser = None
-        self.gps_settings_file = os.path.join(get_storage_path(), "GPS_setting.txt")
+        self.gps_settings_file = os.path.join(get_storage_path(title), "GPS_setting.txt")
 
 
     def setup_dialog(self):

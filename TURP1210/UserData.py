@@ -27,7 +27,7 @@ from pgpy.constants import (PubKeyAlgorithm,
                             SignatureType)
 from passlib.hash import pbkdf2_sha256 as passwd
 
-from TURP1210.TU_crypt.TU_crypt_public import *
+from TURP1210.TU_crypt.TU_crypt import *
     
 import requests
 import traceback
@@ -39,16 +39,16 @@ import logging
 import logging.config
 logger = logging.getLogger(__name__)
 
-def get_storage_path(progname = 'TURP1210'):
+def get_storage_path(progname):
     storage = os.path.join(os.getenv('LOCALAPPDATA'), progname )
     if not os.path.isdir(storage):
         os.makedirs(storage)
     return storage
 
 class UserData(QDialog):
-    def __init__(self, path_to_file = "UserData.json"):
+    def __init__(self, title, path_to_file = "UserData.json"):
         super(UserData, self).__init__()
-        storage = get_storage_path()
+        storage = get_storage_path(title)
         self.path_to_file = os.path.join(storage, path_to_file)
 
         self.token = None
@@ -293,8 +293,11 @@ class UserData(QDialog):
         Send  arequest to refresh the token
         """
         self.attempts = 1
-        header_values = {'Authorization' : self.user_data["Web Token"],
-                         'Requested-scope':'user' }
+        try:
+            header_values = {'Authorization'  : self.user_data["Web Token"],
+                             'Requested-scope':'user' }
+        except KeyError:
+            QMessageBox.warning(self,"Token Missing","The user token was missing. Please login using your username and password to obtain a token.")
         url = self.user_data["Decoder Web Site Address"] 
         try:
             r = requests.get(url, headers=header_values)
@@ -514,11 +517,11 @@ class UserData(QDialog):
             returned_message = base64.b64decode(result["Decrypted Bytes"].encode('ascii'))
             logger.debug("\nReturned Message: {}".format(returned_message))
             if test_message == returned_message:
-                if display_dialog:
-                    QMessageBox.information(self,"Success","The test message was successfully encrypted with the local public key and decrypted with the server's private key.")
+                logger.debug("The returned message matched the test message.")
+                QMessageBox.information(self,"Success","The test message was successfully encrypted with the local public key and decrypted with the server's private key.")
                 return True
             else:
-                logger.debug("The Returned Message did not match the test message.")
+                logger.debug("The returned ressage did not match the test message.")
         except:
             logger.debug(traceback.format_exc())
        
@@ -580,7 +583,8 @@ class UserData(QDialog):
                                  sensitive=False,
                                  compression=CompressionAlgorithm.ZIP,
                                  encoding='ascii')
-        pgp_message |= self.private_key.sign(pgp_message)
+        if self.private_key is not None:
+            pgp_message |= self.private_key.sign(pgp_message)
         return pgp_message
 
 
@@ -1107,6 +1111,6 @@ if __name__ == '__main__':
         app = QApplication(sys.argv)
     else:
         app.close()
-    user_data = UserData()
+    user_data = UserData("TruckCRYPT")
     user_data.show_dialog()
     sys.exit(app.exec_())
