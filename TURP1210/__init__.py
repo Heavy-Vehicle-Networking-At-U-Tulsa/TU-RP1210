@@ -9,4 +9,3 @@ from TURP1210.UserData import *
 from TURP1210.PDFReports import *
 from TURP1210.ISO15765 import *
 from TURP1210.Graphing.graphing import * 
-from TURP1210.DDEC_1587 import *
