@@ -117,9 +117,12 @@ except FileNotFoundError:
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
-with open('version.json') as f:
-    TU_RP1210_version = json.load(f)
-
+try:
+    with open('version.json') as f:
+        TU_RP1210_version = json.load(f)
+except:
+    print("This is a module that should be run from another program. See the demo code.")
+    
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
 
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
@@ -628,6 +631,7 @@ class TU_RP1210(QMainWindow):
 
     def create_new(self, new_file=True):
 
+        self.source_addresses = []
 
         for k,item in self.graph_tabs.items():
             item.deleteLater()
@@ -1007,12 +1011,11 @@ class TU_RP1210(QMainWindow):
         self.J1939.uds_data_model.signalUpdate()
         self.J1939.uds_table.resizeRowsToContents()
         for c in self.J1939.uds_resizable_cols:
-            self.J1939.uds_table.resizeColumnToContents(c)            
-        self.J1939.uds_table.scrollToBottom()
+            self.J1939.uds_table.resizeColumnToContents(c)
+        
 
         self.plot_decrypted_data()
-        logger.debug(self.pdf_engine.event_groups)
-
+        
     def plot_decrypted_data(self):
         pass
 
@@ -1266,7 +1269,9 @@ class TU_RP1210(QMainWindow):
         
         if self.client_ids["J1939"] is None or self.client_ids["J1708"] is None:
             QMessageBox.information(self,"RP1210 Client Not Connected.","The default RP1210 Device was not found or is unplugged. Please reconnect your Vehicle Diagnostic Adapter (VDA) and select the RP1210 device to use.")
-        
+            self.voltage_graph.hide()
+        else:
+            self.voltage_graph.show()
         progress.deleteLater()
 
     def check_connections(self):
@@ -1416,7 +1421,10 @@ class TU_RP1210(QMainWindow):
         """
         if self.ask_permission():
             logger.info("Starting Vehicle Network Scan.")
-
+            # Ensure brakes, engine and global sources are in the source addresses.
+            for sa in [0x00, 0x0B, 0xFF]:
+                if sa not in self.source_addresses:
+                    self.source_addresses.append(sa)
             # Log the time when this starts
             self.extraction_time_pc = time.time()
             try:
@@ -1463,9 +1471,9 @@ class TU_RP1210(QMainWindow):
                     except:
                         pgn_name= ""
                     progress_label.setText("Pass {}: Requesting PGN {} - {}".format(request_pass+1, pgn, pgn_name))
-                        
+                    
                     random.shuffle(self.source_addresses)
-                    for address in [0x00, 0x0B, 0xFF]: #self.source_addresses:
+                    for address in self.source_addresses:
                         request_count += 1
                         # Send the request for a PGN onto the J1939 Network
                         # and wait for a response
@@ -1876,30 +1884,29 @@ class TU_RP1210(QMainWindow):
     #     pass
     
     def read_rp1210(self):
-        # This needs to run often to keep the queues from filling
-        try:
-            for protocol in ["J1939","J1708"]:
-                if protocol in self.rx_queues:
-                    start_time = time.time()
-                    while self.rx_queues[protocol].qsize():
-                        #Get a message from the queue. These are raw bytes
-                        #if not protocol == "J1708":
-                        rxmessage = self.rx_queues[protocol].get()
-                        if protocol == "J1939":
+        # This function needs to run often to keep the queues from filling
+        #try:
+        for protocol in self.rx_queues.keys():
+            if protocol in self.rx_queues:
+                start_time = time.time()
+                while self.rx_queues[protocol].qsize():
+                    #Get a message from the queue. These are raw bytes
+                    #if not protocol == "J1708":
+                    rxmessage = self.rx_queues[protocol].get()
+                    if protocol == "J1939":
+                        try:
                             self.J1939.fill_j1939_table(rxmessage)
-                        elif protocol == "J1708":
+                        except:
+                            logger.debug(traceback.format_exc())
+                    elif protocol == "J1708":
+                        try:
                             self.J1587.fill_j1587_table(rxmessage)
-                        
-                        if time.time() - start_time + 50 > self.update_rate: #give some time to process events
-                            logger.debug("Can't keep up with messages.")
-                            return
-                #except KeyError:
-                #    logger.debug(traceback.format_exc())
-                    #pass # nothing is connected.
-        except AttributeError:
-            logger.debug(traceback.format_exc())
-            #pass # nothing is connected.        
-
+                        except:
+                            logger.debug(traceback.format_exc())
+                    
+                    if time.time() - start_time + 50 > self.update_rate: #give some time to process events
+                        logger.debug("Can't keep up with messages.")
+                        return
     def register_software(self):
         logging.debug("Register Software Request")                      
         self.edit_user_data()

@@ -449,14 +449,14 @@ class J1939Tab(QWidget):
 
         pgn_key = repr((pgn,sa))
         source_key = "{} on J1939".format(self.get_sa_name(sa))
+        if sa not in self.battery_potential.keys():
+            self.battery_potential[sa] = []
+            logger.debug("Set battery potential for SA {} to an empty list.".format(sa))
+
         if sa not in self.root.source_addresses:
         #if sa not in self.ecm_time.keys():
             #self.ecm_time[sa]=[]
 
-            self.battery_potential[sa] = []
-            logger.debug("Added empty list to dictionaries for source address {}".format(sa))
-
-        
             self.root.source_addresses.append(sa)
             self.root.data_package["Time Records"][source_key] = {}
             self.root.data_package["Component Information"][source_key] = {}
