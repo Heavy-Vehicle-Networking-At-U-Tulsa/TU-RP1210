@@ -122,7 +122,7 @@ try:
         TU_RP1210_version = json.load(f)
 except:
     print("This is a module that should be run from another program. See the demo code.")
-    
+
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
 
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
@@ -390,13 +390,6 @@ class TU_RP1210(QMainWindow):
         run_action.setStatusTip('Scan for all data using standard data and known EDR recovery routines.')
         run_action.triggered.connect(self.start_scan)
         self.run_menu.addAction(run_action)
-               
-        iso_replay_action = QAction(QIcon(os.path.join(module_directory,r'icons/Replay_48px.png')), 'Replay &ISO Network Traffic', self)
-        iso_replay_action.setShortcut('Ctrl+Shift+I')
-        iso_replay_action.setStatusTip('Responds to requests over the ISO15765 protocol based on the saved data.')
-        iso_replay_action.triggered.connect(self.iso_replay)
-        self.run_menu.addAction(iso_replay_action)
-        
         
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
@@ -413,7 +406,6 @@ class TU_RP1210(QMainWindow):
 
         self.run_toolbar = self.addToolBar("&Download")
         self.run_toolbar.addAction(run_action)
-        self.run_toolbar.addAction(iso_replay_action)
         self.run_toolbar.addAction(setup_gps_action)
         self.run_toolbar.addAction(upload_action)
         
@@ -633,14 +625,14 @@ class TU_RP1210(QMainWindow):
 
         self.source_addresses = []
 
-        for k,item in self.graph_tabs.items():
-            item.deleteLater()
+        # I don't think this does anything
+        #for k,item in self.graph_tabs.items():
+        #    item.deleteLater()
 
         try:
             self.export_path = os.path.join(os.path.expanduser('~'),"Documents","{}".format(self.title))
             if not os.path.exists(self.export_path):
                 os.makedirs(self.export_path)
-
         except FileNotFoundError:
             logger.debug(traceback.format_exc())
             self.export_path = os.path.expanduser('~')
@@ -653,6 +645,9 @@ class TU_RP1210(QMainWindow):
                                              os.path.join(self.export_path, self.filename),
                                              "",
                                              "")
+            if not fname[0]:
+                #the user pressed cancel
+                return
         else: 
             fname=[False]
         
@@ -704,11 +699,12 @@ class TU_RP1210(QMainWindow):
         self.data_package["Warnings"] = []
         self.data_package["J1587 Message and Parameter IDs"] = {}
         self.data_package["J1939 Parameter Group Numbers"] = {}
+        self.data_package["J1939 Suspect Parameter Numbers"] = {}
+        self.data_package["UDS Messages"] = {}
         self.data_package["Component Information"] = {}
         self.data_package["Distance Information"] = {}
         self.data_package["ECU Time Information"] = {}
-        self.data_package["J1939 Suspect Parameter Numbers"] = {}
-        self.data_package["UDS Messages"] = {}
+        self.data_package["Event Data"] = {}
         self.data_package["GPS Data"] = {
             "Altitude": 0.0,
             "GPS Time": None,
@@ -726,152 +722,6 @@ class TU_RP1210(QMainWindow):
         self.J1939.clear_j1939_table()
         self.J1587.clear_J1587_table()
         self.Components.clear_data()
-
-    def iso_replay(self):
-        logger.debug("ISO Replay")
-
-
-        # try:
-        #     self.close_clients()
-        # except AttributeError:
-        #     pass
-        # try:
-        #     for thread in self.read_message_threads:
-        #         thread.runSignal = False
-        # except AttributeError:
-        #     pass
-        
-        # # We want to connect to multiple clients with different protocols.
-        # deviceID = 1
-        # self.client_ids={}
-        # self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "250000")
-        # self.client_ids["J1708"] = self.RP1210.get_client_id("J1708", deviceID, "Auto")
-        # self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "250000")
-       
-        # for protocol, nClientID in self.client_ids.items():
-        #     QCoreApplication.processEvents()
-        #     if nClientID is not None:
-        #         # By turning on Echo Mode, our logger process can record sent messages as well as received.
-        #         fpchClientCommand = (c_char*2000)()
-        #         fpchClientCommand[0] = 1 #Echo mode on
-        #         return_value = self.RP1210.SendCommand(c_short(RP1210_Echo_Transmitted_Messages), 
-        #                                                c_short(nClientID), 
-        #                                                byref(fpchClientCommand), 1)
-        #         logger.debug('RP1210_Echo_Transmitted_Messages returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-                
-        #          #Set all filters to pass
-        #         return_value = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), 
-        #                                                c_short(nClientID),
-        #                                                None, 0)
-        #         if return_value == 0:
-        #             logger.debug("RP1210_Set_All_Filters_States_to_Pass for {} is successful.".format(protocol))
-        #             #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
-        #             self.rx_queues[protocol] = queue.Queue(10000)
-        #             self.extra_queues[protocol] = queue.Queue(10000)
-        #             self.read_message_threads[protocol] = RP1210ReadMessageThread(self, 
-        #                                                                           self.rx_queues[protocol],
-        #                                                                           self.extra_queues[protocol],
-        #                                                                           self.RP1210.ReadMessage, 
-        #                                                                           nClientID,
-        #                                                                           protocol, self.title)
-        #             self.read_message_threads[protocol].setDaemon(True) #needed to close the thread when the application closes.
-        #             self.read_message_threads[protocol].start()
-        #             logger.debug("Started RP1210ReadMessage Thread.")
-
-        #             if protocol == "J1939":
-        #                 self.isodriver = ISO15765Driver(self, self.extra_queues["J1939"])
-                    
-        #         else :
-        #             logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-
-        #         if protocol == "J1939":
-        #             fpchClientCommand[0] = 0x00 #0 = as fast as possible milliseconds
-        #             fpchClientCommand[1] = 0x00
-        #             fpchClientCommand[2] = 0x00
-        #             fpchClientCommand[3] = 0x00
-                    
-        #             return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
-        #                                                    c_short(nClientID), 
-        #                                                    byref(fpchClientCommand), 4)
-        #             logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-                    
-               
-        #     else:
-        #         logger.debug("{} Client not connected for All Filters to pass. No Queue will be set up.".format(protocol))
-        try:
-            assert self.client_ids["J1939"] > 0   
-        except:
-            return
-            
-        fpchClientCommand = (c_char*2000)()
-        fpchClientCommand[0] = CHANGE_BAUD_NOW
-        fpchClientCommand[1] = RP1210_BAUD_250k
-        logger.debug("Setting Baud Rate")
-        
-        return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Baud), 
-                                                       c_short(self.client_ids["J1939"]), 
-                                                       byref(fpchClientCommand), 2)
-        logger.debug('RP1210_Set_J1939_Baud returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-        
-        logger.debug("Claiming Address")
-        fpchClientCommand[0] = 0x00 #Address to claim (engine #1)
-        fpchClientCommand[1] = 0xF7
-        fpchClientCommand[2] = 0x02
-        fpchClientCommand[3] = 0xA1
-        fpchClientCommand[4] = 0x01
-        fpchClientCommand[5] = 0x00
-        fpchClientCommand[6] = 0x00
-        fpchClientCommand[7] = 0x00
-        fpchClientCommand[8] = 0x10
-        fpchClientCommand[9] = 0x00
-        return_value = self.RP1210.SendCommand(c_short(RP1210_Protect_J1939_Address), 
-                                                       c_short(self.client_ids["J1939"]), 
-                                                       byref(fpchClientCommand), 10)
-        logger.debug('RP1210_Protect_J1939_Address returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-        
-
-        fpchClientCommand[0] = 0x01 #0 = as fast as possible milliseconds
-        fpchClientCommand[1] = 0x00
-        fpchClientCommand[2] = 0x00
-        fpchClientCommand[3] = 0x00
-        
-        return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
-                                               c_short(self.client_ids["J1939"]), 
-                                               byref(fpchClientCommand), 4)
-        logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
-                    
-
-
-        ISO_responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
-        ISO_responder_thread.setDaemon(True) #needed to close the thread when the application closes.
-        ISO_responder_thread.start()
-        logger.debug("Started ISO Replay Thread.")
-        
-        J1939_responder_thread = J1939Responder(self, self.extra_queues["CAN"])
-        J1939_responder_thread.setDaemon(True) #needed to close the thread when the application closes.
-        J1939_responder_thread.start()
-        logger.debug("Started J1939 Replay Thread.")
-        
-        progress = QProgressDialog(self)
-        progress.setMinimumWidth(600)
-        progress.setWindowTitle("ISO Message Responder")
-        progress.setMinimumDuration(0)
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setMaximum(ISO_responder_thread.max_count)
-        progress_label = QLabel("Listening for Messages")
-        progress.setLabel(progress_label)
-
-        #Wait for the user to press cancel
-        while not progress.wasCanceled():
-            time.sleep(.05)
-            QApplication.processEvents()
-            progress.setValue(ISO_responder_thread.rx_count)
-            
-        ISO_responder_thread.runSignal = False
-        J1939_responder_thread.runSignal = False
-        #Flush the buffer
-        progress.deleteLater()
-
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
@@ -1279,16 +1129,20 @@ class TU_RP1210(QMainWindow):
         This function checks the VDA hardware status function to see if it has seen network traffic in the last second.
         
         '''    
+        network_connection = {}
 
-        for key in ["J1939", "J1708"]:            
+        for key in ["J1939", "J1708"]:
+            network_connection[key]=False            
             try:
                 current_count = self.read_message_threads[key].message_count
                 duration = time.time() - self.read_message_threads[key].start_time
                 self.message_duration_label[key].setText("<html><img src='{}/icons/icons8_Connected_48px.png'><br>Client Connected<br>{:0.0f} sec.</html>".format(module_directory, duration))
+                network_connection[key] = True
             except (KeyError, AttributeError) as e:
                 current_count = 0
                 duration = 0
                 self.message_duration_label[key].setText("<html><img src='{}/icons/icons8_Disconnected_48px.png'><br>Client Disconnected<br>{:0.0f} sec.</html>".format(module_directory, duration))
+                
             count_change = current_count - self.previous_count[key]
             self.previous_count[key] = current_count
             # See if messages come in. Change the 
@@ -1319,6 +1173,12 @@ class TU_RP1210(QMainWindow):
                 self.send_j1939_request(65254)
         except (KeyError, AttributeError):
             pass
+
+        #return True if any connection is present.
+        for key, val in network_connection.items():
+            if val: 
+                return True
+        return False
 
     def get_hardware_status_ex(self):
         """
@@ -1419,6 +1279,15 @@ class TU_RP1210(QMainWindow):
         Perform a scan of the vehicle network by sending a series of request messages over the
         different vehicle networks. The requests are randomized.
         """
+        if not self.check_connections():
+            logger.info("No Vehicle Network Traffic Detected.")
+            QMessageBox.warning(self, 
+                    "No Vehicle Network",
+                    "There was no vehicle network traffic detected. Please check the ignition key switch and battery voltage.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
+            return
+
         if self.ask_permission():
             logger.info("Starting Vehicle Network Scan.")
             # Ensure brakes, engine and global sources are in the source addresses.
@@ -1445,7 +1314,7 @@ class TU_RP1210(QMainWindow):
             #progress.setWindowModality(Qt.WindowModal) # Improves stability of program
             progress.setModal(False) #Will lead to instability when trying to click around.
             progress.setMaximum(int(total_requests*1.02))
-            progress_label = QLabel("Asking for ISO 15765 Parameters")
+            progress_label = QLabel("Asking for UDS data (ISO 15765)")
             progress.setLabel(progress_label)
 
             request_count = int(0.021*total_requests)
@@ -1790,10 +1659,6 @@ class TU_RP1210(QMainWindow):
         logger.debug("Setup GPS with file.")
         success = self.GPS.try_GPS()
         if not success:
-            try: 
-                self.GPS.ser = None
-            except:
-                logger.debug(traceback.format_exc())
             logger.debug("Setup GPS with dialog box.")
             self.GPS.run()
         
@@ -1851,8 +1716,7 @@ class TU_RP1210(QMainWindow):
             return
         except:
             logger.debug(traceback.format_exc())
-
-            self.gps_icon.setText("<html><img src='{}/icons/icons8_GPS_Disconnected_48px.png'><br>Disconnected</html>").format(module_directory)
+            self.gps_icon.setText("<html><img src='{}/icons/icons8_GPS_Disconnected_48px.png'><br>Disconnected</html>".format(module_directory))
         
         try:
             del self.gps_thread

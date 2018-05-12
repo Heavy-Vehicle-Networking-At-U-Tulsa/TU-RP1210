@@ -567,6 +567,8 @@ class UserData(QDialog):
             except:
                 logger.debug(traceback.format_exc())
             logger.debug("Finished with requests.")
+        except requests.exceptions.ConnectionError:
+            QMessageBox.warning(self,"Connection Error", "There was a connection error to the server. The specified server was {}.".format(url))
         except ConnectionRefusedError:
             logger.debug("Decoding Engine is not online.")
         except:

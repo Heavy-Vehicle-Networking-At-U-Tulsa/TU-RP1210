@@ -33,7 +33,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTreeWidgetItemIterator,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QVariant, QAbstractItemModel, QSortFilterProxyModel
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 
 import time
 import random
@@ -51,6 +51,12 @@ class ComponentInfoTab(QWidget):
         super(ComponentInfoTab,self).__init__()
         self.root = parent
         self.tabs = tabs
+        self.h1_font = QFont()
+        self.h1_font.setBold(True)
+        self.h1_font.setPointSize(18)
+        self.h2_font = QFont()
+        self.h2_font.setBold(True)
+        #self.h2_font.setPointSize(15)
         self.init_ui()
 
     def init_ui(self):
@@ -109,6 +115,7 @@ class ComponentInfoTab(QWidget):
         self.root.data_package["Component Information"] = {}
         self.root.data_package["Distance Information"] = {}
         self.root.data_package["ECU Time Information"] = {}
+        self.root.data_package["Event Data"] = {}
         self.rebuild_trees()
 
     def fill_item(self, item, value):
@@ -118,6 +125,7 @@ class ComponentInfoTab(QWidget):
                 child = QTreeWidgetItem()
                 if type(val) is dict:
                     child.setText(0, str(key))
+                    child.setFont(0, self.h2_font)
                 else:
                     child.setText(0, str(key) + ": " + self.get_display_value(key, val))
                 if val: #Add only if it is not an empty dictionary. Empty dictionaries are False.
@@ -148,21 +156,25 @@ class ComponentInfoTab(QWidget):
         return display_val
 
     def rebuild_trees(self): 
+
         self.component_tree.clear()
         tree_root = self.component_tree.invisibleRootItem()
         component_branch = QTreeWidgetItem()
         tree_root.addChild(component_branch)
         component_branch.setText(0, "Component Information")
+        component_branch.setFont(0, self.h1_font)
         self.fill_item(component_branch, self.root.data_package["Component Information"])
         
         distance_branch = QTreeWidgetItem()
         tree_root.addChild(distance_branch)
         distance_branch.setText(0, "Distance Data")
+        distance_branch.setFont(0, self.h1_font)
         self.fill_item(distance_branch, self.root.data_package["Distance Information"])
         
         time_branch = QTreeWidgetItem()
         tree_root.addChild(time_branch)
-        time_branch.setText(0, "ECU Time Data")
+        time_branch.setText(0,"ECU Time Data")
+        time_branch.setFont(0, self.h1_font)
         self.fill_item(time_branch, self.root.data_package["ECU Time Information"])  
 
         self.realtime_tree.clear()
@@ -170,7 +182,15 @@ class ComponentInfoTab(QWidget):
         realtime_branch = QTreeWidgetItem()
         realtime_root.addChild(realtime_branch)
         realtime_branch.setText(0, "Real Time Data")
+        realtime_branch.setFont(0, self.h1_font)
         self.fill_item(realtime_branch, self.root.data_package["Time Records"])  
+
+        event_branch = QTreeWidgetItem()
+        realtime_root.addChild(event_branch)
+        event_branch.setText(0, "Event Data")
+        event_branch.setFont(0, self.h1_font)
+        self.fill_item(event_branch, self.root.data_package["Event Data"])  
+        
 
     def request_VIN(self):
         self.send_requests(65260, 237)
