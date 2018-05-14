@@ -604,7 +604,7 @@ class UserData(QDialog):
         key_details += "  key_algorithm: {}\n".format(self.private_key.key_algorithm)
         key_details += "  key_size:      {}\n".format(self.private_key.key_size)
         key_details += "  pubkey:        {}\n".format(self.private_key.pubkey)
-        key_details += "  signers:       {}\n".format(self.private_key.signers)
+        key_details += "  signers:       {}\n".format(self.private_key.signers[0])
         key_details += "  userid:        {}\n".format(self.private_key.userids[0])
         logger.info(key_details)
         QMessageBox.information(self, "Private Key Details", key_details)

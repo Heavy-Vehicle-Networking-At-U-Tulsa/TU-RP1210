@@ -54,75 +54,60 @@ class RP1210ReadMessageThread(threading.Thread):
                                                        c_short(2000),
                                                        c_short(BLOCKING_IO))
                 if return_value > 0:
+                    current_time = time.time()
                     if ucTxRxBuffer[4] == b'\x00': #Echo is on, so we only want to see what others are sending.
                         self.message_count +=1
-                    current_time = time.time()
-                    time_bytes = struct.pack("<L",int(current_time))                 
-                    if self.protocol == "CAN": 
-                        dlc = int(return_value - 10)
-                        #the following conversion is to emulate the data structure from the NMFTA CAN Logger Project
-                        # See https://github.com/Heavy-Vehicle-Networking-At-U-Tulsa/NMFTA-CAN-Logger/tree/master/_07_Low_Latency_Logger_with_Requests
-                        try:
-                            microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
-                        except struct.error:
-                            continue
-                        # RP1210_ReadMessage API:
-                        #Reverse endianess
-                        vda_timestamp = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[0:4])[0])  
-                        
-                        #echo_byte = ucTxRxBuffer[4]
+                                   
+                    if self.protocol == "CAN":
+                        vda_timestamp = struct.unpack(">L",ucTxRxBuffer[0:4])[0]
                         extended = ucTxRxBuffer[5]
                         if extended:
-                            can_id = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[6:10])[0]) #Swap endianness
-                            can_data = ucTxRxBuffer[10:18]
+                            can_id = struct.unpack(">L",ucTxRxBuffer[6:10])[0] #Swap endianness
+                            can_data = ucTxRxBuffer[10:return_value]
+                            dlc = int(return_value - 10)
+                        
                         else:
-                            can_id = struct.pack("<H",struct.unpack(">H",ucTxRxBuffer[6:8])[0]) #Swap endianness
-                            can_data = ucTxRxBuffer[8:16]
-                        # Build the 24 bytes that make up a CAN message.
+                            can_id = struct.unpack(">H",ucTxRxBuffer[6:8])[0] #Swap endianness
+                            can_data = ucTxRxBuffer[8:return_value]
+                            dlc = int(return_value - 8)
                         
-                        #if can_id not in self.can_ids_to_block:
-                        self.rx_queue.put(ucTxRxBuffer[:return_value])
-                        self.extra_queue.put(ucTxRxBuffer[:return_value])
+                        # #the following conversion is to emulate the data structure from the NMFTA CAN Logger Project
+                        # # See https://github.com/Heavy-Vehicle-Networking-At-U-Tulsa/NMFTA-CAN-Logger/tree/master/_07_Low_Latency_Logger_with_Requests
+                        # try:
+                        #     microsecond_bytes = struct.pack("<L", int((dlc << 24) + (current_time % 1) * 1000000))
+                        # except struct.error:
+                        #     continue
+                        # # RP1210_ReadMessage API:
+                        # #Reverse endianess
+                        # #vda_timestamp = struct.pack("<L",struct.unpack(">L",ucTxRxBuffer[0:4])[0])  
                         
-                        message_bytes += time_bytes
-                        message_bytes += vda_timestamp
-                        message_bytes += microsecond_bytes
-                        message_bytes += can_id
-                        message_bytes += can_data
-                        if len(message_bytes) >= 504:
-                            message_bytes += b'\xFF\xFF\xFF\xFF'
-                            with open(self.filename,'ab') as log_file:
-                                log_file.write(message_bytes)
-                            message_bytes = b'1234'
+                        
+                        # #echo_byte = ucTxRxBuffer[4]
+                        
+                        # # Build the 24 bytes that make up a CAN message.
+                        # message_bytes = time_bytes
+                        # message_bytes += vda_timestamp
+                        # message_bytes += microsecond_bytes
+                        # message_bytes += can_id
+                        # message_bytes += can_data
+                        self.rx_queue.put( (current_time, vda_timestamp, can_id, dlc, can_data) )
+                        
 
                     elif self.protocol == "J1708": 
-                        self.rx_queue.put(ucTxRxBuffer[:return_value])
-                        self.extra_queue.put(ucTxRxBuffer[5:return_value])
-                        #long_message += self.make_log_data(b'J1708',return_value,time_bytes,ucTxRxBuffer)
-                        #if len(long_message) >= 100:
-                        with open(self.filename,'a') as log_file:
-                            log_file.write(" ".join("{:02X}".format(c) for c in ucTxRxBuffer[5:return_value]) + "\n")
-                            #del long_message
-                            #long_message = b''
-
+                        self.rx_queue.put((current_time, ucTxRxBuffer[:return_value]))
+                        self.extra_queue.put((current_time, ucTxRxBuffer[5:return_value]))
+                        
                     elif self.protocol == "J1939":
                         pgn = struct.unpack("<L", ucTxRxBuffer[5:8] + b'\x00')[0]
                         sa = struct.unpack("B",ucTxRxBuffer[9])[0]
                         
                         if (pgn not in self.pgns_to_block) or (sa not in self.sources_to_block):
-                                self.rx_queue.put(ucTxRxBuffer[:return_value])
+                                self.rx_queue.put((current_time, ucTxRxBuffer[:return_value]))
                         #ISO 15765 traffic only
                         if pgn == 0xDA00:
                             dst_addr = struct.unpack("B",ucTxRxBuffer[10])[0]
                             message_data = ucTxRxBuffer[11:return_value]
                             self.extra_queue.put((pgn, 6, sa, dst_addr, message_data))
-                        #else:
-                        #    print("Blocked {} {}".format(pgn,sa))
-                        # Logging for J1939 is taken care of by CAN
-                    # elif self.protocol == "ISO15765": 
-                    #     self.rx_queue.put(ucTxRxBuffer[:return_value])
-                    #     self.extra_queue.put(ucTxRxBuffer[:return_value])
-                    #     print(ucTxRxBuffer[:return_value])
 
                     
         logger.debug("RP1210 Receive Thread is finished.")

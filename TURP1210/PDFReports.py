@@ -209,7 +209,7 @@ class FLAReportTemplate(SimpleDocTemplate):
             except:   
                 self.serial = "Not Provided"
         try: 
-            self.download_date = time_string(self.data_package["Time Records"]["Permission Time"])
+            self.download_date = time_string(self.data_package["Time Records"]["Personal Computer"]["Permission Time"])
         except KeyError:
             #print(traceback.format_exc())
             self.download_date = "Not Provided"
@@ -297,7 +297,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                       Paragraph("Local Time Value",bold_style)]]
         for key in pc_time_keys:
             try:
-                timestamp = int(self.data_package["Time Records"][key])
+                timestamp = int(self.data_package["Time Records"]["Personal Computer"][key])
             except (TypeError, KeyError):
                 timestamp = "Data Not Obtained."
             if 'minus' in key:
@@ -323,7 +323,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                       Paragraph("Hours:Minutes:Seconds", bold_style)]]
         key="PC Time minus GPS Time"
         try:
-            diff = int(self.data_package["Time Records"][key])
+            diff = int(self.data_package["Time Records"]["Personal Computer"][key])
             time_data.append([key,
                           "{}".format(diff),
                           hours_min_sec(diff)
@@ -331,11 +331,11 @@ class FLAReportTemplate(SimpleDocTemplate):
         except (TypeError, KeyError):
             diff = "GPS Time Data Not Available."
         try:
-            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
-                        self.data_package["Time Records"]["Permission Time"])
+            duration = int(self.data_package["Time Records"]["Personal Computer"]["Last PC Time"] - 
+                        self.data_package["Time Records"]["Personal Computer"]["Permission Time"])
         except (TypeError, KeyError):
-            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
-                        self.data_package["Time Records"]["PC Start Time"])  
+            duration = int(self.data_package["Time Records"]["Personal Computer"]["Last PC Time"] - 
+                        self.data_package["Time Records"]["Personal Computer"]["PC Start Time"])  
         time_data.append(["Download Duration",
                           "{:d}".format(duration),
                           hours_min_sec(duration)

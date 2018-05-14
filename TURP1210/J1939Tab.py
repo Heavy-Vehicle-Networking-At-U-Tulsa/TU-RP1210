@@ -421,8 +421,10 @@ class J1939Tab(QWidget):
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_data_model.endResetModel()
         
-    def fill_j1939_table(self, rx_buffer):
+    def fill_j1939_table(self, j1939_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
+        current_time = j1939_buffer[0]
+        rx_buffer = j1939_buffer[1]
         try:
             vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
             pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
@@ -468,7 +470,7 @@ class J1939Tab(QWidget):
          
 
         data_bytes = rx_buffer[11:]
-        current_time = time.time()
+        
         try:
             self.j1939_unique_ids[pgn_key]["Num"] += 1
             previous_data_bytes = base64.b64decode(self.j1939_unique_ids[pgn_key]["Message List"].encode('ascii'))

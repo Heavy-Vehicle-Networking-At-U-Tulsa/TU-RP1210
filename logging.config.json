@@ -22,19 +22,64 @@
             "class": "logging.FileHandler",
             "level": "DEBUG",
             "formatter": "json_format",
-            "filename": "TU_RP1210_Log.json",
+            "filename": "TU_RP1210_Session_Log.json",
+            "mode": "w",
+            "encoding": "utf8"
+        },
+        "can_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "filename": "TU_RP1210_CAN_Log.csv",
+            "mode": "w",
+            "encoding": "utf8"
+        },
+        "j1939_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "filename": "TU_RP1210_J1939_Log.csv",
+            "mode": "w",
+            "encoding": "utf8"
+        },
+        "j1708_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "filename": "TU_RP1210_J1708_Log.csv",
             "mode": "w",
             "encoding": "utf8"
         }
     },
     "loggers": {
+        "J1939Logger": {
+            "handlers": [
+                "j1939_handler"
+            ],
+            "level": "DEBUG",
+            "propagate": false 
+        },
+        "J1708Logger": {
+            "handlers": [
+                "j1708_handler"
+            ],
+            "level": "DEBUG",
+            "propagate": false 
+        },
+        "CANLogger": {
+            "handlers": [
+                "can_handler"
+            ],
+            "level": "DEBUG",
+            "propagate": false 
+        },
         "": {
             "handlers": [
                 "console",
                 "file_handler"
             ],
             "level": "DEBUG",
-            "propagate": true
+            "propagate": false
         }
     }
 }
