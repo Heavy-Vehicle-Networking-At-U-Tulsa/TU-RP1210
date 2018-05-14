@@ -3,7 +3,7 @@ import shutil
 import os
 from cx_Freeze import setup, Executable
 import json
-with open("TURP1210/version.json") as fp:
+with open("version.json") as fp:
     version = json.load(fp)
 
 #os.environ['TCL_LIBRARY'] = r'C:\Users\dailyadmin\AppData\Local\Programs\Python\Python36-32\tcl\tcl8.6'
@@ -37,11 +37,11 @@ build_exe_options = {"packages": ['cryptography',
                                   #'tkinter',  
                                   'pdfrw',
                                   'serial'] ,
-                     "include_files": ["TURP1210/SCELogo.pdf",
-                                       "TURP1210/logging.config.json",
-                                       "TURP1210/Client Public Key.pem",
-                                       "TURP1210/J1939db.json",
-                                       "TURP1210/J1587db.json",
+                     "include_files": ["Logo.pdf",
+                                       "logging.config.json",
+                                       "Client Public Key.pem",
+                                       "J1939db.json",
+                                       "J1587db.json",
                                        "TURP1210/icons",
                                       ],
                     
@@ -105,7 +105,7 @@ if sys.platform == "win32":
     base = "Win32GUI"
 
 target = Executable(
-    script=r"TURP1210\TU_RP1210.py",
+    script=r"TURP1210_DEMO.py",
     #initScript="",
     base=base,
     #icon="",
@@ -117,7 +117,7 @@ target = Executable(
 
     )
 
-setup(  name = "TU-RP1210",
+setup(  name = "TURP1210",
         version = "{}.{}.{}".format(version["major"],version["minor"],version["patch"]),
         description = "A graphical user interface for Vehicle Diagnostic Adapters compatible with RP1210",
         options = {"build_exe": build_exe_options,
