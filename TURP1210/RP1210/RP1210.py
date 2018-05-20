@@ -95,7 +95,7 @@ class RP1210ReadMessageThread(threading.Thread):
 
                     elif self.protocol == "J1708": 
                         self.rx_queue.put((current_time, ucTxRxBuffer[:return_value]))
-                        self.extra_queue.put((current_time, ucTxRxBuffer[5:return_value]))
+                        #self.extra_queue.put((current_time, ucTxRxBuffer[5:return_value]))
                         
                     elif self.protocol == "J1939":
                         pgn = struct.unpack("<L", ucTxRxBuffer[5:8] + b'\x00')[0]

@@ -1140,11 +1140,11 @@ class TU_RP1210(QMainWindow):
         
         # We want to connect to multiple clients with different protocols.
         self.client_ids={}
-        self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "Auto")
+        self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "{}".format(speed))
         progress.setValue(1)
         self.client_ids["J1708"] = self.RP1210.get_client_id("J1708", deviceID, "Auto")
         progress.setValue(2)
-        self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
+        self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "{}".format(speed))
         progress.setValue(3)
         #self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
         #progress.setValue(3)
