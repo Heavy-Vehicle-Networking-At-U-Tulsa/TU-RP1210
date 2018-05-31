@@ -42,10 +42,6 @@ class J1939TableModel(QAbstractTableModel):
         if index.isValid() and role == Qt.DisplayRole:
             key = self.table_rows[index.row()]
             col_name = self.header[index.column()]
-            #print(key)
-            #print(col_name)
-            #print('hey')
-            #print(self.data_dict.values())
             return str(self.data_dict[key][col_name])
         if role == Qt.BackgroundRole:
             if self.first == 'PGN':
@@ -83,22 +79,35 @@ class J1939TableModel(QAbstractTableModel):
             elif self.first == "Acronym":
                 key = self.table_rows[index.row()]
                 col_name = self.header[index.column()]
+                stringSource = self.data_dict[key]['Source']
+                if stringSource == 'Engine #1':
+                    return QBrush(QColor(255,177,0))
+                elif stringSource == 'Retarder - Engine':
+                    return QBrush(QColor(255,0,0))
+                elif stringSource == 'Cab Controller - Primary':
+                    return QBrush(QColor(60,200,245))
+                elif stringSource == 'Instrument Cluster #1':
+                    return QBrush(QColor(180,95,225))
+                elif stringSource == 'Body Controller':
+                    return QBrush(QColor(245,130,190))
+                elif stringSource == 'Cab Display #1':
+                    return QBrush(QColor(178,177,124))
+                elif stringSource == 'Off Board Diagnostic-Service Tool #2':
+                    return QBrush(QColor(3,180,140))
             elif self.first == "Line":
                 key = self.table_rows[index.row()]
                 col_name = self.header[index.column()]
-                print('hey')
                 stringSID = self.data_dict[key]['SID']
                 if stringSID == '2E':
                     return QBrush(QColor(255,0,0))
                 elif stringSID == '22':
                     return QBrush(QColor(0,255,0)) 
+                elif stringSID == '7F':
+                    return QBrush(QColor(255,154,0))
+                elif stringSID == '62':
+                    return QBrush(QColor(60,215,245))
         else:
             return QVariant()
-    
-    #def colorTable(self, index, role = Qt.BackgroundRole):
-        #if index.isValid():
-
-
 
     def flags(self, index):
             flags = super(J1939TableModel, self).flags(index)
