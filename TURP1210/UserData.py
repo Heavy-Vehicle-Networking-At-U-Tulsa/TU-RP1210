@@ -534,14 +534,19 @@ class UserData(QDialog):
         """
         #logger.debug(data_package)
         pgp_message = self.make_pgp_message(data_package)
-        header_values = {"Content-type": 'application/text', 
-                         "User-pubkey": base64.b64encode(bytes(self.private_key.pubkey)), # used to verify data_package
-                         'Api-pubkey': base64.b64encode(bytes(self.user_data["Decoder Public Key"],'ascii')), # shows server what key was used to encrypt data
+        header_values = {"Content-type": 'text/plain', 
                          'Authorization' : self.user_data["Web Token"] #used for user authentication
                          }
         url = self.user_data["Decoder Web Site Address"] 
+        content_to_upload = json.dumps({"truckcrypt":data_package,"log_file":True,"j1708":True,"can_data":True})
         try:
-            r = requests.post(url, data=str(pgp_message), headers=header_values)
+            r = requests.post(url, data=content_to_upload, headers=header_values)
+            
+            try:
+                self.user_data["Web Token"] = r.headers['new-token']
+                self.process_web_token()
+            except KeyError:
+                logger.debug("Web Token update failed.")
             # Log what we get back
             logger.debug(r.status_code)
             for k,v in r.headers.items():
@@ -555,18 +560,46 @@ class UserData(QDialog):
                 logger.debug("Request contents not implemented.")
                 QMessageBox.warning(self,"Not Implemented", r.text)
                 return
+            elif r.status_code == 200: #Good stuff
+                return_body = r.json()
+                logger.debug(return_body)
+                j1708_url = return_body["j1708"]
+                r = requests.post(j1708_url, data=j1708log, headers=header_values)
+                #continue
+                uuid = 9
+
+                for attempts in range(10):
+                    header_values = {'Authorization' : self.user_data["Web Token"]}
+                    url = "https://api.truckcrypt.com/v1/org/{}/data_package/{}"
+                    r = requests.get(j1708_url, data=j1708log, headers=header_values)
+                    if r.status_code == 200: #Get the data back
+                        logger.info(r.json)
+                        self.data_package.update(r.json)
+                        break
+                    elif r.status_code == 102: #Still processing
+                        QProcessEvents()
+                        time.sleep(1)
+                        progress.update
+
+                    elif r.status_code == 409: #Broken
+                        break
+                    
+
+
+
             try:
                 #update the token
-                self.user_data["Web Token"] = r.headers['new-token']
-                self.process_web_token()
+                
                 # process the message    
                 pgp_message = pgpy.PGPMessage.from_blob(base64.b64decode(r.text))
                 logger.debug(str(pgp_message))
                 return pgp_message.message
-
             except:
                 logger.debug(traceback.format_exc())
-            logger.debug("Finished with requests.")
+
+            logger.debug("Finished with Server uploads")
+        except requests.exceptions.ConnectionError:
+            QMessageBox.warning(self,"Connection Error", "There was a connection error to the server. The specified server was {}.".format(url))
         except ConnectionRefusedError:
             logger.debug("Decoding Engine is not online.")
         except:
@@ -602,7 +635,7 @@ class UserData(QDialog):
         key_details += "  key_algorithm: {}\n".format(self.private_key.key_algorithm)
         key_details += "  key_size:      {}\n".format(self.private_key.key_size)
         key_details += "  pubkey:        {}\n".format(self.private_key.pubkey)
-        key_details += "  signers:       {}\n".format(self.private_key.signers)
+        key_details += "  signers:       {}\n".format(self.private_key.signers[0])
         key_details += "  userid:        {}\n".format(self.private_key.userids[0])
         logger.info(key_details)
         QMessageBox.information(self, "Private Key Details", key_details)

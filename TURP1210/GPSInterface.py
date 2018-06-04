@@ -60,6 +60,7 @@ class GPSThread(threading.Thread):
         self.gpslon = None
         self.gpslat = None
         self.gpsalt = None
+        logger.debug("Started GPSThread on {}".format(self.ser.port))
 
     def run(self):
         while self.runSignal:
@@ -84,8 +85,9 @@ class GPSThread(threading.Thread):
 
                 self.gpsalt = self.gps.altitude
 
-            except Exception as e:
-                logger.debug(repr(e))
+            except:
+                logger.debug("Error within GPS Read Thread.")
+                logger.debug(traceback.format_exc())
                 self.gpstime = None
                 self.gpslon = None
                 self.gpslat = None
@@ -147,6 +149,10 @@ class GPSDialog(QDialog):
         self.setLayout(self.v_layout)
     
     def run(self):
+        self.gps_port_combo_box.clear()
+        for device in sorted(serial.tools.list_ports.comports(), reverse = True):
+            self.gps_port_combo_box.addItem("{} - {}".format(device.device, device.description))
+        self.gps_port_combo_box.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.exec_()
 
     def set_GPS(self): 
@@ -154,28 +160,40 @@ class GPSDialog(QDialog):
         self.baud = int(self.baud_combo_box.currentText())
         return self.connect_GPS()
 
-    def connect_GPS(self):
+    def connect_GPS(self): 
         logger.debug("Trying to connect GPS.")
+        try:
+            self.ser.close()
+            del self.ser
+        except AttributeError:
+            pass
+
         try:
             self.ser = serial.Serial(self.comport, baudrate=self.baud, timeout=2)
         except serial.serialutil.SerialException:
             logger.debug(traceback.format_exc())
-            
-            self.connected = False
+            if "PermissionError" in repr(traceback.format_exc()):
+                QMessageBox.information(self,"GPS Status","The port {} is already in use. Please unplug and replug the GPS unit.".format(self.comport))
+            else:
+                self.connected = False
+                return False
+        try:
+            test_sentence = self.ser.readline().decode('ascii','ignore')
+            if len(test_sentence) > 0:
+                logger.info("Successful GPS connection on {}".format(self.comport))
+                with open(self.gps_settings_file,"w") as out_file:
+                    out_file.write("{},{}\n".format(self.comport, self.baud))
+                self.connected = True
+                return True
+            else:
+                logger.debug("Could not find GPS connection on {}".format(self.comport))
+                QMessageBox.information(self,"No Connection","Could not find GPS connection on {}".format(self.comport))
+                self.connected = False
+                return False
+        except:
+            logger.debug(traceback.format_exc())
             return False
-        test_sentence = self.ser.readline().decode('ascii','ignore')
-        if len(test_sentence) > 0:
-            logger.info("Successful GPS connection on {}".format(self.comport))
-            with open(self.gps_settings_file,"w") as out_file:
-                out_file.write("{},{}\n".format(self.comport, self.baud))
-            self.connected = True
-            return True
-        else:
-            logger.debug("Could not find GPS connection on {}".format(self.comport))
-            QMessageBox.information(self,"No Connection","Could not find GPS connection on {}".format(self.comport))
-            self.connected = False
-            return False
-    
+
     def try_GPS(self):
         try:
             with open(self.gps_settings_file, "r") as in_file:

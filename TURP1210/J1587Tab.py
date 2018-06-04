@@ -264,7 +264,9 @@ class J1587Tab(QWidget):
         self.byte_set={}
         logger.info("User cleared J1587 table data.")
         
-    def fill_j1587_table(self, rx_buffer):
+    def fill_j1587_table(self, j_buffer):
+        current_time = j_buffer[0]
+        rx_buffer = j_buffer[1]
         #See The J1587 Message from RP1210_ReadMessage in RP1210
         if rx_buffer[4] == 1:
             # Return when the VDA is the one that sent the message. 

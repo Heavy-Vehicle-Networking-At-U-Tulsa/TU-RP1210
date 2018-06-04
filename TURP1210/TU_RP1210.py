@@ -93,8 +93,6 @@ from TURP1210.UserData import *
 from TURP1210.PDFReports import *
 from TURP1210.ISO15765 import *
 from TURP1210.Graphing.graphing import * 
-from TURP1210.DDEC_1587 import *
-
 
 import logging
 import logging.config
@@ -119,8 +117,15 @@ except FileNotFoundError:
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
-with open('version.json') as f:
-    TU_RP1210_version = json.load(f)
+CANlogger = logging.getLogger("CANLogger")
+J1708logger = logging.getLogger("J1708Logger")
+J1939logger = logging.getLogger("J1939Logger")
+
+try:
+    with open('version.json') as f:
+        TU_RP1210_version = json.load(f)
+except:
+    print("This is a module that should be run from another program. See the demo code.")
 
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
 
@@ -131,6 +136,9 @@ class TU_RP1210(QMainWindow):
     def __init__(self, title, connect_gps=False, backup_interval=False):
         super(TU_RP1210,self).__init__()
         
+        self.logfile = logging_dictionary["handlers"]["file_handler"]["filename"]
+        logger.info("Session log file is {}".format(self.logfile))
+
         self.title = title
         self.setWindowTitle(self.title)
 
@@ -222,8 +230,8 @@ class TU_RP1210(QMainWindow):
         
 
         progress_label.setText("Initializing System Variables")
-        #os.system("TASKKILL /F /IM DGServer2.exe")
-        #os.system("TASKKILL /F /IM DGServer1.exe")  
+        os.system("TASKKILL /F /IM DGServer2.exe")
+        os.system("TASKKILL /F /IM DGServer1.exe")  
         
         self.update_rate = 200
 
@@ -279,12 +287,6 @@ class TU_RP1210(QMainWindow):
         progress.setValue(8)
         QCoreApplication.processEvents()
         
-        #Load the ddec module
-        progress_label.setText("Loading the DDEC J1587 Engine")
-        self.ddec_j1587 = DDEC_J1587(self)
-        progress.setValue(9)
-        QCoreApplication.processEvents()
-
 
         progress_label.setText("Starting Loop Timers")
         connections_timer = QTimer(self)
@@ -301,7 +303,6 @@ class TU_RP1210(QMainWindow):
             backup_timer.start(backup_interval)
         progress.setValue(10)
         QCoreApplication.processEvents()
-
 
     def init_ui(self):
         # Builds GUI
@@ -396,19 +397,6 @@ class TU_RP1210(QMainWindow):
         run_action.triggered.connect(self.start_scan)
         self.run_menu.addAction(run_action)
         
-        ddec1587_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_D_52px.png')), 'Start &DDEC J1708 Download', self)
-        ddec1587_action.setShortcut('Ctrl+Shift+D')
-        ddec1587_action.setStatusTip('Send requests to download DDEC Reports Data Pages.')
-        ddec1587_action.triggered.connect(self.start_ddec_J1587)
-        self.run_menu.addAction(ddec1587_action)
-        
-        iso_replay_action = QAction(QIcon(os.path.join(module_directory,r'icons/Replay_48px.png')), 'Replay &ISO Network Traffic', self)
-        iso_replay_action.setShortcut('Ctrl+Shift+I')
-        iso_replay_action.setStatusTip('Responds to requests over the ISO15765 protocol based on the saved data.')
-        iso_replay_action.triggered.connect(self.iso_replay)
-        self.run_menu.addAction(iso_replay_action)
-        
-        
         setup_gps_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_GPS_Signal_48px.png')), 'Setup &GPS', self)
         setup_gps_action.setShortcut('Ctrl+Shift+G')
         setup_gps_action.setStatusTip('Adjust settings for integrating GPS data into the report.')
@@ -424,29 +412,22 @@ class TU_RP1210(QMainWindow):
 
         self.run_toolbar = self.addToolBar("&Download")
         self.run_toolbar.addAction(run_action)
-        self.run_toolbar.addAction(iso_replay_action)
-        self.run_toolbar.addAction(ddec1587_action)
         self.run_toolbar.addAction(setup_gps_action)
         self.run_toolbar.addAction(upload_action)
         
-        graph_menu = menubar.addMenu("&Graph")
-        graph_data_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), '&Plot Incident Graphs', self)
-        graph_data_action.setShortcut('Alt+Shift+P')
-        graph_data_action.setStatusTip('Plot graphs from incident data from speed changes and final stops.')
-        graph_data_action.triggered.connect(self.plot_decrypted_data)
-        graph_menu.addAction(graph_data_action)
+        self.graph_menu = menubar.addMenu('&Graph')
         
         graph_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), 'Show G&raphs', self)
         graph_action.setShortcut('Alt+Shift+R')
         graph_action.setStatusTip('Show Available Graphs')
         graph_action.triggered.connect(self.show_graphs)
-        graph_menu.addAction(graph_action)
+        self.graph_menu.addAction(graph_action)
             
         clear_voltage_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Delete_Table_48px_1.png')), '&Clear Voltage Graphs', self)
         clear_voltage_action.setShortcut('Alt+Shift+C')
         clear_voltage_action.setStatusTip('Clear the time history shown in the vehicle voltage graph.')
         clear_voltage_action.triggered.connect(self.clear_voltage_graph)
-        graph_menu.addAction(clear_voltage_action)
+        self.graph_menu.addAction(clear_voltage_action)
     
         help_menu = menubar.addMenu('&Help')
         register = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Registration_48px.png')), '&Enter User Information', self)
@@ -648,15 +629,17 @@ class TU_RP1210(QMainWindow):
 
     def create_new(self, new_file=True):
 
+        J1939logger.handlers[0].close()
+        CANlogger.handlers[0].close()
+        J1708logger.handlers[0].close()
 
-        for k,item in self.graph_tabs.items():
-            item.deleteLater()
+
+        self.source_addresses = []
 
         try:
             self.export_path = os.path.join(os.path.expanduser('~'),"Documents","{}".format(self.title))
             if not os.path.exists(self.export_path):
                 os.makedirs(self.export_path)
-
         except FileNotFoundError:
             logger.debug(traceback.format_exc())
             self.export_path = os.path.expanduser('~')
@@ -669,6 +652,9 @@ class TU_RP1210(QMainWindow):
                                              os.path.join(self.export_path, self.filename),
                                              "",
                                              "")
+            if not fname[0]:
+                #the user pressed cancel
+                return
         else: 
             fname=[False]
         
@@ -682,23 +668,21 @@ class TU_RP1210(QMainWindow):
                                             "patch":TU_RP1210_version["minor"]}}
         
         try:
-            CAN_log_name = self.read_message_threads["CAN"].filename
+            self.CAN_file_name = logging_dictionary['handlers']["can_handler"]["filename"]
         except:
-            CAN_log_name = None
+            logger.debug(traceback.format_exc())
+            self.CAN_file_name = "No file available"
 
         try:
-            J1708_log_name = self.read_message_threads["J1708"].filename
+            self.J1708_log_name = logging_dictionary['handlers']["j1708_handler"]["filename"]
         except:
-            J1708_log_name = None
+            logger.debug(traceback.format_exc())
+            self.J1708_log_name = "No file available"
 
-        self.data_package["Network Logs"] = {
-            "CAN Log File Name": CAN_log_name,
-            "CAN Log File Size": 0,
-            "CAN Log File Signature": None,
-            "J1708 Log File Name": J1708_log_name,
-            "J1708 Log File Size": 0,
-            "J1708 Log File Signature": None
-            }
+        self.data_package["Network Logs"] = {"CAN Log File":{"Name": self.CAN_file_name},
+                                             "J1708 Log File":{"Name": self.J1708_log_name},
+                                             "Session Log File":{"Name": self.logfile}
+                                             }
 
         self.data_package["File Name"] = self.filename
 
@@ -707,24 +691,27 @@ class TU_RP1210(QMainWindow):
         logger.info("{} running on a machine with UUID: {}".format(self.title, current_machine_id))
         logger.info("{} running on a diskdrive with Serial Number: {}".format(self.title, current_drive_id))
         
-        self.data_package["Time Records"] = {"PC Start Time": time.time(),
-                                             "Last PC Time": None,
-                                             "Last GPS Time": None,
-                                             "Permission Time": None,
-                                             "PC Time at Last GPS Reading": None,
-                                             "PC Time minus GPS Time": []
-                                             }
+        self.data_package["Time Records"] = {"Personal Computer":{
+                                                 "PC Start Time": time.time(),
+                                                 "Last PC Time": None,
+                                                 "Last GPS Time": None,
+                                                 "Permission Time": None,
+                                                 "PC Time at Last GPS Reading": None,
+                                                 "PC Time minus GPS Time": []
+                                                 }
+                                            }
         
         
         self.data_package["User Data"] = self.user_data.get_current_data()
         self.data_package["Warnings"] = []
         self.data_package["J1587 Message and Parameter IDs"] = {}
         self.data_package["J1939 Parameter Group Numbers"] = {}
+        self.data_package["J1939 Suspect Parameter Numbers"] = {}
+        self.data_package["UDS Messages"] = {}
         self.data_package["Component Information"] = {}
         self.data_package["Distance Information"] = {}
         self.data_package["ECU Time Information"] = {}
-        self.data_package["J1939 Suspect Parameter Numbers"] = {}
-        self.data_package["UDS Messages"] = {}
+        self.data_package["Event Data"] = {}
         self.data_package["GPS Data"] = {
             "Altitude": 0.0,
             "GPS Time": None,
@@ -741,42 +728,28 @@ class TU_RP1210(QMainWindow):
         self.J1939.reset_data()
         self.J1939.clear_j1939_table()
         self.J1587.clear_J1587_table()
-        self.Components.clear_data()
+        self.Components.rebuild_trees()
 
-    def iso_replay(self):
-        logger.debug("ISO Replay")
-        responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
-        responder_thread.setDaemon(True) #needed to close the thread when the application closes.
-        responder_thread.start()
-        logger.debug("Started Replay Thread.")
-
-        #logger.debug(response_dict)
-        progress = QProgressDialog(self)
-        progress.setMinimumWidth(600)
-        progress.setWindowTitle("ISO Message Responder")
-        progress.setMinimumDuration(0)
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setMaximum(500)
-        progress_label = QLabel("Listening for Messages")
-        progress.setLabel(progress_label)
-        rx_count=1
-        progress.setValue(rx_count)
-        protocol = "CAN"
-        #Flush the buffer
+    # def setup_logger(self, logger_name, log_file, level=logging.INFO):
+    #     l = logging.getLogger(logger_name)
+    #     l.propagate = False
+    #     l.setLevel(level)
+    #     l.removeHandler(logging.StreamHandler)
         
-
+    #     formatter = logging.Formatter('%(message)s')
+    #     fileHandler = logging.FileHandler(log_file, mode='w')
+    #     fileHandler.setFormatter(formatter)
+    #     fileHandler.setLevel(logging.DEBUG)
+    #     l.addHandler(fileHandler)
+    #     streamHandler = logging.StreamHandler()
+    #     streamHandler.setLevel(logging.CRITICAL)
+    #     l.addHandler(streamHandler)    
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
-        #logger.debug("returned_message:")
-        #logger.debug(returned_message)
-        try:
-            self.data_package["Decrypted Data"] = json.loads(returned_message)
-            self.plot_decrypted_data()
-        except TypeError:
-            logger.debug(traceback.format_exc())
-
-
+        logger.debug("returned_message:")
+        logger.debug(returned_message)
+        
     def edit_user_data(self):
         self.user_data.show_dialog() 
 
@@ -790,11 +763,6 @@ class TU_RP1210(QMainWindow):
 
     def show_graphs(self):
         self.voltage_graph.show()
-        try:
-            self.ddec_j1587.ddec_preview_graph.show()
-        except AttributeError:
-            logger.debug(traceback.format_exc())
-            pass
 
     def new_file(self):
         logger.debug("New File Selected.")
@@ -844,7 +812,7 @@ class TU_RP1210(QMainWindow):
             try:
                 if pgp_file_contents.is_signed:
                     logger.debug("File is signed.")
-                    verification = self.verify_stream(pgp_file_contents, self.user_data.private_key.pubkey)
+                    verification = self.verify_stream(pgp_file_contents, self.user_data.private_key)
                 else:
                     verification = False
                     logger.debug("File is not signed.")
@@ -915,12 +883,13 @@ class TU_RP1210(QMainWindow):
         self.J1939.uds_data_model.signalUpdate()
         self.J1939.uds_table.resizeRowsToContents()
         for c in self.J1939.uds_resizable_cols:
-            self.J1939.uds_table.resizeColumnToContents(c)            
-        self.J1939.uds_table.scrollToBottom()
+            self.J1939.uds_table.resizeColumnToContents(c)
+        
 
         self.plot_decrypted_data()
-        logger.debug(self.pdf_engine.event_groups)
-
+        
+    def plot_decrypted_data(self):
+        pass
 
     def save_file(self, backup=False):
         """
@@ -929,24 +898,32 @@ class TU_RP1210(QMainWindow):
         """
 
         #update the data package
+        progress = QProgressDialog(self)
+        progress.setMinimumWidth(600)
+        progress.setWindowTitle("Saving and Digitally Signing Files")
+        progress.setMinimumDuration(0)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMaximum(4)
         
-
         if backup:
             temp_name = os.path.basename(self.filename)
             temp_name.strip("Backup_")
             backup_name = "Backup_{}".format(temp_name)
-            filename = os.path.join(self.export_path, backup_name)
+            filename = os.path.normpath(os.path.join(self.export_path, backup_name))
         else:
-            filename = os.path.join(self.export_path, self.filename)
+            filename = os.path.normpath(os.path.join(self.export_path, self.filename))
             self.data_package["File Name"] = self.filename
 
-        pgp_message = self.user_data.make_pgp_message(self.data_package)
+        progress_label = QLabel("Saving and signing {} file to {}".format(self.title,filename))
+        progress.setLabel(progress_label)
+
+        saved_pgp_message = self.user_data.make_pgp_message(self.data_package)
         with open(filename,'w') as file_out:
-            file_out.write(str(pgp_message))
+            file_out.write(str(saved_pgp_message))
 
         if not backup:
             with open(filename[:-3] + 'json', 'w') as outfile:
-                outfile.write(pgp_message.message)
+                outfile.write(saved_pgp_message.message)
             msg = "Saved signed file to {}".format(filename)
             logger.info(msg)
             self.filename = os.path.basename(self.filename)
@@ -955,7 +932,80 @@ class TU_RP1210(QMainWindow):
                                                        TU_RP1210_version["minor"],
                                                        self.filename))
             self.statusBar().showMessage(msg)
-        return pgp_message
+        progress.setValue(1)
+        
+        #CAN Logs
+        progress_label.setText("Saving and signing CAN logs.")
+        QCoreApplication.processEvents()
+        self.sign_and_save_support_files(logging_dictionary["handlers"]["can_handler"]["filename"],
+                                             " CAN Log", 
+                                             "CAN Log File")
+        progress.setValue(2)
+        
+        progress_label.setText("Saving and signing J1708 logs.")
+        QCoreApplication.processEvents()
+        self.sign_and_save_support_files(logging_dictionary["handlers"]["j1708_handler"]["filename"],
+                                             " J1708 Log", 
+                                             "J1708 Log File")
+        progress.setValue(3)
+        
+        
+        # Session Logs
+        progress_label.setText("Saving and signing session debug logs.")
+        QCoreApplication.processEvents()
+        self.sign_and_save_support_files(logging_dictionary["handlers"]["file_handler"]["filename"],
+                                         " Session Log", 
+                                         "Session Log File")
+        progress.setValue(4)
+        progress_label.setText("Done with saving and signing all the user files.")
+        QCoreApplication.processEvents()
+        
+        self.Components.rebuild_trees()
+        return saved_pgp_message
+    
+    def sign_and_save_support_files(self, support_filename, suffix, key_name):
+        """
+        A routine to use PGP signing on all the supporting files for the cpt file. This
+        includes CAN Logs, J1708 Logs, and Session logs.
+        """
+        filename = os.path.normpath(os.path.join(self.export_path, self.filename))
+        try:
+            
+            with open(support_filename,'rb') as can_file:
+                file_contents = can_file.read()
+            pgp_message = self.user_data.make_pgp_message({suffix: base64.b64encode(file_contents).decode('ascii','strict')})
+            if pgp_message.is_signed:
+                can_signature = ", ".join([str(s) for s in pgp_message.signatures])
+                can_signer = ", ".join(pgp_message.signers)
+                if ", ".join(pgp_message.signers) == can_signer:
+                    can_signer += " ({})".format(self.user_data.private_key.userids[0])
+                else:
+                    can_signer += " (Unknown ID)"
+                logger.info("PGP Message Signers are {}".format(can_signer))
+            else:
+                can_signature = "No Signature Information Available"
+                can_signer = None
+            new_file_name = filename[:-4] + suffix +".pgp"
+            if support_filename[-4:] == 'json':
+                shutil.copy(support_filename, new_file_name[:-3]+support_filename[-4:])
+            else:
+                shutil.copy(support_filename, new_file_name[:-3]+support_filename[-3:])
+            with open(new_file_name,'w') as file_out:
+                file_out.write(str(pgp_message))
+            can_file_size = humanize.naturalsize(os.path.getsize(new_file_name), binary=True)
+            logger.debug("Saved{} with a size of {}".format(suffix,can_file_size))
+        except:
+            logger.debug(traceback.format_exc())
+            can_signature = "There was an error digitally signing the {}.".format(suffix)
+            can_signer = "Not Signed"
+            can_file_size = None
+
+        
+        self.data_package["Network Logs"][key_name]["Name"] = new_file_name
+        self.data_package["Network Logs"][key_name]["Size"] = can_file_size
+        self.data_package["Network Logs"][key_name]["Signature"] = can_signature
+        self.data_package["Network Logs"][key_name]["Signer"] = can_signer
+
 
     def save_file_as(self):
         filters = "{} Data Files (*.cpt);;All Files (*.*)".format(self.title)
@@ -1090,11 +1140,11 @@ class TU_RP1210(QMainWindow):
         
         # We want to connect to multiple clients with different protocols.
         self.client_ids={}
-        self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "Auto")
+        self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "{}".format(speed))
         progress.setValue(1)
         self.client_ids["J1708"] = self.RP1210.get_client_id("J1708", deviceID, "Auto")
         progress.setValue(2)
-        self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "Auto")
+        self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "{}".format(speed))
         progress.setValue(3)
         #self.client_ids["ISO15765"] = self.RP1210.get_client_id("ISO15765", deviceID, "Auto")
         #progress.setValue(3)
@@ -1134,8 +1184,8 @@ class TU_RP1210(QMainWindow):
                 if return_value == 0:
                     logger.debug("RP1210_Set_All_Filters_States_to_Pass for {} is successful.".format(protocol))
                     #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
-                    self.rx_queues[protocol] = queue.Queue()
-                    self.extra_queues[protocol] = queue.Queue()
+                    self.rx_queues[protocol] = queue.Queue(10000)
+                    self.extra_queues[protocol] = queue.Queue(10000)
                     self.read_message_threads[protocol] = RP1210ReadMessageThread(self, 
                                                                                   self.rx_queues[protocol],
                                                                                   self.extra_queues[protocol],
@@ -1148,28 +1198,21 @@ class TU_RP1210(QMainWindow):
 
                     self.statusBar().showMessage("{} connected using {}".format(protocol,dll_name))
                     if protocol == "J1939":
-                        self.isodriver = ISO15765Driver(self, self.extra_queues[protocol])
+                        self.isodriver = ISO15765Driver(self, self.extra_queues["J1939"])
                     
                 else :
                     logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
 
-                if protocol == "ISO15765":
-                    fpchClientCommand[0] = b'\x01' #EXTENDED CAN
-                    fpchClientCommand[1] = b'\x00'
-                    fpchClientCommand[2] = b'\xda'
-                    fpchClientCommand[3] = b'\x00'
-                    fpchClientCommand[4] = b'\x00'
-                    fpchClientCommand[5] = b'\xFF'
-                    fpchClientCommand[6] = b'\x00'
-                    fpchClientCommand[7] = b'\xda'
-                    fpchClientCommand[8] = b'\x00'
-                    fpchClientCommand[9] = b'\x00'
-                    fpchClientCommand[10] = b'\xFF'
+                if protocol == "J1939":
+                    fpchClientCommand[0] = 0x00 #0 = as fast as possible milliseconds
+                    fpchClientCommand[1] = 0x00
+                    fpchClientCommand[2] = 0x00
+                    fpchClientCommand[3] = 0x00
                     
-                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_Message_Filtering_For_ISO15765), 
+                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
                                                            c_short(nClientID), 
-                                                           byref(fpchClientCommand), 11)
-                    logger.debug('RP1210_Set_Message_Filtering_For_ISO15765 returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                                                           byref(fpchClientCommand), 4)
+                    logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
                     
                
             else:
@@ -1179,7 +1222,9 @@ class TU_RP1210(QMainWindow):
         
         if self.client_ids["J1939"] is None or self.client_ids["J1708"] is None:
             QMessageBox.information(self,"RP1210 Client Not Connected.","The default RP1210 Device was not found or is unplugged. Please reconnect your Vehicle Diagnostic Adapter (VDA) and select the RP1210 device to use.")
-        
+            self.voltage_graph.hide()
+        else:
+            self.voltage_graph.show()
         progress.deleteLater()
 
     def check_connections(self):
@@ -1187,16 +1232,20 @@ class TU_RP1210(QMainWindow):
         This function checks the VDA hardware status function to see if it has seen network traffic in the last second.
         
         '''    
+        network_connection = {}
 
-        for key in ["J1939", "J1708"]:            
+        for key in ["J1939", "J1708"]:
+            network_connection[key]=False            
             try:
                 current_count = self.read_message_threads[key].message_count
                 duration = time.time() - self.read_message_threads[key].start_time
                 self.message_duration_label[key].setText("<html><img src='{}/icons/icons8_Connected_48px.png'><br>Client Connected<br>{:0.0f} sec.</html>".format(module_directory, duration))
+                network_connection[key] = True
             except (KeyError, AttributeError) as e:
                 current_count = 0
                 duration = 0
                 self.message_duration_label[key].setText("<html><img src='{}/icons/icons8_Disconnected_48px.png'><br>Client Disconnected<br>{:0.0f} sec.</html>".format(module_directory, duration))
+                
             count_change = current_count - self.previous_count[key]
             self.previous_count[key] = current_count
             # See if messages come in. Change the 
@@ -1211,7 +1260,7 @@ class TU_RP1210(QMainWindow):
             self.message_rate_label[key].setText("Message Rate:\n{} msg/sec".format(count_change))
         
         #Get ECM Clock and Date from J1587 if available
-        self.data_package["Time Records"]["Last PC Time"] = time.time()
+        self.data_package["Time Records"]["Personal Computer"]["Last PC Time"] = time.time()
         try:
             if self.ok_to_send_j1587_requests and self.client_ids["J1708"] is not None:
                 for pid in [251, 252]: #Clock and Date
@@ -1227,6 +1276,12 @@ class TU_RP1210(QMainWindow):
                 self.send_j1939_request(65254)
         except (KeyError, AttributeError):
             pass
+
+        #return True if any connection is present.
+        for key, val in network_connection.items():
+            if val: 
+                return True
+        return False
 
     def get_hardware_status_ex(self):
         """
@@ -1312,6 +1367,7 @@ class TU_RP1210(QMainWindow):
         """
         container = {}
         data_page_numbers = [[0xf1, b] for b in range(0x80,0x9F)]
+        # There are 33 of these. We should move them to a JSON file and have dictionary that we can reference.
         for i in range(len(data_page_numbers)):
             QCoreApplication.processEvents()
             progress_message = "Requesting ISO Data Element 0x{:02X}{:02X}".format(data_page_numbers[i][0],data_page_numbers[i][1])
@@ -1327,9 +1383,29 @@ class TU_RP1210(QMainWindow):
         Perform a scan of the vehicle network by sending a series of request messages over the
         different vehicle networks. The requests are randomized.
         """
+        if not self.check_connections():
+            logger.info("No Vehicle Network Traffic Detected.")
+            QMessageBox.warning(self, 
+                    "No Vehicle Network",
+                    "There was no vehicle network traffic detected. Please check the ignition key switch and battery voltage.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
+            return
+
+        if not self.GPS.connected:
+            logger.info("No GPS detected at start of scan.")
+            QMessageBox.warning(self, 
+                    "No GPS Signal",
+                    "The GPS signal is not detected. The location and GPS time data in the report may be inaccurate without a current GPS fix.",
+                    QMessageBox.Cancel,
+                    QMessageBox.Cancel)
+
         if self.ask_permission():
             logger.info("Starting Vehicle Network Scan.")
-
+            # Ensure brakes, engine and global sources are in the source addresses.
+            for sa in [0x00, 0x0B, 0xFF]:
+                if sa not in self.source_addresses:
+                    self.source_addresses.append(sa)
             # Log the time when this starts
             self.extraction_time_pc = time.time()
             try:
@@ -1341,7 +1417,7 @@ class TU_RP1210(QMainWindow):
                 self.extraction_time_gps, self.extraction_time_pc - self.extraction_time_gps))
 
             passes = 5
-            total_requests = passes * len(self.J1939.j1939_request_pgns) * 3 #len(self.source_addresses)
+            total_requests = passes * (len(self.J1939.j1939_request_pgns) * len(self.source_addresses) + 33) #for ISO
 
             progress = QProgressDialog(self)
             progress.setMinimumWidth(600)
@@ -1350,18 +1426,19 @@ class TU_RP1210(QMainWindow):
             #progress.setWindowModality(Qt.WindowModal) # Improves stability of program
             progress.setModal(False) #Will lead to instability when trying to click around.
             progress.setMaximum(int(total_requests*1.02))
-            progress_label = QLabel("Asking for ISO 15765 Parameters")
+            progress_label = QLabel("Asking for UDS data (ISO 15765)")
             progress.setLabel(progress_label)
 
             request_count = int(0.021*total_requests)
             progress.setValue(request_count)
             
-            self.get_iso_parameters()
+            
 
             self.J1587.j1587_request_pids.sort(reverse=True)
 
             j1587_tool_mids = [0xac, 0xb6]
             for request_pass in range(passes):
+                self.get_iso_parameters()
                 j1587_parameter_count = 0
                 logger.info("Starting Pass {}".format(request_pass))
                 for pgn in self.J1939.j1939_request_pgns:
@@ -1376,9 +1453,9 @@ class TU_RP1210(QMainWindow):
                     except:
                         pgn_name= ""
                     progress_label.setText("Pass {}: Requesting PGN {} - {}".format(request_pass+1, pgn, pgn_name))
-                        
+                    
                     random.shuffle(self.source_addresses)
-                    for address in [0x00, 0x0B, 0xFF]: #self.source_addresses:
+                    for address in self.source_addresses:
                         request_count += 1
                         # Send the request for a PGN onto the J1939 Network
                         # and wait for a response
@@ -1395,8 +1472,10 @@ class TU_RP1210(QMainWindow):
                         if progress.wasCanceled():
                             logger.info("Network scan stopped by user.")
                             progress.deleteLater()
+                            self.start_oem_scan()
                             return
-                        
+                    self.Components.rebuild_trees()
+
                     #J1587
                     tool = j1587_tool_mids[request_pass % 2] #Switch between requesting tool MIDs
                     j1587_parameter_count += 1
@@ -1417,6 +1496,12 @@ class TU_RP1210(QMainWindow):
             progress.deleteLater()
             logger.info("Finished with Standards Based Data Extraction.")
             
+            self.start_oem_scan()
+    
+    def start_oem_scan(self):
+        #override this function 
+        pass
+
     def find_j1939_data(self, pgn, sa=0):
         '''
         A function that returns bytes data from the data dictionary holding J1939 data.
@@ -1509,7 +1594,7 @@ class TU_RP1210(QMainWindow):
                 data_dict["First File Bytes"] = f.read(150)
             data_dict["File Name"] = file_to_verify_name
             data_dict["Signature File Name"] = file_to_verify_name + '.pgp' 
-            data_dict["Signature"] = 'PGP Signatrure block'
+            data_dict["Signature"] = 'PGP Signature Block'
             data_dict["Public Key"] = str(self.user_data.private_key.pubkey)
             logger.debug("Verification Report inputs:")
             logger.debug(" {}".format(data_dict))
@@ -1641,7 +1726,7 @@ class TU_RP1210(QMainWindow):
             message = pgpy.PGPMessage.from_file(filename)
             logger.info("Successfully opened {} as a PGP message.".format(filename))
         except:
-            format(traceback.format_exc())
+            logger.debug(traceback.format_exc())
             logger.info("Failed to open {} as a PGP message.".format(filename))
             QMessageBox.warning(self, 
                 "Invalid File",
@@ -1650,7 +1735,7 @@ class TU_RP1210(QMainWindow):
                 QMessageBox.Close)
             return False
         
-        return self.verify_stream(message, key)
+        return self.verify_stream(message, self.user_data.private_key)
     
     def send_can_message(self, data_bytes):
         #initialize the buffer
@@ -1659,15 +1744,18 @@ class TU_RP1210(QMainWindow):
             message_bytes += data_bytes
             self.RP1210.send_message(self.client_ids["CAN"], message_bytes)
 
-    def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6):
+    def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6, BAM=True):
         #initialize the buffer
         if self.client_ids["J1939"] is not None:
             b0 =  PGN & 0xff
             b1 = (PGN & 0xff00) >> 8
             b2 = (PGN & 0xff0000) >> 16
+            if BAM and len(data_bytes) > 8:
+                priority |= 0x80
             message_bytes = bytes([b0, b1, b2, priority, SA, DA])
             message_bytes += data_bytes
             self.RP1210.send_message(self.client_ids["J1939"], message_bytes)
+            
 
     def send_j1939_request(self, PGN_to_request, DA=0xff, SA=0xf9): 
         if self.client_ids["J1939"] is not None:
@@ -1692,10 +1780,6 @@ class TU_RP1210(QMainWindow):
         logger.debug("Setup GPS with file.")
         success = self.GPS.try_GPS()
         if not success:
-            try: 
-                self.GPS.ser = None
-            except:
-                logger.debug(traceback.format_exc())
             logger.debug("Setup GPS with dialog box.")
             self.GPS.run()
         
@@ -1735,9 +1819,9 @@ class TU_RP1210(QMainWindow):
                 # else:
                 #     corrected_time = time.localtime(self.gps_thread.gpstime - time.timezone)
                 self.gps_time_label.setText(time.strftime("GPS Time:\n%d %b %Y %H:%M:%S\n%Z", time.localtime(self.gps_thread.gpstime)))
-                self.data_package["Time Records"]["PC Time at Last GPS Reading"]=time.time()
-                self.data_package["Time Records"]["Last GPS Time"] = self.gps_thread.gpstime
-                self.data_package["Time Records"]["PC Time minus GPS Time"] = time.time() - self.gps_thread.gpstime
+                self.data_package["Time Records"]["Personal Computer"]["PC Time at Last GPS Reading"]=time.time()
+                self.data_package["Time Records"]["Personal Computer"]["Last GPS Time"] = self.gps_thread.gpstime
+                self.data_package["Time Records"]["Personal Computer"]["PC Time minus GPS Time"] = time.time() - self.gps_thread.gpstime
                 self.data_package["GPS Data"].update({"Latitude": self.gps_thread.gpslat,
                                                       "Longitude": self.gps_thread.gpslon,
                                                       "Altitude": self.gps_thread.gpsalt,
@@ -1753,8 +1837,7 @@ class TU_RP1210(QMainWindow):
             return
         except:
             logger.debug(traceback.format_exc())
-
-            self.gps_icon.setText("<html><img src='{}/icons/icons8_GPS_Disconnected_48px.png'><br>Disconnected</html>").format(module_directory)
+            self.gps_icon.setText("<html><img src='{}/icons/icons8_GPS_Disconnected_48px.png'><br>Disconnected</html>".format(module_directory))
         
         try:
             del self.gps_thread
@@ -1777,7 +1860,7 @@ class TU_RP1210(QMainWindow):
         return_button = permission_box.exec_()
         if return_button == QMessageBox.Yes:
             logger.info("User acknowledged proper permission to access vehicle data.")
-            self.data_package["Time Records"]["Permission Time"] = time.time()
+            self.data_package["Time Records"]["Personal Computer"]["Permission Time"] = time.time()
             return True
         else:
             return False
@@ -1785,31 +1868,41 @@ class TU_RP1210(QMainWindow):
     # def start_cat(self):
     #     pass
     
-    def read_rp1210(self):
-        # This needs to run often to keep the queues from filling
-        try:
-            for protocol in ["J1939","J1708"]:
-                if protocol in self.rx_queues:
-                    start_time = time.time()
-                    while self.rx_queues[protocol].qsize():
-                        #Get a message from the queue. These are raw bytes
-                        #if not protocol == "J1708":
-                        rxmessage = self.rx_queues[protocol].get()
-                        if protocol == "J1939":
-                            self.J1939.fill_j1939_table(rxmessage)
-                        elif protocol == "J1708":
-                            self.J1587.fill_j1587_table(rxmessage)
-                        
-                        if time.time() - start_time + 50 > self.update_rate: #give some time to process events
-                            logger.debug("Can't keep up with messages.")
-                            return
-                #except KeyError:
-                #    logger.debug(traceback.format_exc())
-                    #pass # nothing is connected.
-        except AttributeError:
-            logger.debug(traceback.format_exc())
-            #pass # nothing is connected.        
 
+    def read_rp1210(self):
+        # This function needs to run often to keep the queues from filling
+        #try:
+        for protocol in self.rx_queues.keys():
+            if protocol in self.rx_queues:
+                start_time = time.time()
+                while self.rx_queues[protocol].qsize():
+                    #Get a message from the queue. These are raw bytes
+                    #if not protocol == "J1708":
+                    rxmessage = self.rx_queues[protocol].get()
+                    if protocol == "CAN":
+                        #Just great a log file.
+                        CANlogger.info("{:0.6f},{},{:08X},{},".format(rxmessage[0],
+                                                                      rxmessage[1],
+                                                                      rxmessage[2],
+                                                                      rxmessage[3]) + 
+                                       ",".join("{:02X}".format(c) for c in rxmessage[4]))
+                    
+                    elif protocol == "J1939":
+                        try:
+                            self.J1939.fill_j1939_table(rxmessage)
+                            #J1939logger.info(rxmessage)
+                        except:
+                            logger.debug(traceback.format_exc())
+                    elif protocol == "J1708":
+                        try:
+                            self.J1587.fill_j1587_table(rxmessage)    
+                            J1708logger.info("{:0.6f},".format(rxmessage[0]) + ",".join("{:02X}".format(c) for c in rxmessage[1]))
+                        except:
+                            logger.debug(traceback.format_exc())
+                    
+                    if time.time() - start_time + 50 > self.update_rate: #give some time to process events
+                        logger.debug("Can't keep up with messages.")
+                        return
     def register_software(self):
         logging.debug("Register Software Request")                      
         self.edit_user_data()
@@ -1852,8 +1945,5 @@ class TU_RP1210(QMainWindow):
         
         logger.debug("Exiting.")
 
-    def start_ddec_J1587(self):
-        self.ddec_j1587.start_ddec_J1587()
-        
-    def plot_decrypted_data(self):
-        self.ddec_j1587.plot_decrypted_data()
+    def decode_can_log_file(self, filename):
+        pass

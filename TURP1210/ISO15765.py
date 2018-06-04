@@ -333,6 +333,7 @@ class UDSResponder(threading.Thread):
         self.response_dict = {}
         self.rx_count = 0
         self.runSignal = True
+        self.max_count = 500 #For the progress bar
         self.create_responses()
         
     def run(self):
@@ -350,7 +351,7 @@ class UDSResponder(threading.Thread):
                 if rxmessage[4] == 0 and rxmessage[7] == 0xDA: #Echo is on. See The CAN Message from RP1210_ReadMessage
                     logger.debug("RX: " + bytes_to_hex_string(rxmessage[6:]))
                     self.rx_count+=1
-                    if self.rx_count == 499:
+                    if self.rx_count == self.max_count:
                         self.rx_count = 1
                     da = rxmessage[8]
                     sa = rxmessage[9]
@@ -375,32 +376,14 @@ class UDSResponder(threading.Thread):
                             if msg_segment[0] == (0x10 & 0xF0):
                                 time.sleep(0.005)
                                 self.wait_for_ack()
-                elif rxmessage[4] == 0 and rxmessage[7] == 0xEA:
-                    if rxmessage[10:13] == b'\xEC\xFE\x00':
-                        logger.debug("REQ: " + bytes_to_hex_string(rxmessage[10:]))
-                        bytes_to_send = bytes([0x01, 0x1C, 0xEC, 0xF9, 0x00, 0x10, 0x12, 0x00, 0x03, 0xFF, 0xEC, 0xFE, 0x00])
-                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
-                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                        time.sleep(0.050)
-                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x01, 0x31, 0x58, 0x50, 0x58, 0x44, 0x50, 0x39])
-                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
-                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                        time.sleep(0.010)
-                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x02, 0x58, 0x37, 0x4A, 0x44, 0x34, 0x38, 0x30])
-                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
-                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                        time.sleep(0.010)
-                        bytes_to_send = bytes([0x01, 0x1C, 0xEB, 0xF9, 0x00, 0x03, 0x30, 0x39, 0x30, 0x2A, 0xFF, 0xFF, 0xFF])
-                        self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
-                        logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                        time.sleep(0.010)
-                    elif rxmessage[10:13] == b'\x00\xEE\x00':
+                
+                elif rxmessage[10:13] == b'\x00\xEE\x00':
                         logger.debug("REQ: " + bytes_to_hex_string(rxmessage[10:]))
                         for i in range(10):
                             bytes_to_send = bytes([0x01, 0x18, 0xEE, 0xFF, 0x00, 0xF7, 0x02, 0xA1, 0x01, 0x00, 0x00, 0x00, 0x10])
                             self.root.RP1210.send_message(self.root.client_ids["CAN"], bytes_to_send)
                             logger.debug("TX: " + bytes_to_hex_string(bytes_to_send))
-                            time.sleep(0.010)              
+                            time.sleep(0.010)           
 
     def wait_for_ack(self):
         start_time = time.time()
