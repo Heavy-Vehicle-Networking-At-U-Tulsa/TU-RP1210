@@ -82,7 +82,8 @@ class RP1210ReadMessageThread(threading.Thread):
                         
                         #if can_id not in self.can_ids_to_block:
                         self.rx_queue.put(ucTxRxBuffer[:return_value])
-                    
+                        self.extra_queue.put(ucTxRxBuffer[:return_value])
+                        
                         message_bytes += time_bytes
                         message_bytes += vda_timestamp
                         message_bytes += microsecond_bytes

@@ -28,6 +28,15 @@ def bytes_to_hex_string(byte_string):
         logger.debug(traceback.format_exc)
         return ""
 
+def hex_string_to_bytes(hex_string):
+    try:
+        return bytes([int(c,16) for c in hex_string.split()])
+    except (TypeError, IndexError):
+        # When unable to iterate over byte_string just return an empty string                                                                                                                             
+        logger.debug(traceback.format_exc)
+        return b''
+
+
 def get_local_time_string(ts):
     return time.strftime("%A, %d %b %Y at %H:%M:%S %Z", time.localtime(ts))
 

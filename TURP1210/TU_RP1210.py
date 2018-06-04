@@ -93,8 +93,6 @@ from TURP1210.UserData import *
 from TURP1210.PDFReports import *
 from TURP1210.ISO15765 import *
 from TURP1210.Graphing.graphing import * 
-from TURP1210.DDEC_1587 import *
-
 
 import logging
 import logging.config
@@ -119,9 +117,12 @@ except FileNotFoundError:
 logging.config.dictConfig(logging_dictionary)
 logger = logging.getLogger(__name__)
 
-with open('version.json') as f:
-    TU_RP1210_version = json.load(f)
-
+try:
+    with open('version.json') as f:
+        TU_RP1210_version = json.load(f)
+except:
+    print("This is a module that should be run from another program. See the demo code.")
+    
 start_time = time.strftime("%Y-%m-%dT%H%M%S %Z", time.localtime())
 
 current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode('ascii','ignore').split('\n')[1].strip() 
@@ -222,8 +223,8 @@ class TU_RP1210(QMainWindow):
         
 
         progress_label.setText("Initializing System Variables")
-        #os.system("TASKKILL /F /IM DGServer2.exe")
-        #os.system("TASKKILL /F /IM DGServer1.exe")  
+        os.system("TASKKILL /F /IM DGServer2.exe")
+        os.system("TASKKILL /F /IM DGServer1.exe")  
         
         self.update_rate = 200
 
@@ -279,12 +280,6 @@ class TU_RP1210(QMainWindow):
         progress.setValue(8)
         QCoreApplication.processEvents()
         
-        #Load the ddec module
-        progress_label.setText("Loading the DDEC J1587 Engine")
-        self.ddec_j1587 = DDEC_J1587(self)
-        progress.setValue(9)
-        QCoreApplication.processEvents()
-
 
         progress_label.setText("Starting Loop Timers")
         connections_timer = QTimer(self)
@@ -395,13 +390,7 @@ class TU_RP1210(QMainWindow):
         run_action.setStatusTip('Scan for all data using standard data and known EDR recovery routines.')
         run_action.triggered.connect(self.start_scan)
         self.run_menu.addAction(run_action)
-        
-        ddec1587_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_D_52px.png')), 'Start &DDEC J1708 Download', self)
-        ddec1587_action.setShortcut('Ctrl+Shift+D')
-        ddec1587_action.setStatusTip('Send requests to download DDEC Reports Data Pages.')
-        ddec1587_action.triggered.connect(self.start_ddec_J1587)
-        self.run_menu.addAction(ddec1587_action)
-        
+               
         iso_replay_action = QAction(QIcon(os.path.join(module_directory,r'icons/Replay_48px.png')), 'Replay &ISO Network Traffic', self)
         iso_replay_action.setShortcut('Ctrl+Shift+I')
         iso_replay_action.setStatusTip('Responds to requests over the ISO15765 protocol based on the saved data.')
@@ -425,28 +414,22 @@ class TU_RP1210(QMainWindow):
         self.run_toolbar = self.addToolBar("&Download")
         self.run_toolbar.addAction(run_action)
         self.run_toolbar.addAction(iso_replay_action)
-        self.run_toolbar.addAction(ddec1587_action)
         self.run_toolbar.addAction(setup_gps_action)
         self.run_toolbar.addAction(upload_action)
         
-        graph_menu = menubar.addMenu("&Graph")
-        graph_data_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), '&Plot Incident Graphs', self)
-        graph_data_action.setShortcut('Alt+Shift+P')
-        graph_data_action.setStatusTip('Plot graphs from incident data from speed changes and final stops.')
-        graph_data_action.triggered.connect(self.plot_decrypted_data)
-        graph_menu.addAction(graph_data_action)
+        self.graph_menu = menubar.addMenu('&Graph')
         
         graph_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Line_Chart_48px.png')), 'Show G&raphs', self)
         graph_action.setShortcut('Alt+Shift+R')
         graph_action.setStatusTip('Show Available Graphs')
         graph_action.triggered.connect(self.show_graphs)
-        graph_menu.addAction(graph_action)
+        self.graph_menu.addAction(graph_action)
             
         clear_voltage_action = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Delete_Table_48px_1.png')), '&Clear Voltage Graphs', self)
         clear_voltage_action.setShortcut('Alt+Shift+C')
         clear_voltage_action.setStatusTip('Clear the time history shown in the vehicle voltage graph.')
         clear_voltage_action.triggered.connect(self.clear_voltage_graph)
-        graph_menu.addAction(clear_voltage_action)
+        self.graph_menu.addAction(clear_voltage_action)
     
         help_menu = menubar.addMenu('&Help')
         register = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Registration_48px.png')), '&Enter User Information', self)
@@ -648,6 +631,7 @@ class TU_RP1210(QMainWindow):
 
     def create_new(self, new_file=True):
 
+        self.source_addresses = []
 
         for k,item in self.graph_tabs.items():
             item.deleteLater()
@@ -745,38 +729,155 @@ class TU_RP1210(QMainWindow):
 
     def iso_replay(self):
         logger.debug("ISO Replay")
-        responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
-        responder_thread.setDaemon(True) #needed to close the thread when the application closes.
-        responder_thread.start()
-        logger.debug("Started Replay Thread.")
 
-        #logger.debug(response_dict)
+
+        # try:
+        #     self.close_clients()
+        # except AttributeError:
+        #     pass
+        # try:
+        #     for thread in self.read_message_threads:
+        #         thread.runSignal = False
+        # except AttributeError:
+        #     pass
+        
+        # # We want to connect to multiple clients with different protocols.
+        # deviceID = 1
+        # self.client_ids={}
+        # self.client_ids["CAN"] = self.RP1210.get_client_id("CAN", deviceID, "250000")
+        # self.client_ids["J1708"] = self.RP1210.get_client_id("J1708", deviceID, "Auto")
+        # self.client_ids["J1939"] = self.RP1210.get_client_id("J1939", deviceID, "250000")
+       
+        # for protocol, nClientID in self.client_ids.items():
+        #     QCoreApplication.processEvents()
+        #     if nClientID is not None:
+        #         # By turning on Echo Mode, our logger process can record sent messages as well as received.
+        #         fpchClientCommand = (c_char*2000)()
+        #         fpchClientCommand[0] = 1 #Echo mode on
+        #         return_value = self.RP1210.SendCommand(c_short(RP1210_Echo_Transmitted_Messages), 
+        #                                                c_short(nClientID), 
+        #                                                byref(fpchClientCommand), 1)
+        #         logger.debug('RP1210_Echo_Transmitted_Messages returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                
+        #          #Set all filters to pass
+        #         return_value = self.RP1210.SendCommand(c_short(RP1210_Set_All_Filters_States_to_Pass), 
+        #                                                c_short(nClientID),
+        #                                                None, 0)
+        #         if return_value == 0:
+        #             logger.debug("RP1210_Set_All_Filters_States_to_Pass for {} is successful.".format(protocol))
+        #             #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
+        #             self.rx_queues[protocol] = queue.Queue(10000)
+        #             self.extra_queues[protocol] = queue.Queue(10000)
+        #             self.read_message_threads[protocol] = RP1210ReadMessageThread(self, 
+        #                                                                           self.rx_queues[protocol],
+        #                                                                           self.extra_queues[protocol],
+        #                                                                           self.RP1210.ReadMessage, 
+        #                                                                           nClientID,
+        #                                                                           protocol, self.title)
+        #             self.read_message_threads[protocol].setDaemon(True) #needed to close the thread when the application closes.
+        #             self.read_message_threads[protocol].start()
+        #             logger.debug("Started RP1210ReadMessage Thread.")
+
+        #             if protocol == "J1939":
+        #                 self.isodriver = ISO15765Driver(self, self.extra_queues["J1939"])
+                    
+        #         else :
+        #             logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+
+        #         if protocol == "J1939":
+        #             fpchClientCommand[0] = 0x00 #0 = as fast as possible milliseconds
+        #             fpchClientCommand[1] = 0x00
+        #             fpchClientCommand[2] = 0x00
+        #             fpchClientCommand[3] = 0x00
+                    
+        #             return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
+        #                                                    c_short(nClientID), 
+        #                                                    byref(fpchClientCommand), 4)
+        #             logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                    
+               
+        #     else:
+        #         logger.debug("{} Client not connected for All Filters to pass. No Queue will be set up.".format(protocol))
+        try:
+            assert self.client_ids["J1939"] > 0   
+        except:
+            return
+            
+        fpchClientCommand = (c_char*2000)()
+        fpchClientCommand[0] = CHANGE_BAUD_NOW
+        fpchClientCommand[1] = RP1210_BAUD_250k
+        logger.debug("Setting Baud Rate")
+        
+        return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Baud), 
+                                                       c_short(self.client_ids["J1939"]), 
+                                                       byref(fpchClientCommand), 2)
+        logger.debug('RP1210_Set_J1939_Baud returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+        
+        logger.debug("Claiming Address")
+        fpchClientCommand[0] = 0x00 #Address to claim (engine #1)
+        fpchClientCommand[1] = 0xF7
+        fpchClientCommand[2] = 0x02
+        fpchClientCommand[3] = 0xA1
+        fpchClientCommand[4] = 0x01
+        fpchClientCommand[5] = 0x00
+        fpchClientCommand[6] = 0x00
+        fpchClientCommand[7] = 0x00
+        fpchClientCommand[8] = 0x10
+        fpchClientCommand[9] = 0x00
+        return_value = self.RP1210.SendCommand(c_short(RP1210_Protect_J1939_Address), 
+                                                       c_short(self.client_ids["J1939"]), 
+                                                       byref(fpchClientCommand), 10)
+        logger.debug('RP1210_Protect_J1939_Address returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+        
+
+        fpchClientCommand[0] = 0x01 #0 = as fast as possible milliseconds
+        fpchClientCommand[1] = 0x00
+        fpchClientCommand[2] = 0x00
+        fpchClientCommand[3] = 0x00
+        
+        return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
+                                               c_short(self.client_ids["J1939"]), 
+                                               byref(fpchClientCommand), 4)
+        logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                    
+
+
+        ISO_responder_thread = UDSResponder(self, self.data_package["UDS Messages"], self.rx_queues["CAN"])
+        ISO_responder_thread.setDaemon(True) #needed to close the thread when the application closes.
+        ISO_responder_thread.start()
+        logger.debug("Started ISO Replay Thread.")
+        
+        J1939_responder_thread = J1939Responder(self, self.extra_queues["CAN"])
+        J1939_responder_thread.setDaemon(True) #needed to close the thread when the application closes.
+        J1939_responder_thread.start()
+        logger.debug("Started J1939 Replay Thread.")
+        
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
         progress.setWindowTitle("ISO Message Responder")
         progress.setMinimumDuration(0)
         progress.setWindowModality(Qt.WindowModal)
-        progress.setMaximum(500)
+        progress.setMaximum(ISO_responder_thread.max_count)
         progress_label = QLabel("Listening for Messages")
         progress.setLabel(progress_label)
-        rx_count=1
-        progress.setValue(rx_count)
-        protocol = "CAN"
+
+        #Wait for the user to press cancel
+        while not progress.wasCanceled():
+            time.sleep(.05)
+            QApplication.processEvents()
+            progress.setValue(ISO_responder_thread.rx_count)
+            
+        ISO_responder_thread.runSignal = False
+        J1939_responder_thread.runSignal = False
         #Flush the buffer
-        
+        progress.deleteLater()
 
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
-        #logger.debug("returned_message:")
-        #logger.debug(returned_message)
-        try:
-            self.data_package["Decrypted Data"] = json.loads(returned_message)
-            self.plot_decrypted_data()
-        except TypeError:
-            logger.debug(traceback.format_exc())
-
-
+        logger.debug("returned_message:")
+        logger.debug(returned_message)
+        
     def edit_user_data(self):
         self.user_data.show_dialog() 
 
@@ -790,11 +891,6 @@ class TU_RP1210(QMainWindow):
 
     def show_graphs(self):
         self.voltage_graph.show()
-        try:
-            self.ddec_j1587.ddec_preview_graph.show()
-        except AttributeError:
-            logger.debug(traceback.format_exc())
-            pass
 
     def new_file(self):
         logger.debug("New File Selected.")
@@ -915,12 +1011,13 @@ class TU_RP1210(QMainWindow):
         self.J1939.uds_data_model.signalUpdate()
         self.J1939.uds_table.resizeRowsToContents()
         for c in self.J1939.uds_resizable_cols:
-            self.J1939.uds_table.resizeColumnToContents(c)            
-        self.J1939.uds_table.scrollToBottom()
+            self.J1939.uds_table.resizeColumnToContents(c)
+        
 
         self.plot_decrypted_data()
-        logger.debug(self.pdf_engine.event_groups)
-
+        
+    def plot_decrypted_data(self):
+        pass
 
     def save_file(self, backup=False):
         """
@@ -1134,8 +1231,8 @@ class TU_RP1210(QMainWindow):
                 if return_value == 0:
                     logger.debug("RP1210_Set_All_Filters_States_to_Pass for {} is successful.".format(protocol))
                     #setup a Receive queue. This keeps the GUI responsive and enables messages to be received.
-                    self.rx_queues[protocol] = queue.Queue()
-                    self.extra_queues[protocol] = queue.Queue()
+                    self.rx_queues[protocol] = queue.Queue(10000)
+                    self.extra_queues[protocol] = queue.Queue(10000)
                     self.read_message_threads[protocol] = RP1210ReadMessageThread(self, 
                                                                                   self.rx_queues[protocol],
                                                                                   self.extra_queues[protocol],
@@ -1148,28 +1245,21 @@ class TU_RP1210(QMainWindow):
 
                     self.statusBar().showMessage("{} connected using {}".format(protocol,dll_name))
                     if protocol == "J1939":
-                        self.isodriver = ISO15765Driver(self, self.extra_queues[protocol])
+                        self.isodriver = ISO15765Driver(self, self.extra_queues["J1939"])
                     
                 else :
                     logger.debug('RP1210_Set_All_Filters_States_to_Pass returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
 
-                if protocol == "ISO15765":
-                    fpchClientCommand[0] = b'\x01' #EXTENDED CAN
-                    fpchClientCommand[1] = b'\x00'
-                    fpchClientCommand[2] = b'\xda'
-                    fpchClientCommand[3] = b'\x00'
-                    fpchClientCommand[4] = b'\x00'
-                    fpchClientCommand[5] = b'\xFF'
-                    fpchClientCommand[6] = b'\x00'
-                    fpchClientCommand[7] = b'\xda'
-                    fpchClientCommand[8] = b'\x00'
-                    fpchClientCommand[9] = b'\x00'
-                    fpchClientCommand[10] = b'\xFF'
+                if protocol == "J1939":
+                    fpchClientCommand[0] = 0x00 #0 = as fast as possible milliseconds
+                    fpchClientCommand[1] = 0x00
+                    fpchClientCommand[2] = 0x00
+                    fpchClientCommand[3] = 0x00
                     
-                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_Message_Filtering_For_ISO15765), 
+                    return_value = self.RP1210.SendCommand(c_short(RP1210_Set_J1939_Interpacket_Time), 
                                                            c_short(nClientID), 
-                                                           byref(fpchClientCommand), 11)
-                    logger.debug('RP1210_Set_Message_Filtering_For_ISO15765 returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
+                                                           byref(fpchClientCommand), 4)
+                    logger.debug('RP1210_Set_J1939_Interpacket_Time returns {:d}: {}'.format(return_value,self.RP1210.get_error_code(return_value)))
                     
                
             else:
@@ -1179,7 +1269,9 @@ class TU_RP1210(QMainWindow):
         
         if self.client_ids["J1939"] is None or self.client_ids["J1708"] is None:
             QMessageBox.information(self,"RP1210 Client Not Connected.","The default RP1210 Device was not found or is unplugged. Please reconnect your Vehicle Diagnostic Adapter (VDA) and select the RP1210 device to use.")
-        
+            self.voltage_graph.hide()
+        else:
+            self.voltage_graph.show()
         progress.deleteLater()
 
     def check_connections(self):
@@ -1329,7 +1421,10 @@ class TU_RP1210(QMainWindow):
         """
         if self.ask_permission():
             logger.info("Starting Vehicle Network Scan.")
-
+            # Ensure brakes, engine and global sources are in the source addresses.
+            for sa in [0x00, 0x0B, 0xFF]:
+                if sa not in self.source_addresses:
+                    self.source_addresses.append(sa)
             # Log the time when this starts
             self.extraction_time_pc = time.time()
             try:
@@ -1376,9 +1471,9 @@ class TU_RP1210(QMainWindow):
                     except:
                         pgn_name= ""
                     progress_label.setText("Pass {}: Requesting PGN {} - {}".format(request_pass+1, pgn, pgn_name))
-                        
+                    
                     random.shuffle(self.source_addresses)
-                    for address in [0x00, 0x0B, 0xFF]: #self.source_addresses:
+                    for address in self.source_addresses:
                         request_count += 1
                         # Send the request for a PGN onto the J1939 Network
                         # and wait for a response
@@ -1659,15 +1754,18 @@ class TU_RP1210(QMainWindow):
             message_bytes += data_bytes
             self.RP1210.send_message(self.client_ids["CAN"], message_bytes)
 
-    def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6):
+    def send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6, BAM=True):
         #initialize the buffer
         if self.client_ids["J1939"] is not None:
             b0 =  PGN & 0xff
             b1 = (PGN & 0xff00) >> 8
             b2 = (PGN & 0xff0000) >> 16
+            if BAM and len(data_bytes) > 8:
+                priority |= 0x80
             message_bytes = bytes([b0, b1, b2, priority, SA, DA])
             message_bytes += data_bytes
             self.RP1210.send_message(self.client_ids["J1939"], message_bytes)
+            
 
     def send_j1939_request(self, PGN_to_request, DA=0xff, SA=0xf9): 
         if self.client_ids["J1939"] is not None:
@@ -1786,30 +1884,29 @@ class TU_RP1210(QMainWindow):
     #     pass
     
     def read_rp1210(self):
-        # This needs to run often to keep the queues from filling
-        try:
-            for protocol in ["J1939","J1708"]:
-                if protocol in self.rx_queues:
-                    start_time = time.time()
-                    while self.rx_queues[protocol].qsize():
-                        #Get a message from the queue. These are raw bytes
-                        #if not protocol == "J1708":
-                        rxmessage = self.rx_queues[protocol].get()
-                        if protocol == "J1939":
+        # This function needs to run often to keep the queues from filling
+        #try:
+        for protocol in self.rx_queues.keys():
+            if protocol in self.rx_queues:
+                start_time = time.time()
+                while self.rx_queues[protocol].qsize():
+                    #Get a message from the queue. These are raw bytes
+                    #if not protocol == "J1708":
+                    rxmessage = self.rx_queues[protocol].get()
+                    if protocol == "J1939":
+                        try:
                             self.J1939.fill_j1939_table(rxmessage)
-                        elif protocol == "J1708":
+                        except:
+                            logger.debug(traceback.format_exc())
+                    elif protocol == "J1708":
+                        try:
                             self.J1587.fill_j1587_table(rxmessage)
-                        
-                        if time.time() - start_time + 50 > self.update_rate: #give some time to process events
-                            logger.debug("Can't keep up with messages.")
-                            return
-                #except KeyError:
-                #    logger.debug(traceback.format_exc())
-                    #pass # nothing is connected.
-        except AttributeError:
-            logger.debug(traceback.format_exc())
-            #pass # nothing is connected.        
-
+                        except:
+                            logger.debug(traceback.format_exc())
+                    
+                    if time.time() - start_time + 50 > self.update_rate: #give some time to process events
+                        logger.debug("Can't keep up with messages.")
+                        return
     def register_software(self):
         logging.debug("Register Software Request")                      
         self.edit_user_data()
@@ -1851,9 +1948,3 @@ class TU_RP1210(QMainWindow):
             pass
         
         logger.debug("Exiting.")
-
-    def start_ddec_J1587(self):
-        self.ddec_j1587.start_ddec_J1587()
-        
-    def plot_decrypted_data(self):
-        self.ddec_j1587.plot_decrypted_data()
