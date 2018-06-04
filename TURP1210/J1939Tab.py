@@ -501,6 +501,7 @@ class J1939Tab(QWidget):
         self.j1939_unique_ids[pgn_key]["VDATime"] = vda_time
         self.j1939_unique_ids[pgn_key]["PGN"] = "{:6d}".format(pgn)
         self.j1939_unique_ids[pgn_key]["SA"] = "{:3d}".format(sa)
+        self.j1939_unique_ids[pgn_key]["Bytes"] = data_bytes
         self.j1939_unique_ids[pgn_key]["Raw Hexadecimal"] = bytes_to_hex_string(data_bytes)
         self.j1939_unique_ids[pgn_key]["Period (ms)"] = "{:10.2f}".format(1000 * (current_time - self.j1939_unique_ids[pgn_key]["Start Time"])/self.j1939_unique_ids[pgn_key]["Num"])
         
