@@ -48,9 +48,6 @@ print("DLL Version: {}.{}".format(DLLMajor,DLLMinor))
 print("API Version: {}.{}".format(APIMajor,APIMinor))
 
 
-# Assignnment: 
-#  Make a function prototype for RP1210_ClientDisconnect
-#  Make a function prototype for RP1210_ReadDetailedVersion
-#  Display the RP1210_ReadDetailedVersion information when 
-#  connected to an RP1210 device (VDA). The VDA will need
-#  12V power.  
+# Assignment: 
+#  1. Make a function prototype for RP1210_ClientDisconnect
+#  2. Make a function prototype for RP1210_ReadDetailedVersion

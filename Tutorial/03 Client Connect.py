@@ -54,6 +54,9 @@ if client_id > 127: # Then there is an error code
     print("RP1210_ClientConnect failed: {}".format(description))
 else:
     print("Success!")
- 
+
+ret_val = RP1210_ClientDisconnect(client_id)
+print("Client Disconnected with return value of: {}".format(ret_val))
 # Assignment:
-# Connect an RP1210 Device and read the detailed version using RP1210_ReadDetailedVersion
+# Connect an RP1210 Device and read the detailed version using 
+# RP1210_ReadDetailedVersion

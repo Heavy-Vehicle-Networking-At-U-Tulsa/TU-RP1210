@@ -79,3 +79,6 @@ else:
     description = fpchDescription.value.decode('ascii','ignore')
     message = "RP1210_ReadDetailedVersion failed with\na return value of  {}: {}".format(return_value, description)
 print(message)
+
+ret_val = RP1210_ClientDisconnect(client_id)
+print("Client Disconnected with return value of: {}".format(ret_val))

@@ -7,6 +7,7 @@
 # We need the following to interface with the RP1210 DLL
 from ctypes import *
 from ctypes.wintypes import HWND
+import struct
 
 # The following entry needs to be in RP121032.ini 
 dll_in_use = "DGDPA5MA"
@@ -121,7 +122,7 @@ while message_count < 100:
         message = TxRxBuffer[10:return_value]
         # Use a list comprehension to make a hex representation of the message.
         msg_str = " ".join(["{:02X}".format(c) for c in message])                              
-        print("{:12d} ({},{},{},{}) {}".format(vda_timestamp,pgn,sa,da,how,msg_str))
+        print("{:12d} ({:5d},{:2d},{:3d},{}) {}".format(vda_timestamp,pgn,sa,da,how,msg_str))
 
 # Assignment: 
 #  Create a data logger to store messages to a file.
