@@ -1501,17 +1501,7 @@ class TU_RP1210(QMainWindow):
     def start_oem_scan(self):
         #override this function 
         pass
-
-    def find_j1939_data(self, pgn, sa=0):
-        '''
-        A function that returns bytes data from the data dictionary holding J1939 data.
-        This function is used to check the presence of data in the dictionary.
-        '''
-        try:
-            return self.J1939.j1939_unique_ids[repr((pgn,sa))]["Bytes"]
-        except KeyError:
-            return False
-    
+  
     def copy_and_sign_files(self, additional_files=[]):
         
         self.save_file_as()
@@ -1755,7 +1745,18 @@ class TU_RP1210(QMainWindow):
             message_bytes = bytes([b0, b1, b2, priority, SA, DA])
             message_bytes += data_bytes
             self.RP1210.send_message(self.client_ids["J1939"], message_bytes)
-            
+    
+    def find_j1939_data(self, pgn, sa=0):
+        '''
+        A function that returns bytes data from the data dictionary holding J1939 data.
+        This function is used to check the presence of data in the dictionary.
+        '''
+        
+        try:
+            return self.J1939.j1939_unique_ids[repr((pgn,sa))]["Bytes"]
+        except KeyError:
+            return False
+          
 
     def send_j1939_request(self, PGN_to_request, DA=0xff, SA=0xf9): 
         if self.client_ids["J1939"] is not None:

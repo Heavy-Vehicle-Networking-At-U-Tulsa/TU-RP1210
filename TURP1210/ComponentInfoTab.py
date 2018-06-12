@@ -217,22 +217,21 @@ class ComponentInfoTab(QWidget):
     def request_hours(self):
         self.send_requests(65253, 247)
         self.send_requests(65255, 247)
-        self.rebuild_trees()
+        
 
     def request_distance(self):
         self.send_requests(65248, 245)
         self.send_requests(65217, 244)
-        self.rebuild_trees()
+        
 
     def request_software(self):
         self.send_requests(65242, 234)
-        self.rebuild_trees()
+        
 
     def request_component_ID(self):
         self.send_requests(65259, 243)
-        self.rebuild_trees()
 
-    def send_requests(self, pgn, mid):
+    def send_requests(self, pgn, mid=234):
         total_requests = 3*(len(self.root.source_addresses) + 1)
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
