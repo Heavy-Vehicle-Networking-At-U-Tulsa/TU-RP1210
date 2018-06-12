@@ -31,6 +31,7 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QTabWidget)
 from PyQt5.QtCore import Qt, QTimer, QAbstractTableModel, QCoreApplication, QVariant, QAbstractItemModel, QSortFilterProxyModel
 from PyQt5.QtGui import QIcon
+import threading
 import queue
 import time
 import calendar
@@ -420,8 +421,10 @@ class J1939Tab(QWidget):
         self.uds_data_model.setDataDict(self.iso_recorder.uds_messages)
         self.uds_data_model.endResetModel()
         
-    def fill_j1939_table(self, rx_buffer):
+    def fill_j1939_table(self, j1939_buffer):
         #See The J1939 Message from RP1210_ReadMessage in RP1210
+        current_time = j1939_buffer[0]
+        rx_buffer = j1939_buffer[1]
         try:
             vda_time = struct.unpack(">L", rx_buffer[0:4])[0]
             pgn = rx_buffer[5] + (rx_buffer[6] << 8) + (rx_buffer[7] << 16)
@@ -448,14 +451,14 @@ class J1939Tab(QWidget):
 
         pgn_key = repr((pgn,sa))
         source_key = "{} on J1939".format(self.get_sa_name(sa))
+        if sa not in self.battery_potential.keys():
+            self.battery_potential[sa] = []
+            logger.debug("Set battery potential for SA {} to an empty list.".format(sa))
+
         if sa not in self.root.source_addresses:
         #if sa not in self.ecm_time.keys():
             #self.ecm_time[sa]=[]
 
-            self.battery_potential[sa] = []
-            logger.debug("Added empty list to dictionaries for source address {}".format(sa))
-
-        
             self.root.source_addresses.append(sa)
             self.root.data_package["Time Records"][source_key] = {}
             self.root.data_package["Component Information"][source_key] = {}
@@ -467,7 +470,7 @@ class J1939Tab(QWidget):
          
 
         data_bytes = rx_buffer[11:]
-        current_time = time.time()
+        
         try:
             self.j1939_unique_ids[pgn_key]["Num"] += 1
             previous_data_bytes = base64.b64decode(self.j1939_unique_ids[pgn_key]["Message List"].encode('ascii'))
@@ -906,3 +909,65 @@ class J1939Tab(QWidget):
                     self.root.send_j1939_message(0xDF00, message)
         except (KeyError, AttributeError) as e:
             pass
+
+class J1939Responder(threading.Thread):
+    def __init__(self, parent,  rxqueue):
+        threading.Thread.__init__(self)
+        self.root = parent
+        self.rxqueue = rxqueue #Sign up for a CAN queue
+        self.response_dict = self.root.data_package["J1939 Parameter Group Numbers"]
+        self.rx_count = 0
+        self.runSignal = True
+        self.pgns_to_ignore = [65254]
+        
+    def run(self):
+        
+        #clear queue
+        while self.rxqueue.qsize():
+            rxmessage = self.rxqueue.get()
+
+        logger.debug("J1939Responser runSignal: {}".format(self.runSignal))
+        previous_time = time.time()
+        
+        #DM01
+        # Time period is the key, PGN is in the list
+        periodic_responses_5000 = [65226,]
+
+        while self.runSignal:
+            current_time = time.time()
+            
+            # if (current_time - previous_time) > 5:
+            #     previous_time = current_time
+            #     for pgn in periodic_responses_5000:
+            #         pgn_key = repr((pgn,0))
+            #         try:
+            #             response = hex_string_to_bytes(self.response_dict[pgn_key]["Raw Hexadecimal"])
+            #         except KeyError:
+            #             logger.debug("PGN {} not in data set.".format(pgn_request))
+            #             continue
+            #         self.root.send_j1939_message(pgn, response, DA=255, SA=0)
+            #         logger.debug("{:0.0f} Sent PGN: {:X}, SA: 0, DA: 255, Bytes: {}".format(current_time,pgn,bytes_to_hex_string(response[:8])))
+
+            # time.sleep(0.005)
+            while self.rxqueue.qsize():
+                
+                rxmessage = self.rxqueue.get()
+                if rxmessage[4] == 0 and rxmessage[7] == 0xEA: #Non-Echo Request Message
+                    da_request = 0 #rxmessage[8]
+                    sa_request = rxmessage[9]
+                    pgn_request = struct.unpack("<L", rxmessage[10:13] +  b'\x00')[0]
+                    if pgn_request in self.pgns_to_ignore:
+                        continue
+
+                    pgn_key = repr((pgn_request,da_request)) #Switch SA to DA
+                    logger.debug("Received Request: {}".format(bytes_to_hex_string(rxmessage[6:])))
+                    try:
+                        response = hex_string_to_bytes(self.response_dict[pgn_key]["Raw Hexadecimal"])
+                    except KeyError:
+                        logger.debug("PGN {} not in data set.".format(pgn_request))
+                        continue
+                    #send_j1939_message(self, PGN, data_bytes, DA=0xff, SA=0xf9, priority=6):
+                    self.root.send_j1939_message(pgn_request, response, DA=sa_request, SA=da_request)
+                    logger.debug("Responsed with PGN: {:08X}, SA: {}, DA: {}, Bytes: {}".format(pgn_request,sa_request,da_request,bytes_to_hex_string(response)))
+
+                          

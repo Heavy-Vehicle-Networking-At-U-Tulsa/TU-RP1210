@@ -209,7 +209,7 @@ class FLAReportTemplate(SimpleDocTemplate):
             except:   
                 self.serial = "Not Provided"
         try: 
-            self.download_date = time_string(self.data_package["Time Records"]["Permission Time"])
+            self.download_date = time_string(self.data_package["Time Records"]["Personal Computer"]["Permission Time"])
         except KeyError:
             #print(traceback.format_exc())
             self.download_date = "Not Provided"
@@ -264,15 +264,18 @@ class FLAReportTemplate(SimpleDocTemplate):
         self.add_information_section(main_key, section_title, component_information_description)
         
         #Event Data
-        self.story.append(PageBreak())
+        self.story.append(Spacer(0.2,0.4*inch))
         self.story.append(Paragraph("Event Data", self.styles["Heading1"]))
-        print("self.event_groups =")
-        print(self.event_groups)
+        self.story.append(Paragraph("This is an event data description", self.styles["Normal"]))
+        #print("self.event_groups =")
+        #print(self.event_groups)
         if len(self.event_groups) > 0:
             for key, value in self.event_groups.items():
+                self.story.append(PageBreak())
                 self.story.append(Paragraph(key, self.styles["Heading2"]))
                 self.story.append(value)
         else:
+            self.story.append(Spacer(0.2,0.4*inch))
             self.story.append(Paragraph("No Event Data is available for this report.", self.styles["Normal"]))
 
 
@@ -294,7 +297,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                       Paragraph("Local Time Value",bold_style)]]
         for key in pc_time_keys:
             try:
-                timestamp = int(self.data_package["Time Records"][key])
+                timestamp = int(self.data_package["Time Records"]["Personal Computer"][key])
             except (TypeError, KeyError):
                 timestamp = "Data Not Obtained."
             if 'minus' in key:
@@ -320,7 +323,7 @@ class FLAReportTemplate(SimpleDocTemplate):
                       Paragraph("Hours:Minutes:Seconds", bold_style)]]
         key="PC Time minus GPS Time"
         try:
-            diff = int(self.data_package["Time Records"][key])
+            diff = int(self.data_package["Time Records"]["Personal Computer"][key])
             time_data.append([key,
                           "{}".format(diff),
                           hours_min_sec(diff)
@@ -328,11 +331,11 @@ class FLAReportTemplate(SimpleDocTemplate):
         except (TypeError, KeyError):
             diff = "GPS Time Data Not Available."
         try:
-            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
-                        self.data_package["Time Records"]["Permission Time"])
+            duration = int(self.data_package["Time Records"]["Personal Computer"]["Last PC Time"] - 
+                        self.data_package["Time Records"]["Personal Computer"]["Permission Time"])
         except (TypeError, KeyError):
-            duration = int(self.data_package["Time Records"]["Last PC Time"] - 
-                        self.data_package["Time Records"]["PC Start Time"])  
+            duration = int(self.data_package["Time Records"]["Personal Computer"]["Last PC Time"] - 
+                        self.data_package["Time Records"]["Personal Computer"]["PC Start Time"])  
         time_data.append(["Download Duration",
                           "{:d}".format(duration),
                           hours_min_sec(duration)
@@ -583,7 +586,7 @@ class FLAReportTemplate(SimpleDocTemplate):
             self.multiBuild(self.story, onFirstPage=self._on_first_page, onLaterPages=self._on_other_page)
             return "Success"
         except PermissionError:
-            return "Permission Error"
+            return "Permission Error. The PDF file may be open in another application. Please close it and try again."
     
     def chopLine(self, old_line, maxline):
         """
@@ -615,7 +618,7 @@ class FLAReportTemplate(SimpleDocTemplate):
         self.story.append(Paragraph(description, self.styles["Normal"]))
 
         for key, value in sorted(self.data_package[main_key].items()):
-            logger.debug("{}: {}".format(key,value))
+            #logger.debug("{}: {}".format(key,value))
             if len(value) > 0:
                 self.story.append(Paragraph(key, self.styles["Heading2"]))
                 for key1, value1 in sorted(value.items()):
@@ -685,35 +688,55 @@ class FLAReportTemplate(SimpleDocTemplate):
                             "Download Date: {}".format(self.download_date)
                             )
 
-    def add_event_table(self, title, table_list):
+    def add_ddec_event_table(self, title, table_list):
         """
         A utility to accumulate chart data for events. Often these charts will be in chunks.
         """
+        styles = getSampleStyleSheet()
+        styleN = styles["BodyText"]
+        #used alignment if required
+        styleN.alignment = TA_LEFT
+
         logger.debug("Adding Table Data for {} to PDF.".format(title))
         #logger.debug(table_list)
         page_width = 7.5 * inch
-        col_widths = [.08*page_width, 
+        col_widths = [.065*page_width, 
+                      .078*page_width, 
                       .08*page_width, 
                       .08*page_width, 
                       .08*page_width, 
                       .08*page_width, 
+                      .085*page_width, 
                       .08*page_width, 
                       .08*page_width, 
-                      .08*page_width, 
-                      .08*page_width, 
-                      .08*page_width, 
+                      .092*page_width, 
                       .08*page_width, 
                       .08*page_width, 
                       .08*page_width]
-        
-        table_object = Table(table_list, repeatRows=2, repeatCols=1, colWidths=col_widths )
-        table_object.setStyle(TableStyle(self.table_options))
-        self.event_groups[title] = table_object
+        formatted_table_list=[]
+        for row in table_list:
+            formatted_table_list.append([])
+            for col_num in range(1,len(row)):
+                try:
+                    if "Accelerator Switch" in row[col_num]:
+                        row[col_num] = "Accel. Switch"
+                    elif "Diagnostic Code" in row[col_num]:
+                        row[col_num] = "Diag. Code"
+                except TypeError:
+                    pass
+                formatted_table_list[-1].append(Paragraph("{}".format(row[col_num]), styleN))
 
-    def add_event_chart(self, title, img):
-        
+        try:
+            table_object = Table(formatted_table_list, repeatRows=2, repeatCols=1, colWidths=col_widths )
+            table_object.setStyle(TableStyle(self.table_options))
+            self.event_groups[title] = table_object
+        except ValueError:
+            self.event_groups[title] = Paragraph("There was an error in generating a table. The data to build the table is as follows: {}".format(table_list), 
+                                        self.styles['Normal'])
+
+    def add_event_chart(self, title, img):      
         logger.debug("Adding Charts Data for {} to PDF.".format(title))
-        self.event_groups[title] = PdfImage(img)
+        self.event_groups[title] = PdfImage(img,width=7.5*inch, height=8.5*inch,)
         
         
         
@@ -918,7 +941,7 @@ class SignatureVerificationReport(SimpleDocTemplate):
             self.build(self.story)
             return "Success"
         except PermissionError:
-            return "Permission Error"
+            return "Permission Error. Perhaps the PDF file is already open somewhere else. If so, please close it and try again."
 
 if __name__ == '__main__':
     logger.debug("Running tests for generating PDFs for TruckCRYPT.")

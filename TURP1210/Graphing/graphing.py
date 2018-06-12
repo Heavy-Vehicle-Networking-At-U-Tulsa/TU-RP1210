@@ -36,7 +36,7 @@ def get_plot_bytes(self, fig):
     A helper function to produce a bytestream from a matplotlib figure
     """
     img = BytesIO()
-    fig.figsize=(7.5, 10) #inches
+    fig.figsize=(7.5, 8.5) #inches
     fig.savefig(img, format='PDF',)
     return img
  
@@ -65,7 +65,7 @@ class GraphDialog(QDialog):
         layout.addWidget(self.update_button)
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
-        self.show()
+        #self.show()
          
     def plot(self):
         ''' plot data '''
