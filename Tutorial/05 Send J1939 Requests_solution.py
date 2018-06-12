@@ -1,6 +1,6 @@
 # Python3
-# RP1210 Exercise #4
-# Set filters to pass and read J1939 Traffic
+# RP1210 Exercise #5
+# Send Requests for Component ID
 # 
 # 
 
@@ -9,10 +9,12 @@ from ctypes import *
 from ctypes.wintypes import HWND
 import struct
 import time
-import msvcrt
+import random
 
 # The following entry needs to be in RP121032.ini 
 dll_in_use = "DGDPA5MA"
+
+delay = 0.5
 
 RP1210DLL = windll.LoadLibrary(dll_in_use + ".dll")
 
@@ -104,14 +106,46 @@ BLOCKING_IO = 1
 NON_BLOCKING_IO = 0
 
 #Read some messages:
-print("Timestamp (PGN,SA,DA,HOW) Message Data")
 message_count = 0
 start_time = time.time()
-log_list=["Abs. Time,VDA Time,PGN,SA,DA,Pri,B0,B1,B2,B3,B4,B5,B6,B7,...,Bn"]
-not_stopped = True
-input("Press Enter to Log. Press Ctrl + C to stop.")
-try:
-    while message_count < 1000 and not_stopped:
+try: 
+    while message_count < 10000:
+        if time.time() - start_time > delay:
+            start_time = time.time()
+            delay = 1+random.random() # Add randomness to enable different
+                                      # polling in case the system fails the first time
+
+            #send a request message for Component ID per J1939-21
+            # Populate the send buffer per RP1210 Send_Message for J1939
+            TxRxBuffer[0] = 0x00 # PGN for Request LSB
+            TxRxBuffer[1] = 0xEA # PGN for Request 
+            TxRxBuffer[2] = 0x00 # PGN for Request MSB
+            TxRxBuffer[3] = 0x06 # Priority
+            TxRxBuffer[4] = 0xF9 # Source Address (Diagnostics Tool)
+            TxRxBuffer[5] = 0xFF # Destination Send it to everyone (Try ECU Source too)
+            # Change this to the correct PGN.
+            TxRxBuffer[6] = 0xEC # LSB of Component ID PGN
+            TxRxBuffer[7] = 0xFE # Component ID PGN
+            TxRxBuffer[8] = 0x00 # MSB of Component ID PGN
+            
+            msg_len = 9
+            print("Sending Request "+" ".join("{:02X}".format(c) for c in TxRxBuffer[0:msg_len]))
+            #call the command
+            return_value = RP1210_SendMessage(c_short(client_id),
+                                              byref(TxRxBuffer),
+                                              c_short(msg_len), 0, 0)
+            if return_value != 0:
+                fpchDescription = (c_char*80)()
+                RP1210_GetErrorMsg(c_short(return_value), byref(fpchDescription))
+                description = fpchDescription.value.decode('ascii','ignore')
+                print("RP1210_SendMessage failed with a return value of {}: {}".format(return_value,description))
+                break
+            else:
+                print("Request for VIN was sent.")
+        else:
+            # Sleep for a millisecond
+            time.sleep(0.001)    
+
         return_value = RP1210_ReadMessage(c_short(client_id),
                                           byref(TxRxBuffer),
                                           c_short(2000),
@@ -128,20 +162,16 @@ try:
             da = struct.unpack("B",TxRxBuffer[9])[0]
             message = TxRxBuffer[10:return_value]
             # Use a list comprehension to make a hex representation of the message.
-            msg_str = ",".join(["{:02X}".format(c) for c in message])                              
-            data_string = "{:12.6f},{:12d},{:5d},{:2d},{:3d},{},{}".format(time.time(),vda_timestamp,pgn,sa,da,how,msg_str)
-            print(data_string)
-            log_list.append(data_string)
+            msg_str = " ".join(["{:02X}".format(c) for c in message])                              
+            #print("{:12d} ({},{},{},{}) {}".format(vda_timestamp,pgn,sa,da,how,msg_str))
 
+            if pgn == 0xFEEC: #PGN is 65270
+                print("Found VIN:")
+                print(message)
+                
 except KeyboardInterrupt:
-
-    #Open a file and write the data as lines
-    log_name = "RP1210 Log {}.csv".format(time.asctime().replace(":",""))
-    with open(log_name,'w') as log_file:
-        for line in log_list:
-            log_file.write(line+'\n')
-
-    print("\nFinished writing " + log_name)
-
+    print("\nCtrl - C pressed.")
 ret_val = RP1210_ClientDisconnect(client_id)
 print("Client Disconnected with return value of: {}".format(ret_val))
+
+

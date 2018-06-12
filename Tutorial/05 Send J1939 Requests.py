@@ -9,9 +9,12 @@ from ctypes import *
 from ctypes.wintypes import HWND
 import struct
 import time
+import random
 
 # The following entry needs to be in RP121032.ini 
 dll_in_use = "DGDPA5MA"
+
+delay = 0.5
 
 RP1210DLL = windll.LoadLibrary(dll_in_use + ".dll")
 
@@ -103,65 +106,71 @@ BLOCKING_IO = 1
 NON_BLOCKING_IO = 0
 
 #Read some messages:
-print("Timestamp (PGN,SA,DA,HOW) Message Data")
 message_count = 0
 start_time = time.time()
-while message_count < 10000:
-    if time.time() - start_time > 5:
-        start_time = time.time()
+try: 
+    while message_count < 10000:
+        if time.time() - start_time > delay:
+            start_time = time.time()
+            delay = 1+random.random()
 
-        #send a request message for Component ID per J1939-21
-        # Populate the send buffer per RP1210 Send_Message for J1939
-        TxRxBuffer[0] = 0x00 # PGN for Request LSB
-        TxRxBuffer[1] = 0xEA # PGN for Request 
-        TxRxBuffer[2] = 0x00 # PGN for Request MSB
-        TxRxBuffer[3] = 0x06 # Priority
-        TxRxBuffer[4] = 0xF9 # Source Address (Diagnostics Tool)
-        TxRxBuffer[5] = 0xFF # Destination Send it to everyone
-        TxRxBuffer[6] = 0xEC # LSB of Component ID PGN
-        TxRxBuffer[7] = 0xFE # Component ID PGN
-        TxRxBuffer[8] = 0x00 # MSB of Component ID PGN
-        
-        msg_len = 9
-        
-        #call the command
-        return_value = self.SendMessage(c_short(client_id),
-                                        byref(TxRxBuffer),
-                                        c_short(msg_len), 0, 0)
-        if return_value != 0:
-            fpchDescription = (c_char*80)()
-            RP1210_GetErrorMsg(c_short(return_value), byref(fpchDescription))
-            description = fpchDescription.value.decode('ascii','ignore')
-            print("RP1210_SendMessage failed with a return value of {}: {}".format(return_value,description))
+            #send a request message for Component ID per J1939-21
+            # Populate the send buffer per RP1210 Send_Message for J1939
+            TxRxBuffer[0] = 0x00 # PGN for Request LSB
+            TxRxBuffer[1] = 0xEA # PGN for Request 
+            TxRxBuffer[2] = 0x00 # PGN for Request MSB
+            TxRxBuffer[3] = 0x06 # Priority
+            TxRxBuffer[4] = 0xF9 # Source Address (Diagnostics Tool)
+            TxRxBuffer[5] = 0xFF # Destination Send it to everyone (Try ECU Source too)
+            TxRxBuffer[6] = 0xEB # LSB of Component ID PGN
+            TxRxBuffer[7] = 0xFE # Component ID PGN
+            TxRxBuffer[8] = 0x00 # MSB of Component ID PGN
+            
+            msg_len = 9
+            print("Sending Request "+" ".join("{:02X}".format(c) for c in TxRxBuffer[0:msg_len]))
+            #call the command
+            return_value = RP1210_SendMessage(c_short(client_id),
+                                              byref(TxRxBuffer),
+                                              c_short(msg_len), 0, 0)
+            if return_value != 0:
+                fpchDescription = (c_char*80)()
+                RP1210_GetErrorMsg(c_short(return_value), byref(fpchDescription))
+                description = fpchDescription.value.decode('ascii','ignore')
+                print("RP1210_SendMessage failed with a return value of {}: {}".format(return_value,description))
+                break
+            else:
+                print("Request for Component ID was sent.")
         else:
-            print("Request for Component ID was sent.")
-    else:
-        # Sleep for a millisecond
-        time.sleep(0.001)    
+            # Sleep for a millisecond
+            time.sleep(0.001)    
 
-    return_value = RP1210_ReadMessage(c_short(client_id),
-                                      byref(TxRxBuffer),
-                                      c_short(2000),
-                                      c_short(NON_BLOCKING_IO))
-    if return_value > 0:
-        message_count +=1
-       
-        # RP1210: The J1939 Message from RP1210_ReadMessage
-        # Assume Echo is off
-        vda_timestamp = struct.unpack(">L",TxRxBuffer[0:4])[0]
-        pgn = struct.unpack("<L", TxRxBuffer[4:7] + b'\x00')[0]
-        how = struct.unpack("B",TxRxBuffer[7])[0] 
-        sa = struct.unpack("B",TxRxBuffer[8])[0]
-        da = struct.unpack("B",TxRxBuffer[9])[0]
-        message = TxRxBuffer[10:return_value]
-        # Use a list comprehension to make a hex representation of the message.
-        msg_str = " ".join(["{:02X}".format(c) for c in message])                              
-        print("{:12d} ({},{},{},{}) {}".format(vda_timestamp,pgn,sa,da,how,msg_str))
+        return_value = RP1210_ReadMessage(c_short(client_id),
+                                          byref(TxRxBuffer),
+                                          c_short(2000),
+                                          c_short(NON_BLOCKING_IO))
+        if return_value > 0:
+            message_count +=1
+           
+            # RP1210: The J1939 Message from RP1210_ReadMessage
+            # Assume Echo is off
+            vda_timestamp = struct.unpack(">L",TxRxBuffer[0:4])[0]
+            pgn = struct.unpack("<L", TxRxBuffer[4:7] + b'\x00')[0]
+            how = struct.unpack("B",TxRxBuffer[7])[0] 
+            sa = struct.unpack("B",TxRxBuffer[8])[0]
+            da = struct.unpack("B",TxRxBuffer[9])[0]
+            message = TxRxBuffer[10:return_value]
+            # Use a list comprehension to make a hex representation of the message.
+            msg_str = " ".join(["{:02X}".format(c) for c in message])                              
+            #print("{:12d} ({},{},{},{}) {}".format(vda_timestamp,pgn,sa,da,how,msg_str))
 
-        if pgn == 65237:
-            print("Found Component ID:")
-            print(message)
-            exit()
+            if pgn == 0xFEEB: #PGN is 65269
+                print("Found Component ID:")
+                print(message)
+                
+except KeyboardInterrupt:
+    print("\nCtrl - C pressed.")
+ret_val = RP1210_ClientDisconnect(client_id)
+print("Client Disconnected with return value of: {}".format(ret_val))
 
 # Assignment: 
 #  Request VIN
