@@ -10,3 +10,4 @@ pdfrw==0.4
 PyJWT==1.5.3
 pyserial==3.4
 pypiwin32==2.2.3
+PyQt5==5.10
