@@ -170,7 +170,7 @@ class J1939Tab(QWidget):
         j1939_id_box_layout.addWidget(self.add_message_button,1,0,1,1)
         j1939_id_box_layout.addWidget(self.stop_broadcast_button,1,1,1,1)
         j1939_id_box_layout.addWidget(clear_button,1,2,1,1)
-       
+        
         #setup the layout to be displayed in the box
         j1939_id_box.setLayout(j1939_id_box_layout)
         tab_layout.addWidget(j1939_id_box)
