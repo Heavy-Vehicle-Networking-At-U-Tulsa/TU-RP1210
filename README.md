@@ -75,3 +75,5 @@ If you get `HTTPError: 400 Client Error: File already exists. for url: https://u
 
 7. Upload the zip file to GitHub. Anyone with Windows 7 or above should be able to extract this file and run the TU_RP1210.exe file. This program requires an installed RP1210 Vehicle Diagnostics Adapter, like a DG Technologies DPA5.
  
+## Acknowledgements
+This material is based upon work supported by the National Science Foundation under Grant No. 1715409.
