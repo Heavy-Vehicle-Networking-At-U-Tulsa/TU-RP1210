@@ -135,7 +135,7 @@ setup(
                       'passlib>=1.7.1',
                       'pdfrw>=0.4',
                       'humanize>=0.5.1',
-                      'cryptography>=2.1.4',
+                      'cryptography ~> 2.3',
                       'PyQt5>=5.10',
                       'PyJWT>=1.5.3',
                       'pyserial>=3.4'], # Optional
