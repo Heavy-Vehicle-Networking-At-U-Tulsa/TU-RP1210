@@ -4,7 +4,7 @@ PGPy==0.4.3
 passlib==1.7.1
 humanize==0.5.1
 winshell==0.6
-cryptography==2.1.4
+cryptography ~> 2.3
 matplotlib==2.0.2
 pdfrw==0.4
 PyJWT==1.5.3
