@@ -1,5 +1,5 @@
 reportlab==3.4.0
-requests==2.18.4
+requests==2.20
 PGPy==0.4.3
 passlib==1.7.1
 humanize==0.5.1
