@@ -98,13 +98,13 @@ class J1939Tab(QWidget):
         self.j1939_request_pgns += [65260 for i in range(6)] #VIN 
         self.j1939_request_pgns += [65242 for i in range(6)] #Software ID
         
-        self.pgns_to_not_decode = [ 59392, #Ack
+        self.pgns_to_not_decode = [  59392, #Ack
                                     0xEA00, #request messages
                                     0xEB00, # Transport
                                     0xEC00, # Transport
                                     0xDA00, #ISO 15765
                                     65247, # EEC3 at 20 ms
-                                    65265, # Cruise COntrol Vehicle SPeed
+                                    #65265, # Cruise COntrol Vehicle SPeed
                                     0xF001,
                                     0xF002,
                                     0xF003,
@@ -123,6 +123,7 @@ class J1939Tab(QWidget):
         self.j1939_count = 0  # successful 1939 messages
         self.ecm_time = {}
         self.battery_potential = {}
+        self.speed_record = {}
         self.pgn_rows = []
         self.j1939_unique_ids = OrderedDict()
         self.unique_spns = OrderedDict()
@@ -455,6 +456,10 @@ class J1939Tab(QWidget):
             self.battery_potential[sa] = []
             logger.debug("Set battery potential for SA {} to an empty list.".format(sa))
 
+        if sa not in self.speed_record.keys():
+            self.speed_record[sa] = []
+            logger.debug("Set speed record for SA {} to an empty list.".format(sa))
+
         if sa not in self.root.source_addresses:
         #if sa not in self.ecm_time.keys():
             #self.ecm_time[sa]=[]
@@ -577,12 +582,24 @@ class J1939Tab(QWidget):
                 #num_fields = self.unique_spns[repr((965, sa))]["Value"]
                 software = self.unique_spns[repr((234, sa))]["Value"].replace(b'\x00'.decode('ascii','ignore'),'') #Take out non-printable characters
                 self.root.data_package["Component Information"][source_key].update({"Software": software})
-
+            elif pgn == 65265: #Cruise Control Vehcile Speed
+                if "Out" not in self.unique_spns[repr((84,sa))]["Meaning"]: 
+                    # The speed data is not out of range
+                    #Save speed from the ECU as a tuple along with PC time.
+                    self.speed_record[sa].append((time.time(), float(self.unique_spns[repr((84,sa))]["Value"]) ))
+                    if len(self.speed_record[sa]) > 1000:
+                        self.speed_record[sa].pop(0)
+                    self.root.speed_graph.add_data(self.speed_record[sa], 
+                        marker = '.', 
+                        label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 84")
+                    self.root.speed_graph.plot()
             elif pgn == 65271:  # Vehicle Electrical Power 
                 if "Out" not in self.unique_spns[repr((168,sa))]["Meaning"]: 
                     # The voltage data is not out of range
                     #Save Battery voltage from the ECU as a tuple along with PC time.
                     self.battery_potential[sa].append((time.time(), float(self.unique_spns[repr((168,sa))]["Value"]) ))
+                    if len(self.battery_potential[sa]) > 1000:
+                        self.battery_potential[sa].pop(0)
                     self.root.voltage_graph.add_data(self.battery_potential[sa], 
                         marker = 'o-', 
                         label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 168")
@@ -590,6 +607,8 @@ class J1939Tab(QWidget):
                     
                 if "Out" not in self.unique_spns[repr((158,sa))]["Meaning"]:
                     self.battery_potential[sa].append((time.time(), float(self.unique_spns[repr((158,sa))]["Value"]) ))
+                    if len(self.battery_potential[sa]) > 1000:
+                        self.battery_potential[sa].pop(0)
                     self.root.voltage_graph.add_data(self.battery_potential[sa], 
                         marker = '<-', 
                         label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 158")

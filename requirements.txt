@@ -1,5 +1,5 @@
 reportlab==3.4.0
-requests==2.18.4
+requests>=2.20.0
 PGPy==0.4.3
 passlib==1.7.1
 humanize==0.5.1
@@ -10,4 +10,4 @@ pdfrw==0.4
 PyJWT==1.5.3
 pyserial==3.4
 pypiwin32==2.2.3
-PyQt5==5.10
+PyQt5==5.11

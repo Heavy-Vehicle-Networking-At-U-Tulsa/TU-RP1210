@@ -233,7 +233,7 @@ class TU_RP1210(QMainWindow):
         os.system("TASKKILL /F /IM DGServer2.exe")
         os.system("TASKKILL /F /IM DGServer1.exe")  
         
-        self.update_rate = 200
+        self.update_rate = 100
 
         self.module_directory = module_directory
         
@@ -297,10 +297,10 @@ class TU_RP1210(QMainWindow):
         read_timer.timeout.connect(self.read_rp1210)
         read_timer.start(self.update_rate) #milliseconds
         
-        if backup_interval > 1000:
-            backup_timer = QTimer(self)
-            backup_timer.timeout.connect(self.save_backup_file)
-            backup_timer.start(backup_interval)
+        # if backup_interval > 1000:
+        #     backup_timer = QTimer(self)
+        #     backup_timer.timeout.connect(self.save_backup_file)
+        #     backup_timer.start(backup_interval)
         progress.setValue(10)
         QCoreApplication.processEvents()
 
@@ -565,6 +565,12 @@ class TU_RP1210(QMainWindow):
         self.voltage_graph.set_ylabel("Voltage")
         self.voltage_graph.set_title("Battery Voltage Measurements from Vehicle Electronic Control Units")
         
+        self.speed_graph = GraphDialog(self, title="Tone Ring Base Speed")
+        #self.speed_graph.set_yrange(9, 15)
+        self.speed_graph.set_xlabel("Time")
+        self.speed_graph.set_ylabel("Speed [km/h]")
+        self.speed_graph.set_title("Wheel-based Vehicle Speed from Vehicle Networks")
+        
         self.grid_layout.addWidget(info_box_area["J1939"],0,0,1,1)
         self.grid_layout.addWidget(info_box_area["J1708"],1,0,1,1)
         self.grid_layout.addWidget(gps_box_area,2,0,1,1)
@@ -763,6 +769,7 @@ class TU_RP1210(QMainWindow):
 
     def show_graphs(self):
         self.voltage_graph.show()
+        self.speed_graph.show()
 
     def new_file(self):
         logger.debug("New File Selected.")
@@ -1225,6 +1232,7 @@ class TU_RP1210(QMainWindow):
             self.voltage_graph.hide()
         else:
             self.voltage_graph.show()
+            self.speed_graph.show()
         progress.deleteLater()
 
     def check_connections(self):
@@ -1879,7 +1887,7 @@ class TU_RP1210(QMainWindow):
                 while self.rx_queues[protocol].qsize():
                     #Get a message from the queue. These are raw bytes
                     #if not protocol == "J1708":
-                    rxmessage = self.rx_queues[protocol].get()
+                    rxmessage = self.rx_queues[protocol].get()                                   
                     if protocol == "CAN":
                         #Just great a log file.
                         CANlogger.info("{:0.6f},{},{:08X},{},".format(rxmessage[0],
