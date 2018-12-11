@@ -433,6 +433,7 @@ class J1939Tab(QWidget):
             sa = rx_buffer[9] #Source Address
             da = rx_buffer[10] #Destination Address
         except (struct.error, IndexError):
+            logger.debug(traceback.format_exc())
             return
 
         if pgn == 0xDA00: #ISO

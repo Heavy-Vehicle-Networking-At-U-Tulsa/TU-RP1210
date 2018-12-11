@@ -81,6 +81,7 @@ import humanize
 import random
 import os
 import threading
+import binascii
 
 from TURP1210.RP1210.RP1210 import *
 from TURP1210.RP1210.RP1210Functions import *
@@ -327,6 +328,13 @@ class TU_RP1210(QMainWindow):
         open_file.setStatusTip('Open an existing data file.')
         open_file.triggered.connect(self.open_file)
         file_menu.addAction(open_file)
+
+        open_logger2 = QAction(QIcon(os.path.join(module_directory,r'icons/logger2_48px.png')), '&Import CAN Logger 2', self)
+        open_logger2.setShortcut('Ctrl+I')
+        open_logger2.setStatusTip('Open a file from the NMFTA/TU CAN Logger 2')
+        open_logger2.triggered.connect(self.open_open_logger2)
+        file_menu.addAction(open_logger2)
+
 
         save_file = QAction(QIcon(os.path.join(module_directory,r'icons/icons8_Save_48px.png')), '&Save', self)
         save_file.setShortcut('Ctrl+S')
@@ -750,6 +758,104 @@ class TU_RP1210(QMainWindow):
     #     streamHandler = logging.StreamHandler()
     #     streamHandler.setLevel(logging.CRITICAL)
     #     l.addHandler(streamHandler)    
+    #
+    def open_open_logger2(self):
+        filters = "{} Data Files (*.bin);;All Files (*.*)".format(self.title)
+        selected_filter = "CAN Logger 2 Data Files (*.bin)"
+        fname,_ = QFileDialog.getOpenFileName(self, 
+                                            'Open CAN Logger 2 File',
+                                            self.export_path,
+                                            filters,
+                                            selected_filter)
+        if fname:
+            file_size = os.path.getsize(fname)
+            bytes_processed = 0
+            #update the data package
+            progress = QProgressDialog(self)
+            progress.setMinimumWidth(600)
+            progress.setWindowTitle("Processing CAN Logger 2 Data File")
+            progress.setMinimumDuration(0)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setMaximum(file_size)
+            progress_label = QLabel("Processed {:0.3f} of {:0.3f} Mbytes.".format(bytes_processed/1000000,file_size/1000000))
+            progress.setLabel(progress_label)
+        
+            logger.debug("Importing file {}".format(fname))
+            with open(fname,'rb') as f:
+                while True:
+                    line = f.read(512)
+                    if len(line) < 512:
+                        logger.debug("Reached end of file {}".format(fname))
+                        break
+                    #check integrity
+                    bytes_to_check = line[0:508]
+                    crc_value = struct.unpack('<L',line[508:512])[0]
+                    
+                    if binascii.crc32(bytes_to_check) != crc_value:
+                        logger.warning("CRC Failed")
+                        break
+                    #print('CRC Passed')
+                    #print(line)
+                    #print(" ".join(["{:02X}".format(c) for c in line]))
+                    prefix = line[0:4]
+                    RXCount0 = struct.unpack('<L',line[479:483])[0]
+                    RXCount1 = struct.unpack('<L',line[483:487])[0]   
+                    RXCount2 = struct.unpack('<L',line[487:491])[0]
+                    # CAN Controller Receive Error Counters.
+                    Can0_REC = line[491]
+                    Can1_REC = line[492]
+                    Can2_REC = line[493]
+                    # CAN Controller Transmit Error Counters
+                    Can0_TEC = line[494]
+                    Can1_TEC = line[495]
+                    Can2_TEC = line[496]
+                    # A constant ASCII Text file to preserve the original filename (and take up space)
+                    block_filename = line[497:505]
+                    #micro seconds to write the previous 512 bytes to the SD card (only 3 bytes so mask off the MSB)
+                    buffer_write_time = struct.unpack('<L',line[505:509])[0] & 0x00FFFFFF
+                    for i in range(4,487,25):
+                        # parse data from records
+                        channel = line[i]
+                        timestamp = struct.unpack('<L',line[i+1:i+5])[0]
+                        system_micros = struct.unpack('<L',line[i+5:i+9])[0]
+                        can_id = struct.unpack('<L',line[i+9:i+13])[0]
+                        dlc = line[i+13]
+                        if dlc == 0xFF:
+                            break
+                        micros_per_second = struct.unpack('<L',line[i+13:i+17])[0] & 0x00FFFFFF
+                        timestamp += micros_per_second/1000000
+                        data_bytes = line[i+17:i+25]
+                        data = struct.unpack('8B',data_bytes)[0]
+
+                        #create an RP1210 data structure
+                        sa =  can_id & 0xFF
+                        priority = (can_id & 0x1C000000) >> 26
+                        edp = (can_id & 0x02000000) >> 25
+                        dp =  (can_id & 0x01000000) >> 24
+                        pf =  (can_id & 0x00FF0000) >> 16
+                        if pf >= 0xF0:
+                            ps = (can_id & 0x0000FF00) >> 8
+                            da = 0xFF
+                        else:
+                            ps = 0
+                            da = (can_id & 0x0000FF00) >> 8
+                        ps = struct.pack('B', ps)
+                        pf = struct.pack('B', pf)
+                        pgn = ps + pf + struct.pack('B', edp + dp)
+                        rp1210_message = struct.pack('<L',system_micros) 
+                        rp1210_message += b'\x01' 
+                        rp1210_message += pgn  
+                        rp1210_message += struct.pack('B', priority) 
+                        rp1210_message += struct.pack('B', sa) 
+                        rp1210_message += struct.pack('B', da) 
+                        rp1210_message += data_bytes
+                        self.rx_queues["Logger"].put((timestamp, rp1210_message))
+                    bytes_processed += 512
+                    progress.setValue(bytes_processed)
+                    QCoreApplication.processEvents()
+                    
+            progress.deleteLater()
+        
 
     def upload_data_package(self):
         returned_message = self.user_data.upload_data(self.data_package)
@@ -1167,7 +1273,7 @@ class TU_RP1210(QMainWindow):
         with open(selection.connections_file,"w") as rp1210_file:
             json.dump(file_contents, rp1210_file)
 
-        self.rx_queues={}
+        self.rx_queues={"Logger":queue.Queue(10000)}
         self.read_message_threads={}
         self.extra_queues = {}
         # Set all filters to pass.  This allows messages to be read.
@@ -1896,7 +2002,7 @@ class TU_RP1210(QMainWindow):
                                                                       rxmessage[3]) + 
                                        ",".join("{:02X}".format(c) for c in rxmessage[4]))
                     
-                    elif protocol == "J1939":
+                    elif protocol == "J1939" or protocol == "Logger" :
                         try:
                             self.J1939.fill_j1939_table(rxmessage)
                             #J1939logger.info(rxmessage)
