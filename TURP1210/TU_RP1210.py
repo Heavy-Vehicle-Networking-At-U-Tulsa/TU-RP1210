@@ -142,6 +142,8 @@ class TU_RP1210(QMainWindow):
 
         self.title = title
         self.setWindowTitle(self.title)
+        
+        self.update_graphs = False
 
         progress = QProgressDialog(self)
         progress.setMinimumWidth(600)
@@ -768,6 +770,7 @@ class TU_RP1210(QMainWindow):
                                             filters,
                                             selected_filter)
         if fname:
+            self.update_graphs = False
             file_size = os.path.getsize(fname)
             bytes_processed = 0
             #update the data package
@@ -776,6 +779,7 @@ class TU_RP1210(QMainWindow):
             progress.setWindowTitle("Processing CAN Logger 2 Data File")
             progress.setMinimumDuration(0)
             progress.setWindowModality(Qt.WindowModal)
+            progress.setModal(False) #Will lead to instability when trying to click around.
             progress.setMaximum(file_size)
             progress_label = QLabel("Processed {:0.3f} of {:0.3f} Mbytes.".format(bytes_processed/1000000,file_size/1000000))
             progress.setLabel(progress_label)
@@ -843,7 +847,7 @@ class TU_RP1210(QMainWindow):
                         pf = struct.pack('B', pf)
                         pgn = ps + pf + struct.pack('B', edp + dp)
                         rp1210_message = struct.pack('<L',system_micros) 
-                        rp1210_message += b'\x01' 
+                        rp1210_message += b'\x00' 
                         rp1210_message += pgn  
                         rp1210_message += struct.pack('B', priority) 
                         rp1210_message += struct.pack('B', sa) 
@@ -852,7 +856,11 @@ class TU_RP1210(QMainWindow):
                         self.rx_queues["Logger"].put((timestamp, rp1210_message))
                     bytes_processed += 512
                     progress.setValue(bytes_processed)
+                    progress_label.setText("Processed {:0.3f} of {:0.3f} Mbytes.".format(bytes_processed/1000000,file_size/1000000))
+                    if progress.wasCanceled():
+                        break
                     QCoreApplication.processEvents()
+
                     
             progress.deleteLater()
         
@@ -1275,7 +1283,12 @@ class TU_RP1210(QMainWindow):
 
         self.rx_queues={"Logger":queue.Queue(10000)}
         self.read_message_threads={}
-        self.extra_queues = {}
+        self.extra_queues = {"Logger":queue.Queue(10000)}
+        self.isodriver = ISO15765Driver(self, self.extra_queues["Logger"])
+        #for testing only:
+        progress.deleteLater()
+        return
+        
         # Set all filters to pass.  This allows messages to be read.
         # Constants are defined in an included file
         i = 0

@@ -98,19 +98,20 @@ class J1939Tab(QWidget):
         self.j1939_request_pgns += [65260 for i in range(6)] #VIN 
         self.j1939_request_pgns += [65242 for i in range(6)] #Software ID
         
-        self.pgns_to_not_decode = [  59392, #Ack
-                                    0xEA00, #request messages
-                                    0xEB00, # Transport
-                                    0xEC00, # Transport
-                                    0xDA00, #ISO 15765
-                                    65247, # EEC3 at 20 ms
-                                    #65265, # Cruise COntrol Vehicle SPeed
-                                    0xF001,
-                                    0xF002,
-                                    0xF003,
-                                    0xF004,
-                                    57344, #CM1 message
-                                    ]
+        self.pgns_to_not_decode = []
+         # [  59392, #Ack
+         #                            0xEA00, #request messages
+         #                            0xEB00, # Transport
+         #                            0xEC00, # Transport
+         #                            0xDA00, #ISO 15765
+         #                            65247, # EEC3 at 20 ms
+         #                            #65265, # Cruise COntrol Vehicle SPeed
+         #                            0xF001,
+         #                            0xF002,
+         #                            0xF003,
+         #                            0xF004,
+         #                            57344, #CM1 message
+         #                            ]
     def get_pgn_label(self, pgn):
 
         try:
@@ -588,32 +589,37 @@ class J1939Tab(QWidget):
                     # The speed data is not out of range
                     #Save speed from the ECU as a tuple along with PC time.
                     self.speed_record[sa].append((time.time(), float(self.unique_spns[repr((84,sa))]["Value"]) ))
-                    if len(self.speed_record[sa]) > 1000:
-                        self.speed_record[sa].pop(0)
-                    self.root.speed_graph.add_data(self.speed_record[sa], 
-                        marker = '.', 
-                        label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 84")
-                    self.root.speed_graph.plot()
+                    if self.root.update_graphs:
+                        if len(self.speed_record[sa]) > 1000:
+                            self.speed_record[sa].pop(0)
+                        self.root.speed_graph.add_data(self.speed_record[sa], 
+                            marker = '.', 
+                            label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 84")
+                    
+                        self.root.speed_graph.plot()
             elif pgn == 65271:  # Vehicle Electrical Power 
                 if "Out" not in self.unique_spns[repr((168,sa))]["Meaning"]: 
                     # The voltage data is not out of range
                     #Save Battery voltage from the ECU as a tuple along with PC time.
                     self.battery_potential[sa].append((time.time(), float(self.unique_spns[repr((168,sa))]["Value"]) ))
-                    if len(self.battery_potential[sa]) > 1000:
-                        self.battery_potential[sa].pop(0)
-                    self.root.voltage_graph.add_data(self.battery_potential[sa], 
-                        marker = 'o-', 
-                        label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 168")
-                    self.root.voltage_graph.plot()
+                    if self.root.update_graphs:
+                        if len(self.battery_potential[sa]) > 1000:
+                            self.battery_potential[sa].pop(0)
+                        self.root.voltage_graph.add_data(self.battery_potential[sa], 
+                            marker = 'o-', 
+                            label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 168")
+                    
+                        self.root.voltage_graph.plot()
                     
                 if "Out" not in self.unique_spns[repr((158,sa))]["Meaning"]:
                     self.battery_potential[sa].append((time.time(), float(self.unique_spns[repr((158,sa))]["Value"]) ))
-                    if len(self.battery_potential[sa]) > 1000:
-                        self.battery_potential[sa].pop(0)
-                    self.root.voltage_graph.add_data(self.battery_potential[sa], 
-                        marker = '<-', 
-                        label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 158")
-                    self.root.voltage_graph.plot()
+                    if self.root.update_graphs:
+                        if len(self.battery_potential[sa]) > 1000:
+                            self.battery_potential[sa].pop(0)
+                        self.root.voltage_graph.add_data(self.battery_potential[sa], 
+                            marker = '<-', 
+                            label = self.j1939_unique_ids[pgn_key]["Source"]+": SPN 158")
+                        self.root.voltage_graph.plot()
             
             elif pgn == 65253:  # Engine Hours / Revolutions
                 if "Out" not in self.unique_spns[repr((247,sa))]["Meaning"]: 
@@ -877,6 +883,7 @@ class J1939Tab(QWidget):
                 # Display the results
                 if scale >= 1 or spn in self.time_spns:
                     try:
+
                         value = "{:d}".format(int(numerical_value))
                     except ValueError:
                         value = "{}".format(numerical_value)
